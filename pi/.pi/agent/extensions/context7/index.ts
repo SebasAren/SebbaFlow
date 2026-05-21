@@ -41,11 +41,6 @@ export default function (pi: ExtensionAPI) {
       "Search for libraries in the Context7 database. Returns matching libraries with IDs, descriptions, and trust scores. " +
       "Use this to find the correct library ID before fetching documentation.",
     promptSnippet: "Search Context7 for library documentation",
-    promptGuidelines: [
-      "Use this tool to find library IDs when you need up-to-date documentation",
-      "Provide a library name (e.g., 'react', 'next.js') and a query describing what you need",
-      "Returns library IDs that can be used with context7_docs tool",
-    ],
     parameters: SearchParams,
 
     async execute(_toolCallId, params, signal, onUpdate, _ctx) {
@@ -73,11 +68,6 @@ export default function (pi: ExtensionAPI) {
       "Fetch up-to-date documentation and code examples for a specific library using its Context7 library ID. " +
       "Returns relevant snippets ranked by the query. You must first use context7_search to obtain a valid library ID.",
     promptSnippet: "Fetch library documentation from Context7",
-    promptGuidelines: [
-      "Use this tool after obtaining a library ID from context7_search",
-      "Provide a library ID (e.g., '/facebook/react') and a query describing what you need",
-      "Returns documentation snippets and code examples",
-    ],
     parameters: DocsParams,
 
     async execute(_toolCallId, params, signal, onUpdate, _ctx) {

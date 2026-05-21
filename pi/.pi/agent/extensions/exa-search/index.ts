@@ -33,12 +33,6 @@ export default function (pi: ExtensionAPI) {
       "Search the web using Exa. Returns relevant results with titles, URLs, and highlights. " +
       "Great for finding current information, documentation, news, and research.",
     promptSnippet: "Search the web for current information using Exa",
-    promptGuidelines: [
-      "Use this tool when you need current information not in your training data",
-      "Use for finding documentation, tutorials, API references, and best practices",
-      "Use to verify facts or get the latest news and developments",
-      "Use 'category' filter when searching for specific content types (news, research papers, etc.)",
-    ],
     parameters: WebSearchParams,
 
     async execute(_toolCallId, params, signal, onUpdate, _ctx) {
@@ -72,12 +66,6 @@ export default function (pi: ExtensionAPI) {
       "(text, highlights, or summary). Use after web_search to read specific pages in detail, " +
       "or to fetch a known documentation URL directly.",
     promptSnippet: "Fetch and parse web page content from URLs",
-    promptGuidelines: [
-      "Use web_fetch after web_search to read the full content of relevant results",
-      "Use web_fetch when you need detailed page content, not just search highlights",
-      "Use 'highlights' format with a query for the most token-efficient extraction",
-      "Use 'summary' format for quick overviews of long pages",
-    ],
     parameters: WebFetchParams,
 
     async execute(_toolCallId, params, signal, onUpdate, _ctx) {

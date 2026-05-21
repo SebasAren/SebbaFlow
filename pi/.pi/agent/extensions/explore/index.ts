@@ -158,13 +158,8 @@ export default function (pi: ExtensionAPI) {
     promptSnippet:
       "Explore the codebase to find files, trace dependencies, or understand architecture",
     promptGuidelines: [
-      "Use explore for codebase reconnaissance — finding relevant files, tracing imports, understanding structure.",
-      "Prefer explore over multiple read/grep calls when you need to broadly investigate an unfamiliar area.",
       "Call explore up to 4 times in parallel when investigating multiple independent aspects of the codebase (e.g. different modules, different concerns).",
-      "Write specific, keyword-rich queries. Bad: 'explore the codebase'. Good: 'tmux wt worktrunk integration pane_current_path'.",
-      "Provide a directory hint when you know where to look. Use the directory parameter to scope the search (e.g. 'tmux/.config/tmux/scripts/').",
       "For large codebases, use a scout-then-deepen pattern: first explore with quick thoroughness to find relevant files, then call explore again with 'files' set to the discovered paths and thoroughness=thorough.",
-      "Defaults: quick=40 calls/5min, medium=80 calls/5min, thorough=160 calls/10min. Failures are rare — if you see one, use maxToolCalls to increase the budget.",
     ],
     parameters: ExploreParams,
 

@@ -68,12 +68,6 @@ export default function (pi: ExtensionAPI) {
       "Read a specific page from the personal wiki at ~/Documents/wiki/. " +
       "Scope-safe — only reads files within the wiki directory.",
     promptSnippet: "Read a wiki page by path",
-    promptGuidelines: [
-      "Use after wiki_search to read the full content of discovered pages",
-      "Pass the relative path from wiki_search results (e.g. 'concepts/agent-swarm.md')",
-      "Follow [[wiki links]] found in pages for multi-hop discovery",
-      "Pages may contain markdown with frontmatter — read the full content for context",
-    ],
     parameters: WikiReadParams,
 
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {

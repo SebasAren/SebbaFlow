@@ -71,12 +71,6 @@ export default function (pi: ExtensionAPI) {
       "Call this after the initial codebase exploration completes. " +
       "Each subsequent TDD step can then branch from this point.",
     promptSnippet: "Label the current session position as the TDD kickoff checkpoint",
-    promptGuidelines: [
-      "Call tdd-set-kickoff exactly once per plan, after the explore phase completes, before starting Step 1.",
-      "This creates a single labeled checkpoint in the session tree that all steps can branch from.",
-      "Use /kickoff to navigate back to this existing point for fresh steps (or /tdd-go-kickoff <slug> for explicit targeting).",
-      "Never call tdd-set-kickoff more than once per plan.",
-    ],
     parameters: Type.Object({
       slug: Type.String({
         description: "The plan slug (e.g. 'user-auth'). Must match the tdd-plan slug.",

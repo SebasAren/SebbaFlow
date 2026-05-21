@@ -175,13 +175,6 @@ export default function (pi: ExtensionAPI) {
       "Returns the most relevant wiki pages with matching context. " +
       "Great for finding concepts, entities, sources, and synthesis pages.",
     promptSnippet: "Search the wiki for relevant pages",
-    promptGuidelines: [
-      "Use this tool when answering questions about topics that might be in the wiki",
-      "Use specific wiki terminology — the wiki has its own vocabulary (e.g. 'agent swarm', 'spec-driven development')",
-      "Use --semantic for broad conceptual queries where exact keywords might not match",
-      "Use --no-rerank only when speed is critical and you need many rough results",
-      "Follow [[wiki links]] in results for multi-hop discovery",
-    ],
     parameters: WikiSearchParams,
 
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {

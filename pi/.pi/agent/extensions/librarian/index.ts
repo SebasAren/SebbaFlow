@@ -168,14 +168,6 @@ export default function (pi: ExtensionAPI) {
       "You may call librarian up to 4 times in parallel to research different topics simultaneously.",
     ].join(" "),
     promptSnippet: "Research external documentation using web search and Context7",
-    promptGuidelines: [
-      "Use librarian when you need up-to-date documentation, API references, or examples from external sources.",
-      "When relevant, the librarian can also search your personal wiki (wiki_search) and read curated pages (wiki_read).",
-      "Prefer librarian over web_search directly when you need the agent to synthesize findings from multiple sources.",
-      "Call librarian up to 4 times in parallel when researching multiple independent topics or libraries.",
-      "Requires EXA_API_KEY and/or CONTEXT7_API_KEY environment variables to be set.",
-      "Uses wiki at ~/Documents/wiki/ automatically if tools are available — no extra config needed.",
-    ],
     parameters: LibrarianParams,
 
     async execute(_toolCallId, params, signal, onUpdate, ctx) {

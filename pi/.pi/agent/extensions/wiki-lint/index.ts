@@ -314,11 +314,6 @@ export default function (pi: ExtensionAPI) {
       "Detects broken wiki links, orphan pages, missing H1 titles, filename convention violations, " +
       "near-empty pages, and stale inbox files.",
     promptSnippet: "Lint the wiki for structural issues",
-    promptGuidelines: [
-      "Run this periodically or after bulk ingests to catch structural drift",
-      "Use selective checks parameter to run only specific checks",
-      "Each issue includes a path and message — read the files and apply fixes manually",
-    ],
     parameters: Type.Object({
       checks: Type.Optional(
         Type.Array(Type.String(), {
