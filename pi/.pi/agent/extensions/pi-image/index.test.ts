@@ -116,23 +116,17 @@ describe("pi-image extension", () => {
   });
 
   describe("renderCall", () => {
-    it("shows prompt and quality in the rendered text", () => {
-      const result = tool.renderCall(
-        { prompt: "a sunset over mountains", quality: "best" },
-        makeTheme(),
-        {},
-      );
+    it("shows prompt in the rendered text", () => {
+      const result = tool.renderCall({ prompt: "a sunset over mountains" }, makeTheme(), {});
 
       expect(result.text).toContain("Generate Image");
       expect(result.text).toContain("a sunset over mountains");
-      expect(result.text).toContain("best");
     });
 
-    it("shows default quality as fast when not specified", () => {
+    it("shows prompt when not specified", () => {
       const result = tool.renderCall({ prompt: "a cat" }, makeTheme(), {});
 
       expect(result.text).toContain("a cat");
-      expect(result.text).toContain("fast");
     });
 
     it("reuses context.lastComponent when available", () => {
@@ -264,9 +258,9 @@ describe("pi-image extension", () => {
       );
 
       expect(result.details.aspectRatio).toBe("1:1");
-      // Default quality is "fast", model should be IMAGE_MODEL_FAST or its default
+      // Model should be IMAGE_MODEL or its default
       expect(result.details.model).toBe(
-        process.env.IMAGE_MODEL_FAST || "google/gemini-3.1-flash-image-preview",
+        process.env.IMAGE_MODEL || "google/gemini-3.1-flash-image-preview",
       );
 
       savedFiles.push(result.details.path);
@@ -287,25 +281,7 @@ describe("pi-image extension", () => {
     });
   });
 
-  describe("execute — quality & aspect ratio", () => {
-    it("uses best model when quality is 'best'", async () => {
-      mockCreate.mockResolvedValue(mockSdkResponse([{ image_url: { url: PNG_DATA_URL } }]));
-
-      const result = await tool.execute(
-        "call-best",
-        { prompt: "a sunset", quality: "best" },
-        new AbortController().signal,
-        mock(() => {}),
-        {},
-      );
-
-      expect(result.details.model).toBe(
-        process.env.IMAGE_MODEL_BEST || "google/gemini-3-pro-image-preview",
-      );
-
-      savedFiles.push(result.details.path);
-    });
-
+  describe("execute — aspect ratio", () => {
     it("passes aspect_ratio 16:9 to the API", async () => {
       let createParams: any;
       mockCreate.mockImplementation((params: any) => {
@@ -329,44 +305,30 @@ describe("pi-image extension", () => {
       savedFiles.push(result.details.path);
     });
 
-    it("uses quality env var overrides", async () => {
-      // Set custom env var overrides
-      const origFast = process.env.IMAGE_MODEL_FAST;
-      const origBest = process.env.IMAGE_MODEL_BEST;
-      process.env.IMAGE_MODEL_FAST = "custom/fast-model";
-      process.env.IMAGE_MODEL_BEST = "custom/best-model";
+    it("uses IMAGE_MODEL env var override", async () => {
+      const origImageModel = process.env.IMAGE_MODEL;
+      process.env.IMAGE_MODEL = "custom/image-model";
 
-      const createParamsList: any[] = [];
+      let createParams: any;
       mockCreate.mockImplementation((params: any) => {
-        createParamsList.push(params);
+        createParams = params;
         return mockSdkResponse([{ image_url: { url: PNG_DATA_URL } }]);
       });
 
-      const resultFast = await tool.execute(
-        "call-env-1",
-        { prompt: "test", quality: "fast" },
+      const result = await tool.execute(
+        "call-env",
+        { prompt: "test" },
         new AbortController().signal,
         mock(() => {}),
         {},
       );
 
-      const resultBest = await tool.execute(
-        "call-env-2",
-        { prompt: "test", quality: "best" },
-        new AbortController().signal,
-        mock(() => {}),
-        {},
-      );
-
-      expect(createParamsList[0].model).toBe("custom/fast-model");
-      expect(createParamsList[1].model).toBe("custom/best-model");
+      expect(createParams.model).toBe("custom/image-model");
 
       // Clean up env
-      process.env.IMAGE_MODEL_FAST = origFast;
-      process.env.IMAGE_MODEL_BEST = origBest;
+      process.env.IMAGE_MODEL = origImageModel;
 
-      savedFiles.push(resultFast.details.path);
-      savedFiles.push(resultBest.details.path);
+      savedFiles.push(result.details.path);
     });
   });
 

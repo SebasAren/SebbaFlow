@@ -8,7 +8,6 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 /** Parameters for the generate_image tool call. */
 export interface GenerateImageCallArgs {
   prompt: string;
-  quality?: string;
   aspect_ratio?: string;
   image_path?: string;
 }
@@ -28,13 +27,12 @@ export function renderCall(
   theme: Theme,
   context: { lastComponent?: Component },
 ): Text {
-  const quality = args.quality || "fast";
   const editSuffix = args.image_path ? ` (edit: ${args.image_path})` : "";
   const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
   text.setText(
     theme.fg("toolTitle", theme.bold("Generate Image ")) +
       theme.fg("dim", args.prompt) +
-      theme.fg("muted", ` [${quality}]${editSuffix}`),
+      theme.fg("muted", editSuffix),
   );
   return text;
 }

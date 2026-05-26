@@ -18,18 +18,13 @@ export { saveImageToTemp } from "./save";
 export type { GenerateImageApiResult } from "./api";
 export type { SaveImageResult } from "./save";
 
-const DEFAULT_MODEL_FAST = "google/gemini-3.1-flash-image-preview";
-const DEFAULT_MODEL_BEST = "google/gemini-3-pro-image-preview";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-image-preview";
 
 const GenerateImageParams = Type.Object({
   prompt: Type.String({
     description: "Text description of the image to generate",
   }),
-  quality: Type.Optional(
-    Type.String({
-      description: "Image quality: 'fast' or 'best' (default: 'fast')",
-    }),
-  ),
+
   aspect_ratio: Type.Optional(
     Type.String({
       description:
@@ -46,7 +41,6 @@ const GenerateImageParams = Type.Object({
 
 interface ExecuteParams {
   prompt: string;
-  quality?: "fast" | "best";
   aspect_ratio?: string;
   image_path?: string;
 }
@@ -79,7 +73,7 @@ export default function (pi: ExtensionAPI): void {
     description:
       "Generate or edit an image via OpenRouter image generation API. " +
       "Provide a text prompt and optionally image_path to edit an existing image. " +
-      "Optional quality (fast/best) and aspect_ratio params. " +
+      "Optional aspect_ratio param. " +
       "Returns path + metadata to the agent.",
     parameters: GenerateImageParams,
 
@@ -93,11 +87,7 @@ export default function (pi: ExtensionAPI): void {
       _onUpdate: (update: any) => void,
       _ctx: any,
     ) {
-      const quality = params.quality || "fast";
-      const model =
-        quality === "best"
-          ? process.env.IMAGE_MODEL_BEST || DEFAULT_MODEL_BEST
-          : process.env.IMAGE_MODEL_FAST || DEFAULT_MODEL_FAST;
+      const model = process.env.IMAGE_MODEL || DEFAULT_MODEL;
 
       // ── Image editing path (image_path provided) ───────────────────────
       if (params.image_path) {
