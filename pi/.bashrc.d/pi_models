@@ -1,4 +1,4 @@
 #!/bin/bash
-export FALLBACK_MODEL="mistral/mistral-small-latest"
-export CHEAP_MODEL="openrouter/inception/mercury-2"
+export FALLBACK_MODEL="opencode-go/mimo-v2.5"
+export CHEAP_MODEL="opencode-go/deepseek-v4-flash"
 export SUBAGENT_MAX_RETRIES=3
