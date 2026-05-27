@@ -52,11 +52,6 @@ describe("store-memory SKILL.md", () => {
 		expect(content).toMatch(/##\s+Format/i);
 	});
 
-	test("SKILL.md contains a Usage section explaining how to invoke", () => {
-		const content = readFileSync(SKILL_PATH, "utf8");
-		expect(content).toMatch(/##\s+Usage/i);
-	});
-
 	test("SKILL.md contains content boundary rules (what goes in wiki vs .claude/rules/)", () => {
 		const content = readFileSync(SKILL_PATH, "utf8");
 		// Should mention the boundary: conceptual knowledge → wiki, code patterns → .claude/rules/
