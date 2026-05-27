@@ -1,6 +1,6 @@
 ---
 name: review-walk
-description: Interactive code review using the jj review strategy. Duplicates the change, creates a review commit, then walks through logical chunks with the user — flagging issues, discussing, and squashing approved pieces. Use when the user says "walk me through", "let's review together", "review interactively", or wants a collaborative review session.
+description: Interactive chunk-by-chunk code review using jj.
 ---
 
 # Review Walk (Interactive)

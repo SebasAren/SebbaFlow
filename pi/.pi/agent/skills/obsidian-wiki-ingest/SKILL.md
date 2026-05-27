@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-ingest
-description: Ingest sources into the personal wiki at ~/Documents/wiki/. Use when the user wants to add articles, videos, papers, notes, or URLs to the wiki. Invoke with /skill:obsidian-wiki-ingest or /skill:obsidian-wiki-ingest <path-or-url>.
+description: Ingest sources into the wiki.
 ---
 
 # Ingest Sources into the Wiki

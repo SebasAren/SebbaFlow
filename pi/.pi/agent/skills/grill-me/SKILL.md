@@ -1,11 +1,6 @@
 ---
 name: grill-me
-description: >
-  Adversarial design interview — probe the user's plan with relentless questions until both parties
-  share a clear mental model of what's being built. Use when the user says "grill me", asks you to
-  interview them about a plan, wants to stress-test an idea before implementation, or says they want
-  to clarify a feature before coding. Also use before large implementation tasks where the spec is
-  unclear or ambiguous.
+description: Adversarial design interview.
 ---
 
 # Grill Me

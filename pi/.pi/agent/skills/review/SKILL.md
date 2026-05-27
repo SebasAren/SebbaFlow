@@ -1,6 +1,6 @@
 ---
 name: review
-description: Read-only code review of jj changes. Analyze a bookmark, change ID, or range, categorize findings, and produce a formatted review — without touching the jj tree. Use when the user says "review", "review this change", "review main..feature", or wants a code review before merging.
+description: Read-only code review of jj changes.
 ---
 
 # Review (Read-Only)

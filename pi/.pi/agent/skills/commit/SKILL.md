@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Reflects on session findings, updates .claude/rules/ if needed, then commits using jj. Use when asked to commit, when the user says "commit", or after completing a set of changes.
+description: Reflect on session, update rules, commit with jj.
 ---
 
 # Commit with Reflection

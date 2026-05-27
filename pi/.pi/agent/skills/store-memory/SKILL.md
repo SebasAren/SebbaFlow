@@ -1,6 +1,6 @@
 ---
 name: store-memory
-description: Dump conceptual observations, insights, and patterns to the wiki inbox (~/Documents/wiki/raw/inbox/) as timestamped markdown files. The agent decides autonomously when to store. Use when you discover something worth persisting — an insight, a pattern, a design rationale, or a conceptual observation.
+description: Persist observations to wiki inbox.
 ---
 
 # Store Memory to Wiki

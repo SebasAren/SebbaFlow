@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-maintain
-description: Maintain the health of the personal wiki at ~/Documents/wiki/. Use for lint checks (contradictions, orphans, stale claims), wiki status reports, and structural maintenance. Invoke with /skill:obsidian-wiki-maintain <lint|status>.
+description: Wiki health checks.
 ---
 
 # Maintain the Wiki

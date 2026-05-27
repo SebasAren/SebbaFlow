@@ -1,6 +1,6 @@
 ---
 name: tdd-plan
-description: Plan and implement features using TDD (Red-Green-Refactor). Creates a structured plan, then executes it step-by-step. Use when asked to plan, design, or implement a feature with test-first methodology.
+description: Plan and implement features with TDD.
 ---
 
 # TDD Plan & Implement

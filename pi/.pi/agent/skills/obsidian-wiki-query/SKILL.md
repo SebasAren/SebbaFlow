@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-query
-description: Look up information in the personal wiki at ~/Documents/wiki/. Use when the user asks a question that the wiki might cover — AI models, agentic coding, spec-driven development, tooling, or any topic previously ingested. Also use with /skill:obsidian-wiki-query <question>.
+description: Query the personal wiki.
 ---
 
 # Query the Wiki
