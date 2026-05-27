@@ -23,7 +23,6 @@ Lazy resolution via Proton Pass CLI. API keys are **not** loaded on shell startu
 - `pass-cli` is wrapped: only `login`/`logout` subcommands allowed directly
 - `_ensure_secrets` resolves `~/.secrets.tpl` via `pass-cli inject` on first call
 - `nvim` and `pi` are wrapped to call `_ensure_secrets` before launching
-- `wt` calls `_ensure_secrets` in its own wrapper (in the `wt` file)
 
 Template format (`~/.secrets.tpl`):
 ```bash
