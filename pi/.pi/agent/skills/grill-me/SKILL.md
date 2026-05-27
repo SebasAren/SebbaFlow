@@ -10,124 +10,64 @@ description: >
 
 # Grill Me
 
-Interview the user relentlessly about their plan until both parties reach a shared understanding of what's being built. Based on Frederick Brooks' "design concept" — the ephemeral shared idea that floats between collaborators. The AI acts as adversary, not yes-man.
+Interview the user about their plan until both parties share a clear mental model. Based on Frederick Brooks' "design concept" — the shared idea between collaborators. Act as adversary, not yes-man.
 
-## When to Activate
+**Do NOT activate** for precise, well-scoped tasks with clear acceptance criteria. Grill-me is for alignment, not delaying obvious work.
 
-- User says "grill me", "interview me", "stress-test this idea"
-- User describes a feature/plan that is vague, underspecified, or has obvious gaps
-- Before starting a large implementation task where the spec is unclear
-- User asks "what questions should I answer before we start?"
-- Before TDD planning or design-artifact creation
+## Process
 
-**Do NOT activate when** the user gives a precise, well-scoped task with clear acceptance criteria. Grill-me is for *alignment*, not for delaying obvious work.
+### Phase 1: Classify
 
-**Primary domains:** coding tasks and wiki maintenance. Other domains work too, but these are the expected ones.
+Ask one question: _"Can you describe the end state — what does 'done' look like?"_
 
-## The Interview Process
-
-### Phase 1: Classify the task
-
-Ask **one** clarifying question to determine scope:
-
-> "Before we start, I want to make sure I understand what you're building. Can you describe the end state you have in mind — what does 'done' look like?"
-
-Based on the answer, classify the task:
-
-| Classification | Meaning | Next step |
-|----------------|---------|-----------|
-| **Trivial** | The user has a clear, simple goal | Skip grill-me, just do it |
-| **Moderate** | Some ambiguity but direction is clear | Ask 5–10 targeted questions |
-| **Complex** | Multiple decisions, dependencies, or unknowns | Full grill-me interview (20+ questions) |
-
-If trivial, say so and proceed. If moderate or complex, continue to Phase 2.
+| Classification | Response | Action |
+|----------------|----------|--------|
+| **Trivial** | Clear, simple goal | Skip grill-me, just do it |
+| **Moderate** | Some ambiguity | 5–10 targeted questions |
+| **Complex** | Multiple decisions, unknowns | Full interview (20+ questions) |
 
 ### Phase 2: Walk the design tree
 
-Systematically explore the plan by branching through decision nodes. For each area, ask probing questions that expose unknowns:
+Branch through decision nodes:
 
-**Scope questions:**
-- What's in scope? What's explicitly out of scope?
-- What's the minimum viable version? What would be nice-to-have?
-- Who are the users? What are their skill levels?
+- **Scope** — what's in/out? Minimum viable vs nice-to-have? Who are the users?
+- **Edge cases** — failure modes, error states, timeouts, concurrent access?
+- **Dependencies** — existing code, APIs, services, prerequisites?
+- **Trade-offs** — speed vs correctness, simplicity vs flexibility?
+- **Non-obvious constraints** — performance, security, offline requirements?
 
-**Edge cases:**
-- What happens when [thing] fails or returns unexpected data?
-- Are there error states, timeouts, or fallback behaviors to handle?
-- What about concurrent access, race conditions, or conflicting state?
-
-**Dependencies:**
-- What existing code/patterns must this work with?
-- Are there APIs, configs, or services this depends on?
-- What needs to happen first before this can work?
-
-**Trade-offs:**
-- Speed vs. correctness — how important is perfect behavior vs. good enough?
-- Simplicity vs. flexibility — should this handle future cases or just the current one?
-- Consistency vs. pragmatism — does this need to match existing patterns exactly?
-
-**Non-obvious constraints:**
-- Are there performance requirements (latency, throughput, memory)?
-- Are there security or access-control considerations?
-- Does this need to work offline, on slow connections, or with partial data?
+One question at a time. Let the user answer before following up.
 
 ### Phase 3: Play adversary
 
-For each answer, push back:
+Push back on each answer:
+- "Why that approach and not [alternative]?"
+- "What would break if we did it the simpler way?"
+- "Have you considered [edge case]?"
+- "How would you explain this to someone unfamiliar with the codebase?"
 
-- **"Why that approach and not [alternative]?"** — Challenge the user's first instinct
-- **"What would break if we did it the simpler way?"** — Test whether complexity is justified
-- **"Have you considered [edge case]?"** — Surface gaps neither party saw
-- **"How would you explain this to someone unfamiliar with the codebase?"** — Test clarity of the design concept
-
-If the user says "I don't know" or "I haven't thought about that" — that's a successful grill. Mark it as an **open question** and move on. Don't force answers; open questions are valuable output.
+"I don't know" = successful grill. Mark as **open question** and move on.
 
 ### Phase 4: Alignment summary + routing
 
-Once you've covered the design tree (or the user says they've had enough), produce an **alignment summary** — a shared understanding of what we're building, not a design artifact. The planning tool (tdd-plan or plan mode) handles the detailed *how*; grill-me establishes the *what* and *why*.
-
 ```markdown
-## Alignment: [Feature/Plan Name]
+## Alignment: [Feature Name]
 
 ### What we're building
-[1–2 sentences describing the agreed end state]
+[1–2 sentences]
 
 ### Key decisions resolved
 - [Decision]: [Resolution] — [rationale]
 
 ### Open questions
-- [ ] [Question that still needs an answer]
+- [ ] [Question]
 
 ### Recommended next step
-[Routed to `/skill:tdd-plan`, `/plan`, or "just do it" — see routing logic below]
+[Routing]
 ```
 
-Then route to the appropriate next step:
-
-| Routing | When | Next step |
-|---------|------|----------|
-| **TDD plan** | Task is well-scoped with clear pass/fail conditions, benefits from incremental steps with tests | `/skill:tdd-plan <description>` |
-| **Plan mode** | Task is exploratory, config-oriented, or doesn't have a natural test loop | `/plan` then explore in read-only mode |
-| **Just do it** | Alignment was the only blocker — the task is simple and understood | Proceed directly |
-
-A task that seemed like "just explore this" may have been **promoted** to TDD territory by the grilling process — the interview sharpened the spec enough that structured planning now makes sense. Say so explicitly: "Based on what we've aligned on, this is a good candidate for TDD."
-
-Ask the user to confirm the routing. If they disagree, adjust.
-
-## Guidelines
-
-- **Be relentless but not pedantic.** Ask meaningful questions that affect the design, not bikeshedding on naming.
-- **One question at a time.** Don't overwhelm with a wall of questions. Let the user answer, then follow up.
-- **Track resolved decisions.** Don't re-ask things the user already answered clearly.
-- **Respect "I don't know."** Open questions are fine output. Better to surface them now than discover them mid-implementation.
-- **Don't be a yes-man.** If the user's plan has flaws, say so. The whole point is adversarial alignment.
-- **Stop when aligned.** If it becomes clear the user has a solid plan after a few questions, produce the summary and route. Don't grill for grilling's sake.
-- **Grill-me produces alignment, not artifacts.** The output is a shared understanding and a routing decision. Design artifacts (current state, desired state, patterns) are produced by the planning tool — tdd-plan or plan mode — not by grill-me.
-
-## Usage
-
-```
-/skill:grill-me                          # Grill me about whatever I just described
-/skill:grill-me <topic>                  # Grill me about a specific topic
-/grill me about the auth refactor        # Natural language trigger
-```
+| Routing | When |
+|---------|------|
+| **TDD plan** | Well-scoped, clear pass/fail conditions | `→ /skill:tdd-plan <description>` |
+| **Plan mode** | Exploratory, config-oriented | `→ /plan` |
+| **Just do it** | Alignment was the only blocker | Proceed directly |
