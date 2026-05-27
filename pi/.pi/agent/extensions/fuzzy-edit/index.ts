@@ -30,15 +30,16 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "edit",
     label: "edit",
-    description: originalEdit.description,
+    description: [
+      "Edit a file using exact text replacement, with support for multiple disjoint edits in one call.",
+      "Each edits[].oldText is matched against the original file content, not after earlier edits are applied.",
+      "Do not emit overlapping or nested edits \u2014 merge nearby changes into one edit entry.",
+      "Keep edits[].oldText as small as possible while still being unique in the file \u2014 do not pad with large unchanged regions.",
+      "When changing multiple separate locations in one file, use one edit call with multiple entries in edits[].",
+    ].join(" "),
     parameters: editSchema,
     promptSnippet:
       "Make precise file edits with exact text replacement, including multiple disjoint edits in one call",
-    promptGuidelines: [
-      "When changing multiple separate locations in one file, use one edit call with multiple entries in edits[] instead of multiple edit calls",
-      "Each edits[].oldText is matched against the original file, not after earlier edits are applied. Do not emit overlapping or nested edits. Merge nearby changes into one edit.",
-      "Keep edits[].oldText as small as possible while still being unique in the file. Do not pad with large unchanged regions.",
-    ],
     prepareArguments,
 
     async execute(toolCallId, params, signal, onUpdate, ctx) {

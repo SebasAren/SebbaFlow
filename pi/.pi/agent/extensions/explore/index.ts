@@ -154,13 +154,10 @@ export default function (pi: ExtensionAPI) {
       "The explore agent is read-only — it cannot modify files.",
       "Configure the model via CHEAP_MODEL env var (e.g. 'xiaomi-mimo/mimo-v2-flash').",
       "You may call explore up to 4 times in parallel to investigate different aspects of the codebase simultaneously.",
+      "For large codebases, use a scout-then-deepen pattern: first explore with quick thoroughness to find relevant files, then call explore again with 'files' set to the discovered paths and thoroughness=thorough.",
     ].join(" "),
     promptSnippet:
       "Explore the codebase to find files, trace dependencies, or understand architecture",
-    promptGuidelines: [
-      "Call explore up to 4 times in parallel when investigating multiple independent aspects of the codebase (e.g. different modules, different concerns).",
-      "For large codebases, use a scout-then-deepen pattern: first explore with quick thoroughness to find relevant files, then call explore again with 'files' set to the discovered paths and thoroughness=thorough.",
-    ],
     parameters: ExploreParams,
 
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
