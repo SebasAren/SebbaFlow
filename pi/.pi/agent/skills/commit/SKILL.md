@@ -5,145 +5,65 @@ description: Reflects on session findings, updates .claude/rules/ if needed, the
 
 # Commit with Reflection
 
-Before committing, reflect on the session and persist any valuable findings. Then create a clean commit using jj.
+Reflect on the session, persist findings as rules if warranted, then commit with jj.
 
 ## Step 1: Reflect on Findings
 
-Review everything you did this session. A finding earns a rule only if it falls into one of two narrow categories:
+Review the session. A finding earns a rule only if it's:
 
-1. **External constraints not visible in code** — env vars, CI quirks, version gates, vendor API limits, system-binary requirements, undocumented SDK shapes.
-2. **Design decisions whose absence would invite churn** — conventions a future contributor would otherwise undo (e.g. "system prompt is declarative — no ALL CAPS register").
+1. **External constraints not visible in code** — env vars, CI quirks, version gates, undocumented SDK shapes
+2. **Design decisions whose absence would invite churn** — conventions a future contributor would undo
 
-**Derivability test**: if an agent could learn the finding by reading one file, it is *not* a rule. The code is already authoritative — duplicating it in `.claude/rules/` just creates a second source of truth that will rot.
+**Derivability test:** if an agent could learn it by reading one file, it's not a rule. Code is authoritative.
 
-If you found anything that clears the bar, present the findings to the user:
+If nothing notable found, skip to Step 4.
 
-> I found some notable findings this session:
-> - <list each finding as a bullet>
->
-> Would you like me to persist these as rules in `.claude/rules/` for future sessions?
->
-> - **Yes, save all**
-> - **Let me choose which ones**
-> - **No, skip**
-
-- If the user answers **yes** → continue to Step 2 with all findings.
-- If the user answers **pick** → present each finding as a numbered option so they can select which to keep.
-- If the user answers **no** → skip to Step 4.
-
-If **nothing notable** was found, skip directly to Step 4.
+Otherwise present findings to user: save all / pick / skip.
 
 ## Step 2: Update or Create Rules
 
-Persist findings in `.claude/rules/` so future sessions benefit from them.
-
-### Check Existing Rules First
-
-1. Read all files in `.claude/rules/` to see what's already covered
-2. Decide: does the finding belong in an **existing rule file** or does it need a **new one**?
-
-### Update Existing Rule
-
-If the finding fits an existing rule (e.g., a new Python convention goes in `python.md`), append it to that file's body. Do not duplicate what's already there.
-
-### Create New Rule
-
-If the finding is a new category, create a new `.claude/rules/<slug>.md` file:
+Read `.claude/rules/` first. Append to existing file or create new `<slug>.md`:
 
 ```markdown
 ---
-description: Short description of what this rule covers
+description: Short description
 ---
 
-- Finding 1: concise description
-- Finding 2: concise description
+- Finding 1
+- Finding 2
 ```
 
-For path-scoped rules (only relevant when touching certain files):
+For path-scoped rules, add `globs: ["pattern/**/*.ext"]`.
 
-```markdown
----
-globs:
-  - "pattern/**/*.ext"
-description: What this rule covers
----
+**Rules for rules:**
+- One topic per file, bullet points, specific not vague
+- Short rules (<300 bytes) merge into broader rules — avoid sprawl
+- Rules vs skills: passive gotchas → rules, action-oriented procedures → skills
+- File-specific notes → directory `AGENTS.md`, not global rules
+- **Prune as you go** — scan for stale entries when editing, delete in same commit
 
-- Finding 1: concise description
-```
+**What does NOT belong:** derivable implementation details, ephemeral fix recipes, anything already in AGENTS.md/README.md/CONVENTIONS.md, historical narrative.
 
-### Rules for Rules
-
-- **One topic per file** — don't lump unrelated findings together
-- **Keep it concise** — bullet points, not essays
-- **Be specific** — "Widget bars need `importlib` imports" not "imports can be tricky"
-- **Use `globs`** when findings only apply to specific file patterns
-- **No globs** when findings are general project knowledge
-- **Short rules are merge candidates** — Rules under ~300 bytes covering a single topic are better merged into a broader rule than kept as separate files. Avoid rule sprawl.
-- **Rules vs skills heuristic** — Passive gotchas/conventions → rules. Action-oriented procedures (CLI workflows, how-to guides) → skills. Test: "Is this a warning or a procedure?"
-- **File-specific notes go in AGENTS.md** — Detailed gotchas for specific files (e.g., performance constraints for 5 plugin files) belong in that directory's `AGENTS.md`, not as a global rule. Rules should be for cross-project patterns.
-
-### What does NOT belong as a rule
-
-- **Implementation details derivable from the code** — scoring weights, tier thresholds, what a regex captures, which fields a function reads. The code is the source of truth; rules duplicating it rot the moment the code changes.
-- **Ephemeral fix recipes** — "I changed X to Y to fix Z." The fix is in the diff; the rationale is in the commit message.
-- **Anything already in `AGENTS.md` / `README.md` / `CONVENTIONS.md`** — before adding a rule, grep these. A third copy is a third thing to keep in sync.
-- **Historical narrative** — "post-2025-04 redesign", "we used to do X". Rules describe the current invariant, not the journey.
-
-### Prune as you go
-
-Rules age out. When editing an existing rule file, scan it for entries that have decayed into implementation detail (the code now obviously expresses them) or contradict the current code, and delete them in the same commit. A pruned rule file is more valuable than a comprehensive one — every stale bullet costs context on every load.
-
-## Step 3: Run jj fix (auto-format and lint-fix)
-
-Run `jj fix` to auto-format and lint-fix all changed files before committing.
-This ensures code style is consistent and catches fixable lint issues early.
+## Step 3: Run jj fix
 
 ```bash
 jj fix
 ```
 
-If any fix tool reports errors (e.g., unfixable lint warnings), surface them to the user:
+If errors, surface them. Fix and re-run, or skip if user says so.
 
-> `jj fix` reported errors:
-> - <list each error as a bullet>
->
-> Would you like me to address these before committing?
+## Step 4: Commit
 
-If the user asks to fix them, address the errors and re-run `jj fix` until it passes.
-If the user says to skip, proceed to the next step.
-
-If `jj fix` succeeds silently (no errors), proceed to Step 4.
-
-## Step 4: Generate Commit Message and Commit with jj
-
-### Generate the commit message
-
-Generate a conventional commit message from the diff yourself (you are an LLM — don't shell out to another one). Read `jj diff` and produce a one-line message in `<type>(<scope>): <description>` format.
-
-### Fallback
-
-If the diff is empty, use `chore: update`. Otherwise generate the message as described above.
-
-### Commit
+Generate conventional commit message from `jj diff`. No shelling out to another LLM.
 
 ```bash
-jj commit -m "<generated message>"
+jj commit -m "<type>(<scope>): <description>"
 ```
 
-This moves working copy changes into the current revision with the generated message. A bash shell wrapper in `~/.bashrc.d/alias` intercepts `jj commit`/`jj ci` and runs the pre-commit hook from `.githooks/` (via `core.hooksPath`) first — see the `jj()` function there.
+The bash wrapper intercepts `jj commit`/`jj ci` to run pre-commit hooks.
 
-### Committing selectively
-
-If there are unrelated changes you don't want to commit together, use jj's splitting or partial commit:
-
+For selective commits:
 ```bash
-# Split specific files into a new change before committing
 jj split --paths <specific-files>
 jj commit -m "<message for selected files>"
-```
-
-## Usage
-
-```
-/commit                           # Reflect, update rules, then commit via jj
 ```
