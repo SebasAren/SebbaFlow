@@ -72,6 +72,4 @@ See `.claude/rules/global.md` for stow conventions (auto-injected on every sessi
 └── README.md                  # Human-facing setup guide
 ```
 
-## Pre-commit Checks
 
-Run `mise run pre-commit` before committing — it runs format, lint, typecheck, and tests via `.mise/tasks/pre-commit`. The version-controlled hook at `.githooks/pre-commit` invokes it via `core.hooksPath` (set by `mise run setup`). A shell wrapper in `bashrc/.bashrc.d/alias` intercepts `jj commit`/`jj ci` since jj has no native hook support.
