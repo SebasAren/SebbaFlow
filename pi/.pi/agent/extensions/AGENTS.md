@@ -20,7 +20,7 @@ pi/.pi/agent/extensions/
     └── integration.test.ts  # Load + register cycle
 ```
 
-## Tests (471 tests across 45 files)
+## Tests (689 tests across 57 files)
 
 - **Unit tests**: `*.test.ts` next to the source file (e.g., `fuzzy-edit/fuzzy-match.test.ts`).
 - **Integration tests**: one `integration.test.ts` per extension — verifies the extension loads, registers its tools/commands, and handles missing API keys gracefully.
@@ -35,13 +35,14 @@ pi/.pi/agent/extensions/
 bun install
 
 # Typecheck all workspaces
-for dir in */; do [ -f "$dir/tsconfig.json" ] && npx tsc --noEmit -p "$dir/tsconfig.json"; done
+# Typecheck all workspaces (parallel via mise)
+mise run typecheck
 
-# Run all tests
+# Run all tests (parallel)
 bun test --parallel
 
 # Lint
-npx eslint .
+bunx eslint .
 ```
 
 CI runs the same three steps on every push ([`.github/workflows/test.yml`](../../../../.github/workflows/test.yml)).

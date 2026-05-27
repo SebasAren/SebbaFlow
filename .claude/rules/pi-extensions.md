@@ -7,7 +7,7 @@ globs:
 
 ## Development Workflow
 
-- **Always typecheck before committing**: `cd pi/.pi/agent/extensions && for dir in */; do [ -f "$dir/tsconfig.json" ] && npx tsc --noEmit -p "$dir/tsconfig.json"; done`
+- **Always typecheck before committing**: `cd pi/.pi/agent/extensions && bunx tsc --noEmit -p "$dir/tsconfig.json"` for each project that has a `tsconfig.json`. Run via `mise run typecheck` (parallel execution).
 - **Always run tests before committing**: `cd pi/.pi/agent/extensions && bun test --parallel`
 - **TDD discipline**: Write failing test first (RED) → minimum fix (GREEN) → refactor → typecheck → commit.
 
