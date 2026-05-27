@@ -1,5 +1,7 @@
 # Ghostty Configuration
 
+⚠️ **Deprecated**: Ghostty has been replaced by [Kitty](../kitty/README.md) as the primary terminal. Kept for reference.
+
 Fast, native, GPU-accelerated terminal emulator. Replaces WezTerm for better Bluefin/Flatpak integration and native image rendering support inside tmux (pi coding agent).
 
 ## Install (Bluein / Fedora Atomic)
