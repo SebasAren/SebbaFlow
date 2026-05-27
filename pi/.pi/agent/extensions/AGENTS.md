@@ -46,6 +46,19 @@ npx eslint .
 
 CI runs the same three steps on every push ([`.github/workflows/test.yml`](../../../../.github/workflows/test.yml)).
 
+## Internal-Only Extensions
+
+**`exa-search`** and **`context7`** are internal-only: their tools only register when loaded by the librarian subagent, not by the main agent. This keeps raw search results out of the main agent's context window.
+
+- They use `PI_LIBRARIAN_LOAD` env var (set by librarian's session factory) to gate registration.
+- The librarian's `noExtensions: true` + `additionalExtensionPaths` loads them explicitly.
+- Tests verify both skip (no env var) and register (env var set) behavior.
+
+⚠️ When adding a new extension that should also be internal-only, follow the same pattern:
+  1. Guard the default export with `parseInt(process.env.PI_LIBRARIAN_LOAD || "0", 10) < 1`
+  2. Add the extension path to librarian's `additionalExtensionPaths` array
+  3. Write tests for both skipped and registered states
+
 ## Adding a New Extension
 
 1. Create `<name>/` with `index.ts`, `package.json`, `tsconfig.json` (extend `../tsconfig.base.json`).

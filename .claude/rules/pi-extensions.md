@@ -78,3 +78,15 @@ globs:
 5. Verify tests pass and types check
 
 > Explore pre-search architecture (synthetic documents, tier thresholds, index caching, reranker config) is fully documented in [`pi/.pi/README.md`](../../pi/.pi/README.md).
+
+## Internal-Only Extensions (Subagent Dependencies)
+
+**`exa-search`** and **`context7`** are internal-only extensions — their tools (`web_search`/`web_fetch`/`context7_search`/`context7_docs`) are registered only when loaded by the **librarian** subagent session, not by the main agent. This keeps raw search tool results out of the main agent's context window.
+
+**How it works:**
+1. Each extension checks `process.env.PI_LIBRARIAN_LOAD` at the top of its default export.
+2. If the env var is not set (main agent load), the extension returns early without registering anything.
+3. The librarian's session factory sets `PI_LIBRARIAN_LOAD` to a refcounted integer before calling `loader.reload()`, then unsets it in a `finally` block.
+4. The refcount supports concurrent librarian calls (up to 4 parallel).
+
+**What stays exposed to the main agent:** `wiki_search`, `wiki_read`, `explore`, `librarian`, and all non-external-source tools.

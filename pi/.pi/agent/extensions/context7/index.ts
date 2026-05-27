@@ -25,13 +25,14 @@ function getClient(): Context7 {
 }
 
 export default function (pi: ExtensionAPI) {
-  // Get API key from environment (captured at init for warning)
+  // Internal-only extension — only registers tools when loaded by the
+  // librarian subagent session (which sets PI_LIBRARIAN_LOAD).
+  // The main agent skips registration, keeping these tools out of its context.
+  if (parseInt(process.env.PI_LIBRARIAN_LOAD || "0", 10) < 1) return;
+
+  // Get API key from environment (captured at init for warning — but guard above
+  // skips this entirely for main agent, warning only fires in subagent context)
   const apiKey = process.env.CONTEXT7_API_KEY;
-  if (!apiKey) {
-    console.warn(
-      "[context7] CONTEXT7_API_KEY not set. Context7 tools will not work. Get your API key at context7.com/dashboard",
-    );
-  }
 
   // Tool 1: Search libraries
   pi.registerTool({
@@ -84,27 +85,6 @@ export default function (pi: ExtensionAPI) {
         state,
         theme,
       );
-    },
-  });
-
-  // Register a quick command for documentation lookup
-  pi.registerCommand("context7", {
-    description: "Quick Context7 documentation lookup (library query)",
-    handler: async (args, ctx) => {
-      if (!args) {
-        ctx.ui.notify("Usage: /context7 <library> <query>", "warning");
-        return;
-      }
-      const parts = args.split(/\s+/);
-      if (parts.length < 2) {
-        ctx.ui.notify("Usage: /context7 <library> <query>", "warning");
-        return;
-      }
-      const library = parts[0];
-      const query = parts.slice(1).join(" ");
-      pi.sendUserMessage(`Search Context7 for library "${library}" and get docs about: ${query}`, {
-        deliverAs: "followUp",
-      });
     },
   });
 }

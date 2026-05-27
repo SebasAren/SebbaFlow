@@ -14,13 +14,13 @@ import { WebFetchParams, executeWebFetch } from "./web-fetch";
 import { renderSearchCall, renderSearchResult, renderFetchCall, renderFetchResult } from "./render";
 
 export default function (pi: ExtensionAPI) {
+  // Internal-only extension — only registers tools when loaded by the
+  // librarian subagent session (which sets PI_LIBRARIAN_LOAD).
+  // The main agent skips registration, keeping these tools out of its context.
+  if (parseInt(process.env.PI_LIBRARIAN_LOAD || "0", 10) < 1) return;
+
   // Get API key from environment
   const apiKey = process.env.EXA_API_KEY;
-  if (!apiKey) {
-    console.warn(
-      "[exa-search] EXA_API_KEY not set. Web search tool will not work. Set it via: export EXA_API_KEY='your-key'",
-    );
-  }
 
   const exa = apiKey ? new Exa(apiKey) : null;
 
@@ -86,18 +86,6 @@ export default function (pi: ExtensionAPI) {
         state,
         theme,
       );
-    },
-  });
-
-  // Register a quick search command
-  pi.registerCommand("search", {
-    description: "Quick web search using Exa",
-    handler: async (args, ctx) => {
-      if (!args) {
-        ctx.ui.notify("Usage: /search <query>", "warning");
-        return;
-      }
-      pi.sendUserMessage(`Search the web for: ${args}`, { deliverAs: "followUp" });
     },
   });
 }

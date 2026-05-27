@@ -85,7 +85,23 @@ async function createLibrarianSession(
       path.join(extensionsDir, "wiki-read"),
     ],
   });
-  await loader.reload();
+
+  // Signal to internal-only extensions (exa-search, context7) that they
+  // are being loaded in a librarian subagent context and should register
+  // their tools. Uses a refcount to support concurrent librarian calls.
+  const prev = process.env.PI_LIBRARIAN_LOAD;
+  const depth = parseInt(prev || "0", 10);
+  process.env.PI_LIBRARIAN_LOAD = String(depth + 1);
+  try {
+    await loader.reload();
+  } finally {
+    const newDepth = parseInt(process.env.PI_LIBRARIAN_LOAD || "0", 10);
+    if (newDepth <= 1) {
+      delete process.env.PI_LIBRARIAN_LOAD;
+    } else {
+      process.env.PI_LIBRARIAN_LOAD = String(newDepth - 1);
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const model = resolveModel(modelName);

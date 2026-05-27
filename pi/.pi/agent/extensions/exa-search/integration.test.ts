@@ -16,9 +16,11 @@ import exaSearchExtension from "./index";
 
 describe("exa-search extension", () => {
   const origKey = process.env.EXA_API_KEY;
+  const origLibrarian = process.env.PI_LIBRARIAN_LOAD;
 
   it("can be loaded without errors", () => {
     delete process.env.EXA_API_KEY;
+    delete process.env.PI_LIBRARIAN_LOAD;
     const mockApi = {
       registerTool: mock(() => {}),
       registerCommand: mock(() => {}),
@@ -26,36 +28,43 @@ describe("exa-search extension", () => {
     expect(() => exaSearchExtension(mockApi as any)).not.toThrow();
   });
 
-  it("registers two tools (web_search and web_fetch)", () => {
-    delete process.env.EXA_API_KEY;
+  it("skips registration when not in librarian context (PI_LIBRARIAN_LOAD not set)", () => {
+    delete process.env.PI_LIBRARIAN_LOAD;
     const registeredTools: any[] = [];
-    const mockApi = {
-      registerTool: (tool: any) => registeredTools.push(tool),
-      registerCommand: mock(() => {}),
-    };
-    exaSearchExtension(mockApi as any);
-    expect(registeredTools).toHaveLength(2);
-    expect(registeredTools[0].name).toBe("web_search");
-    expect(registeredTools[1].name).toBe("web_fetch");
-  });
-
-  it("registers a command named 'search'", () => {
-    delete process.env.EXA_API_KEY;
     const registeredCommands: { name: string; command: any }[] = [];
     const mockApi = {
-      registerTool: mock(() => {}),
+      registerTool: (tool: any) => registeredTools.push(tool),
       registerCommand: (name: string, command: any) => {
         registeredCommands.push({ name, command });
       },
     };
     exaSearchExtension(mockApi as any);
-    expect(registeredCommands).toHaveLength(1);
-    expect(registeredCommands[0].name).toBe("search");
-    expect(registeredCommands[0].command.description).toBeDefined();
+    expect(registeredTools).toHaveLength(0);
+    expect(registeredCommands).toHaveLength(0);
+  });
+
+  it("registers two tools (web_search and web_fetch) when in librarian context", () => {
+    process.env.PI_LIBRARIAN_LOAD = "1";
+    const registeredTools: any[] = [];
+    const registeredCommands: { name: string; command: any }[] = [];
+    const mockApi = {
+      registerTool: (tool: any) => registeredTools.push(tool),
+      registerCommand: (name: string, command: any) => {
+        registeredCommands.push({ name, command });
+      },
+    };
+    exaSearchExtension(mockApi as any);
+    delete process.env.PI_LIBRARIAN_LOAD;
+    expect(registeredTools).toHaveLength(2);
+    expect(registeredTools[0].name).toBe("web_search");
+    expect(registeredTools[1].name).toBe("web_fetch");
+    expect(registeredCommands).toHaveLength(0);
   });
 
   afterAll(() => {
     if (origKey !== undefined) process.env.EXA_API_KEY = origKey;
     else delete process.env.EXA_API_KEY;
+    if (origLibrarian !== undefined) process.env.PI_LIBRARIAN_LOAD = origLibrarian;
+    else delete process.env.PI_LIBRARIAN_LOAD;
   });
 });

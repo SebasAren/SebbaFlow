@@ -17,9 +17,11 @@ import context7Extension from "./index";
 
 describe("context7 extension", () => {
   const origKey = process.env.CONTEXT7_API_KEY;
+  const origLibrarian = process.env.PI_LIBRARIAN_LOAD;
 
   it("can be loaded without errors", () => {
     delete process.env.CONTEXT7_API_KEY;
+    delete process.env.PI_LIBRARIAN_LOAD;
     const mockApi = {
       registerTool: mock(() => {}),
       registerCommand: mock(() => {}),
@@ -27,36 +29,43 @@ describe("context7 extension", () => {
     expect(() => context7Extension(mockApi as any)).not.toThrow();
   });
 
-  it("registers two tools (context7_search and context7_docs)", () => {
-    delete process.env.CONTEXT7_API_KEY;
+  it("skips registration when not in librarian context (PI_LIBRARIAN_LOAD not set)", () => {
+    delete process.env.PI_LIBRARIAN_LOAD;
     const registeredTools: any[] = [];
-    const mockApi = {
-      registerTool: (tool: any) => registeredTools.push(tool),
-      registerCommand: mock(() => {}),
-    };
-    context7Extension(mockApi as any);
-    expect(registeredTools).toHaveLength(2);
-    expect(registeredTools[0].name).toBe("context7_search");
-    expect(registeredTools[1].name).toBe("context7_docs");
-  });
-
-  it("registers a command named 'context7'", () => {
-    delete process.env.CONTEXT7_API_KEY;
     const registeredCommands: { name: string; command: any }[] = [];
     const mockApi = {
-      registerTool: mock(() => {}),
+      registerTool: (tool: any) => registeredTools.push(tool),
       registerCommand: (name: string, command: any) => {
         registeredCommands.push({ name, command });
       },
     };
     context7Extension(mockApi as any);
-    expect(registeredCommands).toHaveLength(1);
-    expect(registeredCommands[0].name).toBe("context7");
+    expect(registeredTools).toHaveLength(0);
+    expect(registeredCommands).toHaveLength(0);
   });
 
-  // Restore API key
+  it("registers two tools (context7_search and context7_docs) when in librarian context", () => {
+    process.env.PI_LIBRARIAN_LOAD = "1";
+    const registeredTools: any[] = [];
+    const registeredCommands: { name: string; command: any }[] = [];
+    const mockApi = {
+      registerTool: (tool: any) => registeredTools.push(tool),
+      registerCommand: (name: string, command: any) => {
+        registeredCommands.push({ name, command });
+      },
+    };
+    context7Extension(mockApi as any);
+    delete process.env.PI_LIBRARIAN_LOAD;
+    expect(registeredTools).toHaveLength(2);
+    expect(registeredTools[0].name).toBe("context7_search");
+    expect(registeredTools[1].name).toBe("context7_docs");
+    expect(registeredCommands).toHaveLength(0);
+  });
+
   afterAll(() => {
     if (origKey !== undefined) process.env.CONTEXT7_API_KEY = origKey;
     else delete process.env.CONTEXT7_API_KEY;
+    if (origLibrarian !== undefined) process.env.PI_LIBRARIAN_LOAD = origLibrarian;
+    else delete process.env.PI_LIBRARIAN_LOAD;
   });
 });
