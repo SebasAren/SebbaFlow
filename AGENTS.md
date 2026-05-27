@@ -63,7 +63,7 @@ Tool directories may have an `AGENTS.md` (path-scoped agent instructions) or a `
 | Pi extension docs | `pi/.pi/README.md` |
 | explore tool (local codebase) | Codebase reconnaissance — files, dependencies, architecture |
 | librarian tool (external docs) | Documentation research — web, library docs, personal wiki |
-| Tests | `pi/.pi/agent/extensions/**/*.test.ts`, `pi/.local/bin/tdd-plan.test.ts`, `obsidian/.local/lib/wiki-search/wiki-search.test.ts` |
+| Tests | `pi/.pi/agent/extensions/**/*.test.ts`, `pi/.local/bin/tdd-plan.test.ts`, `pi/.local/bin/store-memory*.test.ts`, `obsidian/.local/lib/wiki-search/wiki-search.test.ts`, `obsidian/.local/lib/wiki-core/`, `obsidian/.local/lib/issue/` |
 | CI | `.github/workflows/test.yml` |
 | Homebrew packages | `homebrew/Brewfile` |
 | brew-sync CLI | `homebrew/.local/bin/brew-sync` |
