@@ -184,6 +184,12 @@ export default function (pi: ExtensionAPI) {
       "You may call librarian up to 4 times in parallel to research different topics simultaneously.",
     ].join(" "),
     promptSnippet: "Research external documentation using web search and Context7",
+    promptGuidelines: [
+      "Use librarian when you need information external to the codebase: library APIs, package docs, best practices, usage examples, or web resources.",
+      "Call librarian up to 4 times in parallel to research different topics or libraries simultaneously.",
+      "When looking up a specific library or framework, provide the 'library' parameter to scope the search.",
+      "Use 'focus' to narrow results: docs, examples, api, best-practices, or changelog.",
+    ],
     parameters: LibrarianParams,
 
     async execute(_toolCallId, params, signal, onUpdate, ctx) {

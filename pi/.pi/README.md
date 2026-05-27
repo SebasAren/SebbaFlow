@@ -116,6 +116,87 @@ explore(query="authentication flow", thoroughness="thorough", files=["auth/handl
 
 ---
 
+## Librarian Subagent — Deep Dive
+
+The librarian extension provides external documentation research by spawning a subagent with access to three distinct sources. It keeps raw search results out of the main agent's context window — the subagent consumes them internally and returns only a synthesized answer.
+
+### How It Works
+
+```
+User query  (e.g. "how do I use TanStack Query's optimistic updates?")
+  │
+  ├─► Web Search (Exa)
+  │     Searches the web for relevant pages, documentation, and tutorials.
+  │     Returns: search results with titles, URLs, and snippets.
+  │
+  ├─► Library Docs (Context7)
+  │     Queries curated library documentation for API references, examples,
+  │     changelogs, and migration guides. Can target a specific library.
+  │     Returns: structured documentation chunks.
+  │
+  ├─► Personal Wiki (Obsidian)
+  │     Searches and reads from ~/Documents/wiki/ for curated notes,
+  │     past research, and personal knowledge artifacts.
+  │     Returns: wiki page content.
+  │
+  └─► Subagent  (tools: web_search, web_fetch, context7_search, context7_docs, wiki_search, wiki_read)
+        Synthesizes findings from all three sources into a coherent answer.
+        Configured with context-appropriate budgets (60 calls / 240s timeout).
+        Structured output: Sources / Findings / Summary.
+```
+
+### Source Selection
+
+| Source | When it's used | Example queries |
+|--------|---------------|-----------------|
+| Web Search | General web research, tutorials, blog posts | "react server components best practices" |
+| Library Docs | Specific API lookups, migration guides | "next.js 14 config options" |
+| Personal Wiki | Known topics previously ingested | "our team's coding conventions" |
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Subagent synthesizes, not parent | Raw search results are verbose and context-heavy. The subagent consumes them and returns only the relevant synthesized answer. |
+| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its six required extensions explicitly. |
+| Internal-only extensions | `exa-search` and `context7` register their tools only when loaded by the librarian subagent, using `PI_LIBRARIAN_LOAD` env var gating. See [Internal-Only Extensions docs](extensions/AGENTS.md#internal-only-extensions). |
+| Budget tailored to source mix | 60 max tool calls / 240s timeout — conservatively sized for chaining searches across multiple sources. |
+
+### Usage Patterns
+
+```bash
+# Parallel research across different libraries
+librarian(query="Lucide icon sizing and customization")
+librarian(query="Tailwind CSS v4 container queries")
+librarian(query="Framer Motion page transitions")
+
+# Targeted library lookup
+librarian(query="useCallback vs useMemo", library="react")
+
+# Focused search
+librarian(query="TanStack Query optimistic updates", focus="examples")
+librarian(query="Next.js 15 upgrade guide", focus="changelog")
+
+# Wiki-backed research (library: known, from wiki)
+librarian(query="deployment pipeline", library="our-monorepo")
+```
+
+---
+
+## When to Use Which: explore vs librarian
+
+| Scenario | Tool | Why |
+|----------|------|-----|
+| Find files, trace dependencies, understand local architecture | **explore** | Has file index, syntax-aware reranking, reads local source. |
+| Look up an API, library docs, or best practices | **librarian** | Has web search, library docs, and wiki access. |
+| Check if an existing implementation exists in the repo | **explore** | Searches actual source files and symbols. |
+| Research how to use a package or framework | **librarian** | Searches docs, examples, and tutorials online. |
+| Scout a large codebase before editing | **explore** | Scout-then-deepen pattern with `thoroughness="quick"`. |
+| Consult personal / previously ingested knowledge | **librarian** | Has wiki_search/wiki_read under the hood. |
+| Need both local context and external docs | **both** | Call explore + librarian in parallel for independent concerns. |
+
+---
+
 ## Architecture
 
 ### Shared Subagent Runner

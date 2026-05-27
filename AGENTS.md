@@ -61,6 +61,8 @@ Tool directories may have an `AGENTS.md` (path-scoped agent instructions) or a `
 | Quality watchers | `pitchfork.toml` — use `/skill:pitchfork` to check live status |
 | Pi extensions | `pi/.pi/agent/extensions/` (see its `AGENTS.md`) |
 | Pi extension docs | `pi/.pi/README.md` |
+| explore tool (local codebase) | Codebase reconnaissance — files, dependencies, architecture |
+| librarian tool (external docs) | Documentation research — web, library docs, personal wiki |
 | Tests | `pi/.pi/agent/extensions/**/*.test.ts`, `pi/.local/bin/tdd-plan.test.ts`, `obsidian/.local/lib/wiki-search/wiki-search.test.ts` |
 | CI | `.github/workflows/test.yml` |
 | Homebrew packages | `homebrew/Brewfile` |
