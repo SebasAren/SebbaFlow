@@ -5,54 +5,44 @@ description: Look up information in the personal wiki at ~/Documents/wiki/. Use 
 
 # Query the Wiki
 
-Answer questions from the wiki at `~/Documents/wiki/`. The wiki is a general-purpose, LLM-maintained knowledge base. All domains are welcome — not just AI/LLM topics.
+Answer questions from the wiki at `~/Documents/wiki/`. All domains welcome.
 
 ## Search Algorithm
 
-Follow these steps in order. Stop when you have enough to answer.
+Stop when you have enough to answer.
 
-### Step 1 — Full-text search
-
-If the index didn't surface the right pages, search page content:
+### Step 1 — wiki_search
 
 ```
 wiki_search:0 {"query": "<keywords>", "top": 5}
 ```
 
-The tool returns:
-- `content[0].text` — preview snippets (ripgrep context around keyword matches). BM25 results show surrounding lines; semantic results may have sparse or empty context.
-- `details.paths` — full file paths like `/home/<user>/Documents/wiki/wiki/entities/humanlayer.md`.
+Returns `content[0].text` (snippets) and `details.paths` (full paths). Snippets are match context, not summaries — `read` the full files.
 
-**Use snippets to triage, then read full files.** The snippets are match context, not document summaries. Semantic hits especially may lack useful preview text. `read` the files at `details.paths` for complete content.
+Try multiple search terms with wiki-specific terminology (e.g., "agent swarm" not "multi-agent AI").
 
-For manual control via `bash`:
+Manual fallback:
 ```bash
-rg -il "<keyword>" ~/Documents/wiki/wiki/          # list matching files
-rg -i -C 2 "<phrase>" ~/Documents/wiki/wiki/       # context around matches
+rg -il "<keyword>" ~/Documents/wiki/wiki/
+rg -i -C 2 "<phrase>" ~/Documents/wiki/wiki/
 ```
-
-Try multiple search terms — the wiki uses specific terminology (e.g., "agent swarm" not "multi-agent AI", "spec-driven development" not "requirements engineering").
 
 ### Step 2 — Follow wiki links
 
-Pages use `[[wiki-link]]` cross-references. When a matching page links to related pages that are also relevant, read those too. This is the "multi-hop" — the wiki's link graph often surfaces context the initial search missed.
+Pages use `[[wiki-link]]` cross-references. Read linked pages — the link graph surfaces context the initial search missed.
 
 ### Step 3 — Synthesize
 
-Synthesize the answer with `[[wiki links]]` citations. If the answer is valuable (comparison, analysis, discovery), ask the user whether to save it as `wiki/analysis/<slug>.md`.
+Answer with `[[wiki links]]` citations. If valuable, ask user about saving to `wiki/analysis/<slug>.md`.
 
-## Wiki Page Types
+## Page Types
 
 | Directory | Content |
 |-----------|---------|
-| `wiki/concepts/` | Topic pages — definitions, properties, comparisons |
-| `wiki/entities/` | People, orgs, tools, models — concrete things |
-| `wiki/sources/` | Source summaries — what was ingested and key takeaways |
-| `wiki/synthesis/` | High-level overviews spanning multiple sources |
-| `wiki/analysis/` | Filed-back answers, comparisons, explorations |
+| `wiki/concepts/` | Definitions, properties, comparisons |
+| `wiki/entities/` | People, orgs, tools, models |
+| `wiki/sources/` | Source summaries |
+| `wiki/synthesis/` | High-level overviews spanning sources |
+| `wiki/analysis/` | Filed-back answers, comparisons |
 
-## Tips
-
-- Use `wiki_search` for all discovery — it handles both keyword and semantic matching.
-- The synthesis pages (`wiki/synthesis/`) are the broadest — check them for overviews.
-- If you find nothing relevant, say so. Don't fabricate wiki content.
+If nothing relevant found, say so. Don't fabricate.
