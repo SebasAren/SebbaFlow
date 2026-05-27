@@ -1,14 +1,10 @@
 ---
 name: knowledge-audit
 description: >
-  Review the staleness and usefulness of any agent-facing knowledge in the repo:
-  rule files (`.claude/rules/`), AGENTS.md (at any depth), CONVENTIONS.md, README.md,
-  and domain docs if present. Use this skill whenever the user wants to audit, clean
-  up, or prune their knowledge base: "audit rules", "audit docs", "audit knowledge",
-  "review rules for staleness", "clean up the rules", "are any docs outdated?",
-  "prune old knowledge", "check if rules are still relevant", "knowledge audit",
-  or any variation. Also trigger when the user says they're confused by a rule/doc
-  that seems wrong — use that as the starting point for a broader audit.
+  Review agent-facing knowledge (rules, AGENTS.md, CONVENTIONS.md, README.md,
+  domain docs) for staleness and accuracy. Use when the user asks to audit, clean,
+  or prune knowledge. Also use when they're confused by a rule/doc that seems wrong
+  — treat that as the starting point for a broader audit.
 ---
 
 # Knowledge Audit
@@ -25,12 +21,12 @@ Audit every agent-facing knowledge file in the repo for staleness, accuracy, and
 
 When the user triggers this skill, determine scope:
 
-| User says                                              | Scope                                          |
-| ------------------------------------------------------ | ---------------------------------------------- |
-| "audit rules", "check rules", "review rules"           | `.claude/rules/` only                          |
-| "audit docs", "check docs", "review docs"              | `docs/**` and `*.md` reference docs only       |
-| "audit AGENTS", "audit conventions"                    | Just the named file(s)                         |
-| "audit knowledge", "audit everything", "full audit"    | All knowledge files (default for ambiguous)    |
+| User says                                           | Scope                                       |
+| --------------------------------------------------- | ------------------------------------------- |
+| "audit rules", "check rules", "review rules"        | `.claude/rules/` only                       |
+| "audit docs", "check docs", "review docs"           | `docs/**` and `*.md` reference docs only    |
+| "audit AGENTS", "audit conventions"                 | Just the named file(s)                      |
+| "audit knowledge", "audit everything", "full audit" | All knowledge files (default for ambiguous) |
 
 When in doubt prefer the full audit — partial scopes miss cross-file contradictions, which is where most rot lives.
 
@@ -161,14 +157,14 @@ Rule files load into context on every matching session — every bullet must ear
 - **Is this a design decision whose absence would invite churn?** (e.g. "system prompt is declarative — no ALL CAPS register") → keep.
 - **Is this just a snapshot of current implementation?** (scoring weights, regex captures, which fields a function reads) → cut. The code is the source of truth.
 
-This is the same bar the commit skill applies when *adding* rules — apply it in reverse to existing bullets.
+This is the same bar the commit skill applies when _adding_ rules — apply it in reverse to existing bullets.
 
 ## Execution Guidelines
 
 - **Be thorough but fair.** Don't flag minor style differences as contradictions. Focus on substantive accuracy issues.
 - **Verify before flagging.** Before calling something a contradiction, actually check the code. Don't guess.
 - **Cite evidence.** When flagging an issue, cite the specific line in the rule/doc AND the actual code that contradicts it.
-- **Respect file roles.** Rules (`.claude/rules/`) are auto-injected and pay context cost on every load — apply the derivability bar. AGENTS.md is the agent-facing index/overview. CONVENTIONS.md is the per-language source of truth. README.md is human-facing setup. Docs (`docs/domain/`) are deep reference. Each role implies what *should* live there and what shouldn't.
+- **Respect file roles.** Rules (`.claude/rules/`) are auto-injected and pay context cost on every load — apply the derivability bar. AGENTS.md is the agent-facing index/overview. CONVENTIONS.md is the per-language source of truth. README.md is human-facing setup. Docs (`docs/domain/`) are deep reference. Each role implies what _should_ live there and what shouldn't.
 - **Check cross-references.** Rules often say "read `docs/domain/X.md` before implementing." Verify those docs exist and are current.
 - **Batch reads.** When reading multiple files, do it in parallel — don't read one at a time unnecessarily.
 - **Synthesize across files, don't just summarize per file.** A bullet that's stale in one file is often stale in two more. The topical pass in Step 3 is where systemic rot becomes visible.
