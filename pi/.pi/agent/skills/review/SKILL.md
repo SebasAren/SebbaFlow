@@ -5,95 +5,55 @@ description: Read-only code review of jj changes. Analyze a bookmark, change ID,
 
 # Review (Read-Only)
 
-Analyze jj changes and produce categorized findings — no tree manipulation, no brain commits, no side effects.
-
-## When to Activate
-
-- User says "review this", "review <bookmark>", "review <change-id>"
-- `/skill:review <arg>` — accepts:
-  - A jj bookmark name: `main`, `feature-branch`
-  - A change ID (partial or full): `nx`, `kowqznzo`
-  - A range: `abc::def`, `main..feature`
-- User wants a code review of any local or remote change
+Analyze jj changes and produce categorized findings. No tree manipulation, no side effects.
 
 **Do NOT activate** for trivial changes (< 5 files, < 50 lines) — just review inline.
 
-## Prerequisites
-
-- `jj` must be installed and the repo must be a jj repo
-
 ## Workflow
 
-### Step 1: Resolve the target
-
-Accept any of these formats and resolve to a diff:
+### Step 1: Resolve target
 
 ```bash
-# Bookmark — diff against its parent or merge base
-jj diff -r 'bookmark'
-
-# Change ID
-jj diff -r 'change-id'
-
-# Range — combined diff
-jj diff --from 'A' --to 'B'
-```
-
-Also read the commit description(s):
-
-```bash
-jj log -r 'bookmark' -T 'description' --no-graph
-jj log -r 'change-id' -T 'description' --no-graph
+jj diff -r 'bookmark'                # bookmark
+jj diff -r 'change-id'               # change ID
+jj diff --from 'A' --to 'B'          # range
+jj log -r 'target' -T 'description' --no-graph
 ```
 
 ### Step 2: Read the diff
 
 ```bash
-jj diff --stat          # overview
-jj diff                 # full diff
+jj diff --stat
+jj diff
 ```
 
 ### Step 3: Review file by file
 
-For each file in the diff, read the full file using the `read` tool for context. Do NOT review from the diff alone.
+Read full files with `read` tool — do NOT review from diffs alone.
 
-For each finding, classify:
+Classify each finding:
 
 | Category | Emoji | Meaning |
 |----------|-------|---------|
-| **Must fix** | 🔴 | Bug, security issue, broken logic, will cause failure |
-| **Suggestion** | 🟡 | Better approach, missing edge case, improvement opportunity |
-| **Nit** | 🟢 | Style, naming, minor cleanup — discretionary |
+| **Must fix** | 🔴 | Bug, security issue, broken logic |
+| **Suggestion** | 🟡 | Better approach, missing edge case |
+| **Nit** | 🟢 | Style, naming, minor cleanup |
 
-For each finding, note:
-- **File and line range**
-- **What the issue is**
-- **Why it matters** (one sentence)
-- **Suggested fix** (concrete, not vague)
+For each: file/line range, what, why (one sentence), concrete fix.
 
-### Step 4: Produce the review
+### Step 4: Produce review
 
-#### Determine the verdict
-
-| Verdict | When |
-|---------|------|
-| **Request Changes** | Any 🔴 findings |
-| **Comment** | Only 🟡 findings, no 🔴 |
-| **Approve** | Only 🟢 findings, or no findings at all |
-
-#### Format
+**Verdict:** Request Changes (any 🔴) | Comment (only 🟡) | Approve (only 🟢 or none)
 
 ```markdown
 ## Review: <change description>
 
 **Verdict:** Request Changes / Comment / Approve
-
-**Summary:** <1–2 sentence overview of what this change does and your assessment>
+**Summary:** <1–2 sentence overview>
 
 ---
 
 ### 🔴 Must Fix
-
 **`file.ts:42–55`** — <what>
 <why it matters>
 ```suggestion
@@ -101,12 +61,9 @@ For each finding, note:
 ```
 
 ### 🟡 Suggestions
-
 **`file.ts:88`** — <what>
-<suggested alternative>
 
 ### 🟢 Nits
-
 **`file.ts:12`** — <what>
 
 ---
@@ -114,19 +71,11 @@ For each finding, note:
 **Files reviewed:** <count>/<total>
 ```
 
-## Guidelines
-
-- **Read full files, not just diffs.** Context matters. A diff can look correct but be broken in context.
-- **Be thorough but not pedantic.** Focus on correctness, edge cases, and maintainability. Don't bikeshed on naming unless it's genuinely confusing.
-- **Categorize honestly.** Not everything is 🔴. If it works but could be better, that's 🟡. If it's just style, that's 🟢.
-- **Give concrete suggestions.** "Consider a different approach" is useless. Show the code.
-- **Respect "I just want to approve this."** If the user wants a quick pass, do a quick pass. Don't force a deep review on a trivial change.
-
 ## Usage
 
 ```
-/skill:review                            # Review current change
-/skill:review main                       # Review bookmark against parent
-/skill:review kowqznzo                   # Review specific change
-/skill:review abc::def                   # Review range of commits
+/skill:review                            # current change
+/skill:review main                       # bookmark
+/skill:review kowqznzo                   # change ID
+/skill:review abc::def                   # range
 ```
