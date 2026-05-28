@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pi Usage Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        background: #0f1117;
+        color: #e1e4e8;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: #f0f6fc;
+      }
+      .subtitle {
+        color: #8b949e;
+        margin-bottom: 2rem;
+        font-size: 0.9rem;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      .card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 1.25rem;
+      }
+      .card .label {
+        color: #8b949e;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+      }
+      .card .value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #f0f6fc;
+      }
+      .card .sub {
+        font-size: 0.8rem;
+        color: #8b949e;
+        margin-top: 0.25rem;
+      }
+      .charts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .chart-box {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 1.25rem;
+      }
+      .chart-box h2 {
+        font-size: 1rem;
+        color: #c9d1d9;
+        margin-bottom: 1rem;
+        font-weight: 600;
+      }
+      .chart-box canvas {
+        width: 100% !important;
+      }
+      .full-width {
+        grid-column: 1 / -1;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+      th {
+        text-align: left;
+        color: #8b949e;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #30363d;
+        font-weight: 500;
+      }
+      td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #21262d;
+      }
+      tr:hover td {
+        background: #1c2128;
+      }
+      .mono {
+        font-family: "SF Mono", "Cascadia Code", monospace;
+        font-size: 0.8rem;
+      }
+      .cost {
+        color: #f0883e;
+      }
+      .refresh {
+        background: #238636;
+        color: white;
+        border: none;
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      .refresh:hover {
+        background: #2ea043;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      @media (max-width: 900px) {
+        .charts {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>⚡ Pi Usage Dashboard</h1>
+        <div class="subtitle" id="subtitle">Loading…</div>
+      </div>
+      <button class="refresh" onclick="load()">↻ Refresh</button>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="charts">
+      <div class="chart-box full-width">
+        <h2>Daily Cost</h2>
+        <canvas id="chart-daily-cost"></canvas>
+      </div>
+      <div class="chart-box full-width">
+        <h2>Daily Tokens by Model</h2>
+        <canvas id="chart-daily-tokens"></canvas>
+      </div>
+      <div class="chart-box">
+        <h2>Cost by Model</h2>
+        <canvas id="chart-model-cost"></canvas>
+      </div>
+      <div class="chart-box">
+        <h2>Token Distribution</h2>
+        <canvas id="chart-token-dist"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-box" style="margin-bottom: 2rem">
+      <h2>Model Breakdown</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Turns</th>
+            <th>Input</th>
+            <th>Output</th>
+            <th>Cache Read</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody id="model-table"></tbody>
+      </table>
+    </div>
+
+    <div class="chart-box">
+      <h2>Recent Turns</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Model</th>
+            <th>Input</th>
+            <th>Output</th>
+            <th>Cache</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody id="recent-table"></tbody>
+      </table>
+    </div>
+
+    <script>
+      const COLORS = [
+        "#58a6ff",
+        "#f0883e",
+        "#3fb950",
+        "#bc8cff",
+        "#f778ba",
+        "#79c0ff",
+        "#ffa657",
+        "#56d364",
+      ];
+      const TOKEN_FMT = (n) =>
+        n >= 1_000_000
+          ? (n / 1_000_000).toFixed(1) + "M"
+          : n >= 1000
+            ? (n / 1000).toFixed(1) + "k"
+            : n;
+      const COST_FMT = (n) =>
+        n >= 0.01 ? "$" + n.toFixed(4) : "$" + n.toFixed(6);
+
+      const charts = {};
+
+      async function load() {
+        const resp = await fetch("/api/usage");
+        const entries = await resp.json();
+        if (!entries.length) {
+          document.getElementById("subtitle").textContent = "No data yet";
+          return;
+        }
+        render(entries);
+      }
+
+      function render(entries) {
+        // --- Aggregate ---
+        const totalCost = entries.reduce((s, e) => s + e.cost, 0);
+        const totalInput = entries.reduce((s, e) => s + e.input, 0);
+        const totalOutput = entries.reduce((s, e) => s + e.output, 0);
+        const totalCacheRead = entries.reduce((s, e) => s + e.cacheRead, 0);
+        const models = [...new Set(entries.map((e) => e.model))];
+        const projects = [...new Set(entries.map((e) => e.project))];
+        const days = [
+          ...new Set(
+            entries.map((e) => new Date(e.ts).toISOString().slice(0, 10)),
+          ),
+        ].sort();
+
+        document.getElementById("subtitle").textContent =
+          `${entries.length} turns across ${days.length} day${days.length > 1 ? "s" : ""} · ${models.length} model${models.length > 1 ? "s" : ""} · ${projects.length} project${projects.length > 1 ? "s" : ""}`;
+
+        // --- Summary cards ---
+        document.getElementById("cards").innerHTML = `
+    <div class="card"><div class="label">Total Cost</div><div class="value cost">${COST_FMT(totalCost)}</div></div>
+    <div class="card"><div class="label">Total Turns</div><div class="value">${entries.length}</div><div class="sub">~${(entries.length / days.length).toFixed(0)}/day</div></div>
+    <div class="card"><div class="label">Total Tokens</div><div class="value">${TOKEN_FMT(totalInput + totalOutput + totalCacheRead)}</div><div class="sub">${TOKEN_FMT(totalInput)} in · ${TOKEN_FMT(totalOutput)} out</div></div>
+    <div class="card"><div class="label">Avg Cost/Turn</div><div class="value">${COST_FMT(totalCost / entries.length)}</div></div>
+  `;
+
+        // --- Model table ---
+        const modelAgg = {};
+        for (const e of entries) {
+          if (!modelAgg[e.model])
+            modelAgg[e.model] = {
+              turns: 0,
+              input: 0,
+              output: 0,
+              cacheRead: 0,
+              cost: 0,
+            };
+          const m = modelAgg[e.model];
+          m.turns++;
+          m.input += e.input;
+          m.output += e.output;
+          m.cacheRead += e.cacheRead;
+          m.cost += e.cost;
+        }
+        document.getElementById("model-table").innerHTML = Object.entries(
+          modelAgg,
+        )
+          .sort((a, b) => b[1].cost - a[1].cost)
+          .map(
+            ([model, d]) => `<tr>
+      <td><strong>${model}</strong></td>
+      <td class="mono">${d.turns}</td>
+      <td class="mono">${TOKEN_FMT(d.input)}</td>
+      <td class="mono">${TOKEN_FMT(d.output)}</td>
+      <td class="mono">${TOKEN_FMT(d.cacheRead)}</td>
+      <td class="mono cost">${COST_FMT(d.cost)}</td>
+    </tr>`,
+          )
+          .join("");
+
+        // --- Recent turns ---
+        document.getElementById("recent-table").innerHTML = entries
+          .slice(-30)
+          .reverse()
+          .map(
+            (e) => `<tr>
+    <td class="mono">${new Date(e.ts).toLocaleTimeString()}</td>
+    <td>${e.model}</td>
+    <td class="mono">${TOKEN_FMT(e.input)}</td>
+    <td class="mono">${TOKEN_FMT(e.output)}</td>
+    <td class="mono">${TOKEN_FMT(e.cacheRead)}</td>
+    <td class="mono cost">${COST_FMT(e.cost)}</td>
+  </tr>`,
+          )
+          .join("");
+
+        // --- Chart defaults ---
+        Chart.defaults.color = "#8b949e";
+        Chart.defaults.borderColor = "#21262d";
+        Chart.defaults.font.family =
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+        Chart.defaults.font.size = 12;
+
+        // --- Daily cost chart ---
+        const dailyCost = {};
+        for (const e of entries) {
+          const day = new Date(e.ts).toISOString().slice(0, 10);
+          dailyCost[day] = (dailyCost[day] || 0) + e.cost;
+        }
+        const sortedDays = Object.keys(dailyCost).sort();
+        makeChart(
+          "chart-daily-cost",
+          "bar",
+          {
+            labels: sortedDays,
+            datasets: [
+              {
+                label: "Cost ($)",
+                data: sortedDays.map((d) => dailyCost[d]),
+                backgroundColor: "#f0883e",
+                borderRadius: 4,
+              },
+            ],
+          },
+          { plugins: { legend: { display: false } } },
+        );
+
+        // --- Daily tokens by model (stacked bar) ---
+        const dailyModelTokens = {};
+        for (const e of entries) {
+          const day = new Date(e.ts).toISOString().slice(0, 10);
+          if (!dailyModelTokens[day]) dailyModelTokens[day] = {};
+          dailyModelTokens[day][e.model] =
+            (dailyModelTokens[day][e.model] || 0) + e.input + e.output;
+        }
+        const tokenDays = Object.keys(dailyModelTokens).sort();
+        makeChart(
+          "chart-daily-tokens",
+          "bar",
+          {
+            labels: tokenDays,
+            datasets: models.map((model, i) => ({
+              label: model,
+              data: tokenDays.map((d) => dailyModelTokens[d]?.[model] || 0),
+              backgroundColor: COLORS[i % COLORS.length],
+              borderRadius: 2,
+            })),
+          },
+          { scales: { x: { stacked: true }, y: { stacked: true } } },
+        );
+
+        // --- Cost by model (doughnut) ---
+        const modelCosts = models.map((m) => modelAgg[m]?.cost || 0);
+        makeChart(
+          "chart-model-cost",
+          "doughnut",
+          {
+            labels: models,
+            datasets: [
+              {
+                data: modelCosts,
+                backgroundColor: COLORS.slice(0, models.length),
+              },
+            ],
+          },
+          { plugins: { legend: { position: "right" } } },
+        );
+
+        // --- Token distribution (pie) ---
+        makeChart(
+          "chart-token-dist",
+          "pie",
+          {
+            labels: ["Input", "Output", "Cache Read"],
+            datasets: [
+              {
+                data: [totalInput, totalOutput, totalCacheRead],
+                backgroundColor: ["#58a6ff", "#3fb950", "#bc8cff"],
+              },
+            ],
+          },
+          { plugins: { legend: { position: "right" } } },
+        );
+      }
+
+      function makeChart(canvasId, type, data, extraOpts = {}) {
+        if (charts[canvasId]) charts[canvasId].destroy();
+        charts[canvasId] = new Chart(document.getElementById(canvasId), {
+          type,
+          data,
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            ...extraOpts,
+          },
+        });
+      }
+
+      load();
+    </script>
+  </body>
+</html>

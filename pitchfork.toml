@@ -33,11 +33,7 @@ watch = ["nvim/.config/nvim/**/*.lua"]
 
 [daemons.lint-shell]
 run = "bash -c 'shellcheck -e SC1090 -e SC1091 -e SC2155 -e SC2162 -e SC2054 bashrc/.bashrc.d/alias bashrc/.bashrc.d/secrets .githooks/pre-commit .mise/tasks/* && echo ✓ lint-shell passed'"
-watch = [
-    "bashrc/.bashrc.d/*",
-    ".githooks/*",
-    ".mise/tasks/*",
-]
+watch = ["bashrc/.bashrc.d/*", ".githooks/*", ".mise/tasks/*"]
 
 # --- Type checking (re-run on change) ---
 
@@ -45,6 +41,14 @@ watch = [
 run = "bash -c 'for dir in */; do [ -f \"$dir/tsconfig.json\" ] && echo \"=== $dir ===\" && bunx tsc --noEmit -p \"$dir/tsconfig.json\"; done && echo ✓ typecheck passed'"
 dir = "pi/.pi/agent/extensions"
 watch = ["**/*.ts"]
+
+# --- Dashboard server (long-running) ---
+
+[daemons.usage-dash]
+run = "bun run usage-dashboard/server.ts"
+port = { expect = [4813] }
+ready_output = "usage-dashboard"
+boot_start = true
 
 # --- Format check (re-run on change) ---
 # All paths kept relative to project root (no ../../) to avoid widening
@@ -55,7 +59,7 @@ watch = ["**/*.ts"]
 run = "bash -c 'prettier --check \"pi/.pi/agent/extensions/**/*.{ts,tsx}\" 2>/dev/null; stylua --check nvim/.config/nvim/ 2>/dev/null; ruff format --check . 2>/dev/null; echo ✓ format-check passed'"
 dir = "."
 watch = [
-    "pi/.pi/agent/extensions/**/*.ts",
-    "nvim/.config/nvim/**/*.lua",
-    "**/*.py",
+  "pi/.pi/agent/extensions/**/*.ts",
+  "nvim/.config/nvim/**/*.lua",
+  "**/*.py",
 ]
