@@ -110,7 +110,7 @@ export default function (pi: ExtensionAPI) {
         const finalContent = hasCRLF ? modified.replace(/\n/g, "\r\n") : modified;
         await writeFile(absolutePath, finalContent, "utf-8");
 
-        const diffResult = generateDiff(normalizedContent, modified);
+        const diffResult = generateDiff(normalizedContent, modified, editPath);
         return {
           content: [
             {
@@ -123,6 +123,7 @@ export default function (pi: ExtensionAPI) {
           details: {
             diff: diffResult.diff,
             firstChangedLine: diffResult.firstChangedLine,
+            patch: diffResult.patch,
           } satisfies EditToolDetails,
         };
       });

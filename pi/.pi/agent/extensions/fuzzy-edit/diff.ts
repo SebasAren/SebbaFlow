@@ -12,7 +12,8 @@ import * as Diff from "diff";
 export function generateDiff(
   oldContent: string,
   newContent: string,
-): { diff: string; firstChangedLine?: number } {
+  path: string = "file",
+): { diff: string; firstChangedLine?: number; patch: string } {
   const maxLineNum = Math.max(oldContent.split("\n").length, newContent.split("\n").length);
   const width = String(maxLineNum).length;
   const parts = Diff.diffLines(oldContent, newContent);
@@ -107,5 +108,6 @@ export function generateDiff(
     }
   }
 
-  return { diff: output.join("\n"), firstChangedLine };
+  const patch = Diff.createPatch(path, oldContent, newContent);
+  return { diff: output.join("\n"), firstChangedLine, patch };
 }
