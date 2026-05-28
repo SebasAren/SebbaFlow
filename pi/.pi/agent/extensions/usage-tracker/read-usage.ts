@@ -35,9 +35,15 @@ export function readUsageEntries(filePath: string, options: ReadUsageOptions = {
   for (const line of content.split("\n")) {
     if (!line.trim()) continue;
     try {
-      const parsed = JSON.parse(line);
+      const parsed: unknown = JSON.parse(line);
       // Runtime validation — skip structurally invalid entries
-      if (typeof parsed.ts !== "number" || typeof parsed.model !== "string") continue;
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        typeof (parsed as Record<string, unknown>).ts !== "number" ||
+        typeof (parsed as Record<string, unknown>).model !== "string"
+      )
+        continue;
       const entry = parsed as UsageEntry;
 
       if (options.since !== undefined && entry.ts < options.since) continue;

@@ -48,8 +48,8 @@ export function createExtension(deps: ExtensionDeps) {
     pi.on("turn_end", (event: TurnEndEvent) => {
       const msg = event.message;
       if (msg.role === "assistant") {
-        // AgentMessage doesn't expose usage/model — cast to access runtime fields
-        const entry = deps.parseUsageEntry(msg as any, process.cwd());
+        // AgentMessage at runtime has usage/model on the assistant branch
+        const entry = deps.parseUsageEntry(msg, process.cwd());
         deps.appendUsageEntry(entry, deps.usagePath);
       }
     });
