@@ -25,12 +25,70 @@
       }
       .subtitle {
         color: #8b949e;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
         font-size: 0.9rem;
       }
+
+      /* Filters */
+      .filters {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .range-btns {
+        display: flex;
+        gap: 0;
+      }
+      .range-btns button {
+        background: #21262d;
+        color: #8b949e;
+        border: 1px solid #30363d;
+        padding: 0.4rem 0.85rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .range-btns button:not(:first-child) {
+        border-left: none;
+      }
+      .range-btns button:first-child {
+        border-radius: 6px 0 0 6px;
+      }
+      .range-btns button:last-child {
+        border-radius: 0 6px 6px 0;
+      }
+      .range-btns button:hover {
+        background: #30363d;
+        color: #c9d1d9;
+      }
+      .range-btns button.active {
+        background: #238636;
+        color: #fff;
+        border-color: #238636;
+      }
+      .range-btns button.active + button {
+        border-left-color: #238636;
+      }
+      select.filter-select {
+        background: #21262d;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      select.filter-select:focus {
+        outline: none;
+        border-color: #58a6ff;
+      }
+
+      /* Cards */
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
         margin-bottom: 2rem;
       }
@@ -57,6 +115,12 @@
         color: #8b949e;
         margin-top: 0.25rem;
       }
+      .card.hero .value {
+        font-size: 2.25rem;
+        color: #58a6ff;
+      }
+
+      /* Charts */
       .charts {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -81,6 +145,8 @@
       .full-width {
         grid-column: 1 / -1;
       }
+
+      /* Tables */
       table {
         width: 100%;
         border-collapse: collapse;
@@ -107,17 +173,29 @@
       .cost {
         color: #f0883e;
       }
-      .refresh {
-        background: #238636;
-        color: white;
+
+      /* Buttons */
+      .btn {
         border: none;
         padding: 0.4rem 1rem;
         border-radius: 6px;
         cursor: pointer;
         font-size: 0.8rem;
+        transition: background 0.15s;
       }
-      .refresh:hover {
+      .btn-refresh {
+        background: #238636;
+        color: white;
+      }
+      .btn-refresh:hover {
         background: #2ea043;
+      }
+      .btn-export {
+        background: #1f6feb;
+        color: white;
+      }
+      .btn-export:hover {
+        background: #388bfd;
       }
       .header {
         display: flex;
@@ -125,6 +203,29 @@
         align-items: center;
         margin-bottom: 0.5rem;
       }
+      .header-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      /* Toast */
+      .toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: #238636;
+        color: #fff;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+
       @media (max-width: 900px) {
         .charts {
           grid-template-columns: 1fr;
@@ -138,7 +239,26 @@
         <h1>⚡ Pi Usage Dashboard</h1>
         <div class="subtitle" id="subtitle">Loading…</div>
       </div>
-      <button class="refresh" onclick="load()">↻ Refresh</button>
+      <div class="header-actions">
+        <button class="btn btn-export" onclick="exportMarkdown()">
+          📋 Export MD
+        </button>
+        <button class="btn btn-refresh" onclick="load()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="range-btns" id="range-btns">
+        <button data-range="5h">5h</button>
+        <button data-range="1d">1d</button>
+        <button data-range="7d">7d</button>
+        <button data-range="30d">30d</button>
+        <button data-range="all" class="active">All</button>
+      </div>
+      <select class="filter-select" id="project-filter">
+        <option value="all">All Projects</option>
+      </select>
     </div>
 
     <div class="cards" id="cards"></div>
@@ -147,6 +267,10 @@
       <div class="chart-box full-width">
         <h2>Daily Cost</h2>
         <canvas id="chart-daily-cost"></canvas>
+      </div>
+      <div class="chart-box full-width">
+        <h2>Cost Trend (7-day moving avg)</h2>
+        <canvas id="chart-cost-trend"></canvas>
       </div>
       <div class="chart-box full-width">
         <h2>Daily Tokens by Model</h2>
@@ -173,6 +297,10 @@
             <th>Output</th>
             <th>Cache Read</th>
             <th>Cost</th>
+            <th>Cost/1k tok</th>
+            <th>Avg tok/turn</th>
+            <th>Out/In</th>
+            <th>Cache %</th>
           </tr>
         </thead>
         <tbody id="model-table"></tbody>
@@ -185,6 +313,7 @@
         <thead>
           <tr>
             <th>Time</th>
+            <th>Project</th>
             <th>Model</th>
             <th>Input</th>
             <th>Output</th>
@@ -195,6 +324,8 @@
         <tbody id="recent-table"></tbody>
       </table>
     </div>
+
+    <div class="toast" id="toast">Copied to clipboard!</div>
 
     <script>
       const COLORS = [
@@ -212,48 +343,120 @@
           ? (n / 1_000_000).toFixed(1) + "M"
           : n >= 1000
             ? (n / 1000).toFixed(1) + "k"
-            : n;
+            : String(n);
       const COST_FMT = (n) =>
         n >= 0.01 ? "$" + n.toFixed(4) : "$" + n.toFixed(6);
+      const PCT_FMT = (n) => (n * 100).toFixed(1) + "%";
 
       const charts = {};
+      let allEntries = [];
+      let activeRange = "all";
+      let activeProject = "all";
 
+      // --- Filters ---
+      function getFiltered() {
+        let entries = allEntries;
+        if (activeProject !== "all") {
+          entries = entries.filter((e) => e.project === activeProject);
+        }
+        if (activeRange !== "all") {
+          const ms = {
+            "5h": 5 * 3600000,
+            "1d": 86400000,
+            "7d": 7 * 86400000,
+            "30d": 30 * 86400000,
+          };
+          const cutoff = Date.now() - ms[activeRange];
+          entries = entries.filter((e) => e.ts >= cutoff);
+        }
+        return entries;
+      }
+
+      document.getElementById("range-btns").addEventListener("click", (ev) => {
+        if (ev.target.tagName !== "BUTTON") return;
+        document
+          .querySelectorAll("#range-btns button")
+          .forEach((b) => b.classList.remove("active"));
+        ev.target.classList.add("active");
+        activeRange = ev.target.dataset.range;
+        render(getFiltered());
+      });
+
+      document
+        .getElementById("project-filter")
+        .addEventListener("change", (ev) => {
+          activeProject = ev.target.value;
+          render(getFiltered());
+        });
+
+      // --- Data loading ---
       async function load() {
         const resp = await fetch("/api/usage");
-        const entries = await resp.json();
-        if (!entries.length) {
+        allEntries = await resp.json();
+        if (!allEntries.length) {
           document.getElementById("subtitle").textContent = "No data yet";
           return;
         }
-        render(entries);
+        // Populate project dropdown
+        const projects = [...new Set(allEntries.map((e) => e.project))].sort();
+        const sel = document.getElementById("project-filter");
+        const prev = sel.value;
+        sel.innerHTML =
+          '<option value="all">All Projects</option>' +
+          projects
+            .map((p) => `<option value="${p}">${shortProject(p)}</option>`)
+            .join("");
+        sel.value = projects.includes(prev) ? prev : "all";
+        activeProject = sel.value;
+        render(getFiltered());
       }
 
+      function shortProject(p) {
+        return p.split("/").pop() || p;
+      }
+
+      // --- Render ---
       function render(entries) {
-        // --- Aggregate ---
+        if (!entries.length) {
+          document.getElementById("subtitle").textContent = "No data in range";
+          document.getElementById("cards").innerHTML = "";
+          return;
+        }
+
         const totalCost = entries.reduce((s, e) => s + e.cost, 0);
         const totalInput = entries.reduce((s, e) => s + e.input, 0);
         const totalOutput = entries.reduce((s, e) => s + e.output, 0);
         const totalCacheRead = entries.reduce((s, e) => s + e.cacheRead, 0);
+        const totalTokens = totalInput + totalOutput + totalCacheRead;
         const models = [...new Set(entries.map((e) => e.model))];
-        const projects = [...new Set(entries.map((e) => e.project))];
         const days = [
           ...new Set(
             entries.map((e) => new Date(e.ts).toISOString().slice(0, 10)),
           ),
         ].sort();
 
+        const costPer1k =
+          totalTokens > 0 ? (totalCost / totalTokens) * 1000 : 0;
+        const avgTokensPerTurn = totalTokens / entries.length;
+        const outInRatio = totalInput > 0 ? totalOutput / totalInput : 0;
+        const turnsPerDay = entries.length / Math.max(days.length, 1);
+        const cacheHitRate = totalTokens > 0 ? totalCacheRead / totalTokens : 0;
+
         document.getElementById("subtitle").textContent =
-          `${entries.length} turns across ${days.length} day${days.length > 1 ? "s" : ""} · ${models.length} model${models.length > 1 ? "s" : ""} · ${projects.length} project${projects.length > 1 ? "s" : ""}`;
+          `${entries.length} turns across ${days.length} day${days.length > 1 ? "s" : ""} · ${models.length} model${models.length > 1 ? "s" : ""}`;
 
         // --- Summary cards ---
         document.getElementById("cards").innerHTML = `
-    <div class="card"><div class="label">Total Cost</div><div class="value cost">${COST_FMT(totalCost)}</div></div>
-    <div class="card"><div class="label">Total Turns</div><div class="value">${entries.length}</div><div class="sub">~${(entries.length / days.length).toFixed(0)}/day</div></div>
-    <div class="card"><div class="label">Total Tokens</div><div class="value">${TOKEN_FMT(totalInput + totalOutput + totalCacheRead)}</div><div class="sub">${TOKEN_FMT(totalInput)} in · ${TOKEN_FMT(totalOutput)} out</div></div>
-    <div class="card"><div class="label">Avg Cost/Turn</div><div class="value">${COST_FMT(totalCost / entries.length)}</div></div>
-  `;
+          <div class="card hero"><div class="label">Total Tokens</div><div class="value">${TOKEN_FMT(totalTokens)}</div><div class="sub">${TOKEN_FMT(totalInput)} in · ${TOKEN_FMT(totalOutput)} out · ${TOKEN_FMT(totalCacheRead)} cache</div></div>
+          <div class="card"><div class="label">Total Cost</div><div class="value cost">${COST_FMT(totalCost)}</div></div>
+          <div class="card"><div class="label">Total Turns</div><div class="value">${entries.length}</div><div class="sub">~${turnsPerDay.toFixed(0)}/day</div></div>
+          <div class="card"><div class="label">Cost / 1k Tokens</div><div class="value">${COST_FMT(costPer1k)}</div></div>
+          <div class="card"><div class="label">Avg Tokens / Turn</div><div class="value">${TOKEN_FMT(avgTokensPerTurn)}</div></div>
+          <div class="card"><div class="label">Output / Input</div><div class="value">${outInRatio.toFixed(2)}</div></div>
+          <div class="card"><div class="label">Cache Hit Rate</div><div class="value">${PCT_FMT(cacheHitRate)}</div></div>
+        `;
 
-        // --- Model table ---
+        // --- Model aggregates ---
         const modelAgg = {};
         for (const e of entries) {
           if (!modelAgg[e.model])
@@ -271,35 +474,47 @@
           m.cacheRead += e.cacheRead;
           m.cost += e.cost;
         }
+
+        // --- Model table ---
         document.getElementById("model-table").innerHTML = Object.entries(
           modelAgg,
         )
           .sort((a, b) => b[1].cost - a[1].cost)
-          .map(
-            ([model, d]) => `<tr>
-      <td><strong>${model}</strong></td>
-      <td class="mono">${d.turns}</td>
-      <td class="mono">${TOKEN_FMT(d.input)}</td>
-      <td class="mono">${TOKEN_FMT(d.output)}</td>
-      <td class="mono">${TOKEN_FMT(d.cacheRead)}</td>
-      <td class="mono cost">${COST_FMT(d.cost)}</td>
-    </tr>`,
-          )
+          .map(([model, d]) => {
+            const tok = d.input + d.output + d.cacheRead;
+            const costPer1k = tok > 0 ? (d.cost / tok) * 1000 : 0;
+            const avgTok = d.turns > 0 ? tok / d.turns : 0;
+            const outIn = d.input > 0 ? d.output / d.input : 0;
+            const cachePct = tok > 0 ? d.cacheRead / tok : 0;
+            return `<tr>
+              <td><strong>${model}</strong></td>
+              <td class="mono">${d.turns}</td>
+              <td class="mono">${TOKEN_FMT(d.input)}</td>
+              <td class="mono">${TOKEN_FMT(d.output)}</td>
+              <td class="mono">${TOKEN_FMT(d.cacheRead)}</td>
+              <td class="mono cost">${COST_FMT(d.cost)}</td>
+              <td class="mono">${COST_FMT(costPer1k)}</td>
+              <td class="mono">${TOKEN_FMT(avgTok)}</td>
+              <td class="mono">${outIn.toFixed(2)}</td>
+              <td class="mono">${PCT_FMT(cachePct)}</td>
+            </tr>`;
+          })
           .join("");
 
         // --- Recent turns ---
         document.getElementById("recent-table").innerHTML = entries
-          .slice(-30)
+          .slice(-50)
           .reverse()
           .map(
             (e) => `<tr>
-    <td class="mono">${new Date(e.ts).toLocaleTimeString()}</td>
-    <td>${e.model}</td>
-    <td class="mono">${TOKEN_FMT(e.input)}</td>
-    <td class="mono">${TOKEN_FMT(e.output)}</td>
-    <td class="mono">${TOKEN_FMT(e.cacheRead)}</td>
-    <td class="mono cost">${COST_FMT(e.cost)}</td>
-  </tr>`,
+              <td class="mono">${new Date(e.ts).toLocaleTimeString()}</td>
+              <td>${shortProject(e.project)}</td>
+              <td>${e.model}</td>
+              <td class="mono">${TOKEN_FMT(e.input)}</td>
+              <td class="mono">${TOKEN_FMT(e.output)}</td>
+              <td class="mono">${TOKEN_FMT(e.cacheRead)}</td>
+              <td class="mono cost">${COST_FMT(e.cost)}</td>
+            </tr>`,
           )
           .join("");
 
@@ -334,6 +549,35 @@
           { plugins: { legend: { display: false } } },
         );
 
+        // --- Cost trend (7-day moving avg) ---
+        const movingAvg = [];
+        const window = 7;
+        for (let i = 0; i < sortedDays.length; i++) {
+          const slice = sortedDays.slice(Math.max(0, i - window + 1), i + 1);
+          const avg =
+            slice.reduce((s, d) => s + dailyCost[d], 0) / slice.length;
+          movingAvg.push(avg);
+        }
+        makeChart(
+          "chart-cost-trend",
+          "line",
+          {
+            labels: sortedDays,
+            datasets: [
+              {
+                label: "7-day avg ($)",
+                data: movingAvg,
+                borderColor: "#f778ba",
+                backgroundColor: "rgba(247,120,186,0.1)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2,
+              },
+            ],
+          },
+          { plugins: { legend: { display: false } } },
+        );
+
         // --- Daily tokens by model (stacked bar) ---
         const dailyModelTokens = {};
         for (const e of entries) {
@@ -359,7 +603,6 @@
         );
 
         // --- Cost by model (doughnut) ---
-        const modelCosts = models.map((m) => modelAgg[m]?.cost || 0);
         makeChart(
           "chart-model-cost",
           "doughnut",
@@ -367,7 +610,7 @@
             labels: models,
             datasets: [
               {
-                data: modelCosts,
+                data: models.map((m) => modelAgg[m]?.cost || 0),
                 backgroundColor: COLORS.slice(0, models.length),
               },
             ],
@@ -403,6 +646,70 @@
             ...extraOpts,
           },
         });
+      }
+
+      // --- Export ---
+      function exportMarkdown() {
+        const entries = getFiltered();
+        if (!entries.length) return;
+
+        const totalCost = entries.reduce((s, e) => s + e.cost, 0);
+        const totalInput = entries.reduce((s, e) => s + e.input, 0);
+        const totalOutput = entries.reduce((s, e) => s + e.output, 0);
+        const totalCacheRead = entries.reduce((s, e) => s + e.cacheRead, 0);
+        const totalTokens = totalInput + totalOutput + totalCacheRead;
+        const days = [
+          ...new Set(
+            entries.map((e) => new Date(e.ts).toISOString().slice(0, 10)),
+          ),
+        ];
+        const rangeLabel = activeRange === "all" ? "All time" : activeRange;
+
+        const modelAgg = {};
+        for (const e of entries) {
+          if (!modelAgg[e.model])
+            modelAgg[e.model] = {
+              turns: 0,
+              input: 0,
+              output: 0,
+              cacheRead: 0,
+              cost: 0,
+            };
+          const m = modelAgg[e.model];
+          m.turns++;
+          m.input += e.input;
+          m.output += e.output;
+          m.cacheRead += e.cacheRead;
+          m.cost += e.cost;
+        }
+
+        let md = `## Pi Usage Stats (${rangeLabel})\n\n`;
+        md += `| Metric | Value |\n|---|---|\n`;
+        md += `| Total Tokens | ${TOKEN_FMT(totalTokens)} |\n`;
+        md += `| Total Cost | ${COST_FMT(totalCost)} |\n`;
+        md += `| Turns | ${entries.length} (${(entries.length / Math.max(days.length, 1)).toFixed(0)}/day) |\n`;
+        md += `| Cost / 1k tokens | ${COST_FMT(totalTokens > 0 ? (totalCost / totalTokens) * 1000 : 0)} |\n`;
+        md += `| Cache hit rate | ${PCT_FMT(totalTokens > 0 ? totalCacheRead / totalTokens : 0)} |\n\n`;
+
+        md += `### By Model\n\n`;
+        md += `| Model | Turns | Tokens | Cost | Cost/1k tok | Out/In |\n|---|---|---|---|---|---|\n`;
+        for (const [model, d] of Object.entries(modelAgg).sort(
+          (a, b) => b[1].cost - a[1].cost,
+        )) {
+          const tok = d.input + d.output + d.cacheRead;
+          md += `| ${model} | ${d.turns} | ${TOKEN_FMT(tok)} | ${COST_FMT(d.cost)} | ${COST_FMT(tok > 0 ? (d.cost / tok) * 1000 : 0)} | ${(d.input > 0 ? d.output / d.input : 0).toFixed(2)} |\n`;
+        }
+
+        navigator.clipboard
+          .writeText(md)
+          .then(() => showToast("Copied to clipboard!"));
+      }
+
+      function showToast(msg) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2000);
       }
 
       load();
