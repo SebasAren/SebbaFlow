@@ -1,0 +1,17 @@
+{
+  "name": "@pi-ext/usage-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "dependencies": {
+    "@pi-ext/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.3 || ^0.76.0"
+  }
+}

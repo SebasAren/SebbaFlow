@@ -1,0 +1,171 @@
+{
+  "title": "Token Usage Tracker Extension",
+  "slug": "token-usage",
+  "context": "",
+  "architecture": "",
+  "created": "2026-05-28T19:50:46.325Z",
+  "updated": "2026-05-28T20:10:15.227Z",
+  "steps": [
+    {
+      "index": 1,
+      "name": "Scaffold extension structure",
+      "red": {
+        "description": "none",
+        "status": "done"
+      },
+      "green": {
+        "description": "Create usage-tracker/ with index.ts, package.json, tsconfig.json. Verify bun install && tsc --noEmit passes.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 2,
+      "name": "Unit: parseUsageEntry extracts usage from turn_end message",
+      "red": {
+        "description": "Write test for parseUsageEntry that takes a turn_end message (with model/usage fields cast as SdkTurnEndMessage) and returns {ts, project, model, input, output, cacheRead, cacheWrite, cost}. Test with full usage, partial usage (missing fields default to 0), and missing model (defaults to unknown).",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement parseUsageEntry(message, cwd) that extracts usage from message.usage and message.model, returns UsageEntry with Date.now() timestamp.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 3,
+      "name": "Unit: appendEntry writes JSONL to file",
+      "red": {
+        "description": "Write test for appendUsageEntry(entry, filePath) that appends a JSON line to a file. Mock fs.appendFileSync. Verify it creates parent dir if missing, appends JSON + newline, and handles write errors gracefully.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement appendUsageEntry using appendFileSync, with mkdirSync for parent dir. Catch and log errors (do not crash on write failure).",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 4,
+      "name": "Unit: readEntries filters by time range and project",
+      "red": {
+        "description": "Write test for readUsageEntries(filePath, {since, project}). Mock fs.readFileSync returning JSONL string. Test: no filter returns all, time filter excludes old entries, project filter matches cwd prefix, combined filters, malformed lines are skipped.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement readUsageEntries that reads file, parses each line, filters by since (Date comparison) and project (cwd prefix match), skips parse errors.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 5,
+      "name": "Unit: aggregateEntries groups by model",
+      "red": {
+        "description": "Write test for aggregateEntries(entries) that returns {byModel: Map<string, {input, output, cacheRead, cacheWrite, cost, turns}>, total: {same}}. Test: empty array, single entry, multiple entries with same model, multiple models.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement aggregateEntries that reduces entries into per-model sums and a grand total.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 6,
+      "name": "Unit: formatUsageReport renders table",
+      "red": {
+        "description": "Write test for formatUsageReport(agg, timeLabel) that returns string[]. Test: shows model rows with formatted tokens (reuse formatTokens from shared), cost, turns; shows total row; handles empty data with No usage data message.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement formatUsageReport using formatTokens from @pi-ext/shared. Table: Model | Turns | Input | Output | Cost. Total row at bottom.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 7,
+      "name": "Integration: extension registers command and handlers",
+      "red": {
+        "description": "Write integration.test.ts. Mock pi.registerCommand, pi.on. Load extension. Assert registerCommand called with usage and handler. Assert on called with turn_end and agent_end. Assert on called with session_shutdown for cleanup.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Wire up default export: register /usage command, register turn_end and agent_end handlers. Command handler reads JSONL, aggregates, formats, renders via ctx.ui.custom().",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 8,
+      "name": "Integration: turn_end handler captures usage",
+      "red": {
+        "description": "Write test simulating turn_end events. Mock appendFileSync. Fire multiple turn_end events with different models and usage. Verify each appends correct JSONL line with project from ctx.cwd.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement turn_end handler: call parseUsageEntry, then appendUsageEntry. Buffer entries in memory for agent_end.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "skipped"
+      },
+      "completed": true
+    },
+    {
+      "index": 9,
+      "name": "Add to workspace and verify",
+      "red": {
+        "description": "none",
+        "status": "done"
+      },
+      "green": {
+        "description": "Add usage-tracker to workspaces in extensions/package.json. Run bun install, bun test --parallel, mise run typecheck. All pass.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "skipped"
+      },
+      "completed": true
+    }
+  ],
+  "notes": [],
+  "design": {
+    "currentState": "No token usage tracking exists. Pi reports usage in turn_end events but discards it after each session.",
+    "desiredState": "Extension that records every turn usage to ~/.config/pi/usage.jsonl and shows aggregated stats via /usage command (day/week/month, per model, per project).",
+    "patterns": "Follow pi-notify pattern for agent_end/turn_end hooks. Use SdkTurnEndMessage local interface for untyped usage fields. Use @pi-ext/shared formatTokens for display. DI pattern (createExtension) for testability.",
+    "decisions": "JSONL over SQLite (simplicity). turn_end over agent_end for data (usage lives on message, not event). One entry per turn (granular aggregation). Global file with project labels (not per-project files).",
+    "questions": "None — fully scoped."
+  }
+}

@@ -135,6 +135,16 @@
         "@pi-ext/shared": "workspace:*",
       },
     },
+    "usage-tracker": {
+      "name": "@pi-ext/usage-tracker",
+      "version": "1.0.0",
+      "dependencies": {
+        "@pi-ext/shared": "workspace:*",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "^0.75.3 || ^0.76.0",
+      },
+    },
     "wiki-lint": {
       "name": "@pi-ext/wiki-lint",
       "version": "1.0.0",
@@ -363,6 +373,8 @@
     "@pi-ext/shared": ["@pi-ext/shared@workspace:shared"],
 
     "@pi-ext/tdd-tree": ["@pi-ext/tdd-tree@workspace:tdd-tree"],
+
+    "@pi-ext/usage-tracker": ["@pi-ext/usage-tracker@workspace:usage-tracker"],
 
     "@pi-ext/wiki-lint": ["@pi-ext/wiki-lint@workspace:wiki-lint"],
 

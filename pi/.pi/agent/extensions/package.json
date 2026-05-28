@@ -19,7 +19,8 @@
     "wiki-lint",
     "extract-share",
     "pi-notify",
-    "pi-image"
+    "pi-image",
+    "usage-tracker"
   ],
   "devDependencies": {
     "@eslint/js": "^10.0.0",
