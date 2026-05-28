@@ -71,8 +71,9 @@ async function createExploreSession(
     cwd,
     agentDir: getAgentDir(),
     systemPromptOverride: () => systemPrompt,
-    // Skip extensions, skills, prompts — not needed for explore
-    additionalExtensionPaths: [],
+    // Skip extensions, skills, prompts — not needed for explore.
+    // Load usage-tracker so subagent turns are counted in the usage dashboard.
+    additionalExtensionPaths: [path.join(getAgentDir(), "extensions", "usage-tracker")],
     noExtensions: true,
   });
   await loader.reload();

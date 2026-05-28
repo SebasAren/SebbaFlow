@@ -78,11 +78,13 @@ async function createLibrarianSession(
     agentDir: getAgentDir(),
     systemPromptOverride: () => systemPrompt,
     noExtensions: true,
+    // usage-tracker: count librarian turns in the usage dashboard.
     additionalExtensionPaths: [
       path.join(extensionsDir, "exa-search"),
       path.join(extensionsDir, "context7"),
       path.join(extensionsDir, "wiki-search"),
       path.join(extensionsDir, "wiki-read"),
+      path.join(extensionsDir, "usage-tracker"),
     ],
   });
 
