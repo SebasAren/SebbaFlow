@@ -17,6 +17,7 @@
         background: #0f1117;
         color: #e1e4e8;
         padding: 2rem;
+        padding-top: 1rem;
       }
       h1 {
         font-size: 1.5rem;
@@ -29,6 +30,33 @@
         font-size: 0.9rem;
       }
 
+      /* Sticky header */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #0f1117;
+        padding: 0.75rem 0;
+        margin-top: -0.75rem;
+      }
+      .header::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: -2rem;
+        right: -2rem;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #30363d 20%, #30363d 80%, transparent);
+      }
+      .header-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
       /* Filters */
       .filters {
         display: flex;
@@ -36,6 +64,21 @@
         gap: 0.75rem;
         margin-bottom: 1.5rem;
         flex-wrap: wrap;
+        position: sticky;
+        top: 52px;
+        z-index: 99;
+        background: #0f1117;
+        padding: 0.75rem 0;
+        margin-top: -0.5rem;
+      }
+      .filters::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: -2rem;
+        right: -2rem;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #30363d 20%, #30363d 80%, transparent);
       }
       .range-btns {
         display: flex;
@@ -88,15 +131,27 @@
       /* Cards */
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
         gap: 1rem;
         margin-bottom: 2rem;
+      }
+      @media (max-width: 1100px) {
+        .cards {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (max-width: 800px) {
+        .cards {
+          grid-template-columns: repeat(2, 1fr);
+        }
       }
       .card {
         background: #161b22;
         border: 1px solid #30363d;
         border-radius: 8px;
         padding: 1.25rem;
+        border-left: 3px solid #30363d;
+        transition: border-color 0.2s;
       }
       .card .label {
         color: #8b949e;
@@ -115,9 +170,65 @@
         color: #8b949e;
         margin-top: 0.25rem;
       }
-      .card.hero .value {
-        font-size: 2.25rem;
+      .card .trend {
+        font-size: 0.75rem;
+        margin-top: 0.35rem;
+        font-weight: 500;
+      }
+      .trend-up {
+        color: #3fb950;
+      }
+      .trend-down {
+        color: #f85149;
+      }
+      .trend-neutral {
+        color: #8b949e;
+      }
+      /* Card accent colors */
+      .card--tokens {
+        border-left-color: #58a6ff;
+      }
+      .card--tokens .value {
         color: #58a6ff;
+        font-size: 2.25rem;
+      }
+      .card--cost {
+        border-left-color: #f0883e;
+      }
+      .card--cost .value {
+        color: #f0883e;
+      }
+      .card--turns {
+        border-left-color: #3fb950;
+      }
+      .card--turns .value {
+        color: #3fb950;
+      }
+      .card--cache {
+        border-left-color: #bc8cff;
+      }
+      .card--cache .value {
+        color: #bc8cff;
+      }
+      .card--ratio {
+        border-left-color: #f778ba;
+      }
+      .card--ratio .value {
+        color: #f778ba;
+      }
+
+      /* Section dividers */
+      .section {
+        margin-bottom: 2rem;
+      }
+      .section-title {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #484f58;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #21262d;
       }
 
       /* Charts */
@@ -141,12 +252,42 @@
       }
       .chart-box canvas {
         width: 100% !important;
+        height: 300px !important;
+      }
+      .chart-box--sm {
+        display: flex;
+        flex-direction: column;
+      }
+      .chart-box--sm canvas {
+        max-height: 280px;
+        aspect-ratio: 1;
       }
       .full-width {
         grid-column: 1 / -1;
       }
 
       /* Tables */
+      .table-section {
+        margin-bottom: 2rem;
+      }
+      .table-scroll {
+        max-height: 500px;
+        overflow-y: auto;
+        border-radius: 0 0 8px 8px;
+      }
+      .table-scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+      .table-scroll::-webkit-scrollbar-track {
+        background: #161b22;
+      }
+      .table-scroll::-webkit-scrollbar-thumb {
+        background: #30363d;
+        border-radius: 3px;
+      }
+      .table-scroll::-webkit-scrollbar-thumb:hover {
+        background: #484f58;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
@@ -158,6 +299,10 @@
         padding: 0.5rem 0.75rem;
         border-bottom: 1px solid #30363d;
         font-weight: 500;
+        background: #161b22;
+        position: sticky;
+        top: 0;
+        z-index: 1;
       }
       td {
         padding: 0.5rem 0.75rem;
@@ -172,6 +317,30 @@
       }
       .cost {
         color: #f0883e;
+      }
+      /* Sortable headers */
+      th.sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.15s;
+      }
+      th.sortable:hover {
+        color: #c9d1d9;
+      }
+      th.sortable::after {
+        content: " ↕";
+        font-size: 0.7rem;
+        opacity: 0.4;
+      }
+      th.sort-asc::after {
+        content: " ↑";
+        opacity: 1;
+        color: #58a6ff;
+      }
+      th.sort-desc::after {
+        content: " ↓";
+        opacity: 1;
+        color: #58a6ff;
       }
 
       /* Buttons */
@@ -197,16 +366,6 @@
       .btn-export:hover {
         background: #388bfd;
       }
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-      }
-      .header-actions {
-        display: flex;
-        gap: 0.5rem;
-      }
 
       /* Toast */
       .toast {
@@ -221,6 +380,7 @@
         opacity: 0;
         transition: opacity 0.3s;
         pointer-events: none;
+        z-index: 200;
       }
       .toast.show {
         opacity: 1;
@@ -263,66 +423,79 @@
 
     <div class="cards" id="cards"></div>
 
-    <div class="charts">
-      <div class="chart-box full-width">
-        <h2>Daily Cost</h2>
-        <canvas id="chart-daily-cost"></canvas>
-      </div>
-      <div class="chart-box full-width">
-        <h2>Cost Trend (7-day moving avg)</h2>
-        <canvas id="chart-cost-trend"></canvas>
-      </div>
-      <div class="chart-box full-width">
-        <h2>Daily Tokens by Model</h2>
-        <canvas id="chart-daily-tokens"></canvas>
-      </div>
-      <div class="chart-box">
-        <h2>Cost by Model</h2>
-        <canvas id="chart-model-cost"></canvas>
-      </div>
-      <div class="chart-box">
-        <h2>Token Distribution</h2>
-        <canvas id="chart-token-dist"></canvas>
+    <!-- Analytics Section -->
+    <div class="section">
+      <div class="section-title">Analytics</div>
+      <div class="charts">
+        <div class="chart-box full-width">
+          <h2>Daily Cost</h2>
+          <canvas id="chart-daily-cost"></canvas>
+        </div>
+        <div class="chart-box full-width">
+          <h2>Cost Trend (7-day moving avg)</h2>
+          <canvas id="chart-cost-trend"></canvas>
+        </div>
+        <div class="chart-box full-width">
+          <h2>Daily Tokens by Model</h2>
+          <canvas id="chart-daily-tokens"></canvas>
+        </div>
+        <div class="chart-box chart-box--sm">
+          <h2>Cost by Model</h2>
+          <canvas id="chart-model-cost"></canvas>
+        </div>
+        <div class="chart-box chart-box--sm">
+          <h2>Token Distribution</h2>
+          <canvas id="chart-token-dist"></canvas>
+        </div>
       </div>
     </div>
 
-    <div class="chart-box" style="margin-bottom: 2rem">
-      <h2>Model Breakdown</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Model</th>
-            <th>Turns</th>
-            <th>Input</th>
-            <th>Output</th>
-            <th>Cache Read</th>
-            <th>Cost</th>
-            <th>Cost/1k tok</th>
-            <th>Avg tok/turn</th>
-            <th>Out/In</th>
-            <th>Cache %</th>
-          </tr>
-        </thead>
-        <tbody id="model-table"></tbody>
-      </table>
-    </div>
+    <!-- Details Section -->
+    <div class="section">
+      <div class="section-title">Details</div>
 
-    <div class="chart-box">
-      <h2>Recent Turns</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Project</th>
-            <th>Model</th>
-            <th>Input</th>
-            <th>Output</th>
-            <th>Cache</th>
-            <th>Cost</th>
-          </tr>
-        </thead>
-        <tbody id="recent-table"></tbody>
-      </table>
+      <div class="chart-box table-section">
+        <h2>Model Breakdown</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="model">Model</th>
+                <th class="sortable" data-sort="turns">Turns</th>
+                <th class="sortable" data-sort="input">Input</th>
+                <th class="sortable" data-sort="output">Output</th>
+                <th class="sortable" data-sort="cacheRead">Cache Read</th>
+                <th class="sortable" data-sort="cost">Cost</th>
+                <th class="sortable" data-sort="costPer1k">Cost/1k tok</th>
+                <th class="sortable" data-sort="avgTok">Avg tok/turn</th>
+                <th class="sortable" data-sort="outIn">Out/In</th>
+                <th class="sortable" data-sort="cachePct">Cache %</th>
+              </tr>
+            </thead>
+            <tbody id="model-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <h2>Recent Turns</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Project</th>
+                <th>Model</th>
+                <th>Input</th>
+                <th>Output</th>
+                <th>Cache</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody id="recent-table"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="toast" id="toast">Copied to clipboard!</div>
@@ -352,6 +525,8 @@
       let allEntries = [];
       let activeRange = "all";
       let activeProject = "all";
+      let modelSortKey = "cost";
+      let modelSortDir = "desc";
 
       // --- Filters ---
       function getFiltered() {
@@ -372,6 +547,28 @@
         return entries;
       }
 
+      function getPreviousPeriod(entries) {
+        if (!entries.length) return [];
+        const minTs = Math.min(...entries.map((e) => e.ts));
+        const maxTs = Math.max(...entries.map((e) => e.ts));
+        const duration = maxTs - minTs;
+        const prevStart = minTs - duration;
+        const prevEnd = minTs;
+        return allEntries.filter((e) => e.ts >= prevStart && e.ts < prevEnd);
+      }
+
+      function calcTrend(current, previous) {
+        if (!previous.length) return null;
+        const curVal =
+          current.reduce((s, e) => s + e.cost, 0) /
+          Math.max(current.length, 1);
+        const prevVal =
+          previous.reduce((s, e) => s + e.cost, 0) /
+          Math.max(previous.length, 1);
+        if (prevVal === 0) return null;
+        return (curVal - prevVal) / prevVal;
+      }
+
       document.getElementById("range-btns").addEventListener("click", (ev) => {
         if (ev.target.tagName !== "BUTTON") return;
         document
@@ -388,6 +585,25 @@
           activeProject = ev.target.value;
           render(getFiltered());
         });
+
+      // --- Sortable table headers ---
+      document.querySelectorAll("th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.sort;
+          if (modelSortKey === key) {
+            modelSortDir = modelSortDir === "asc" ? "desc" : "asc";
+          } else {
+            modelSortKey = key;
+            modelSortDir = "desc";
+          }
+          // Update header classes
+          document.querySelectorAll("th.sortable").forEach((h) => {
+            h.classList.remove("sort-asc", "sort-desc");
+          });
+          th.classList.add(modelSortDir === "asc" ? "sort-asc" : "sort-desc");
+          renderModelTable(getFiltered());
+        });
+      });
 
       // --- Data loading ---
       async function load() {
@@ -413,6 +629,82 @@
 
       function shortProject(p) {
         return p.split("/").pop() || p;
+      }
+
+      function renderModelTable(entries) {
+        if (!entries.length) {
+          document.getElementById("model-table").innerHTML = "";
+          return;
+        }
+
+        const modelAgg = {};
+        for (const e of entries) {
+          if (!modelAgg[e.model])
+            modelAgg[e.model] = {
+              turns: 0,
+              input: 0,
+              output: 0,
+              cacheRead: 0,
+              cost: 0,
+            };
+          const m = modelAgg[e.model];
+          m.turns++;
+          m.input += e.input;
+          m.output += e.output;
+          m.cacheRead += e.cacheRead;
+          m.cost += e.cost;
+        }
+
+        // Compute derived metrics for sorting
+        const modelRows = Object.entries(modelAgg).map(([model, d]) => {
+          const tok = d.input + d.output + d.cacheRead;
+          return {
+            model,
+            ...d,
+            costPer1k: tok > 0 ? (d.cost / tok) * 1000 : 0,
+            avgTok: d.turns > 0 ? tok / d.turns : 0,
+            outIn: d.input > 0 ? d.output / d.input : 0,
+            cachePct: tok > 0 ? d.cacheRead / tok : 0,
+          };
+        });
+
+        // Sort
+        modelRows.sort((a, b) => {
+          let av = a[modelSortKey];
+          let bv = b[modelSortKey];
+          if (typeof av === "string") {
+            return modelSortDir === "asc"
+              ? av.localeCompare(bv)
+              : bv.localeCompare(av);
+          }
+          return modelSortDir === "asc" ? av - bv : bv - av;
+        });
+
+        document.getElementById("model-table").innerHTML = modelRows
+          .map((d) => {
+            return `<tr>
+              <td><strong>${d.model}</strong></td>
+              <td class="mono">${d.turns}</td>
+              <td class="mono">${TOKEN_FMT(d.input)}</td>
+              <td class="mono">${TOKEN_FMT(d.output)}</td>
+              <td class="mono">${TOKEN_FMT(d.cacheRead)}</td>
+              <td class="mono cost">${COST_FMT(d.cost)}</td>
+              <td class="mono">${COST_FMT(d.costPer1k)}</td>
+              <td class="mono">${TOKEN_FMT(d.avgTok)}</td>
+              <td class="mono">${d.outIn.toFixed(2)}</td>
+              <td class="mono">${PCT_FMT(d.cachePct)}</td>
+            </tr>`;
+          })
+          .join("");
+      }
+
+      function trendBadge(ratio) {
+        if (ratio === null) return "";
+        const pct = Math.abs(ratio * 100).toFixed(0);
+        if (ratio > 0.05) return `<div class="trend trend-up">↑ ${pct}%</div>`;
+        if (ratio < -0.05)
+          return `<div class="trend trend-down">↓ ${pct}%</div>`;
+        return `<div class="trend trend-neutral">— 0%</div>`;
       }
 
       // --- Render ---
@@ -442,64 +734,45 @@
         const turnsPerDay = entries.length / Math.max(days.length, 1);
         const cacheHitRate = totalTokens > 0 ? totalCacheRead / totalTokens : 0;
 
+        // Trend data
+        const prevEntries = getPreviousPeriod(entries);
+        const prevCost = prevEntries.reduce((s, e) => s + e.cost, 0);
+        const prevTokens = prevEntries.reduce(
+          (s, e) => s + e.input + e.output + e.cacheRead,
+          0,
+        );
+        const prevTurns = prevEntries.length;
+        const prevCacheRate =
+          prevTokens > 0
+            ? prevEntries.reduce((s, e) => s + e.cacheRead, 0) / prevTokens
+            : 0;
+        const costTrend =
+          prevCost > 0 ? (totalCost - prevCost) / prevCost : null;
+        const tokensTrend =
+          prevTokens > 0 ? (totalTokens - prevTokens) / prevTokens : null;
+        const turnsTrend =
+          prevTurns > 0 ? (entries.length - prevTurns) / prevTurns : null;
+        const cacheTrend =
+          prevCacheRate > 0
+            ? (cacheHitRate - prevCacheRate) / prevCacheRate
+            : null;
+
         document.getElementById("subtitle").textContent =
           `${entries.length} turns across ${days.length} day${days.length > 1 ? "s" : ""} · ${models.length} model${models.length > 1 ? "s" : ""}`;
 
         // --- Summary cards ---
         document.getElementById("cards").innerHTML = `
-          <div class="card hero"><div class="label">Total Tokens</div><div class="value">${TOKEN_FMT(totalTokens)}</div><div class="sub">${TOKEN_FMT(totalInput)} in · ${TOKEN_FMT(totalOutput)} out · ${TOKEN_FMT(totalCacheRead)} cache</div></div>
-          <div class="card"><div class="label">Total Cost</div><div class="value cost">${COST_FMT(totalCost)}</div></div>
-          <div class="card"><div class="label">Total Turns</div><div class="value">${entries.length}</div><div class="sub">~${turnsPerDay.toFixed(0)}/day</div></div>
-          <div class="card"><div class="label">Cost / 1k Tokens</div><div class="value">${COST_FMT(costPer1k)}</div></div>
-          <div class="card"><div class="label">Avg Tokens / Turn</div><div class="value">${TOKEN_FMT(avgTokensPerTurn)}</div></div>
-          <div class="card"><div class="label">Output / Input</div><div class="value">${outInRatio.toFixed(2)}</div></div>
-          <div class="card"><div class="label">Cache Hit Rate</div><div class="value">${PCT_FMT(cacheHitRate)}</div></div>
+          <div class="card card--tokens"><div class="label">Total Tokens</div><div class="value">${TOKEN_FMT(totalTokens)}</div><div class="sub">${TOKEN_FMT(totalInput)} in · ${TOKEN_FMT(totalOutput)} out · ${TOKEN_FMT(totalCacheRead)} cache</div>${trendBadge(tokensTrend)}</div>
+          <div class="card card--cost"><div class="label">Total Cost</div><div class="value">${COST_FMT(totalCost)}</div>${trendBadge(costTrend)}</div>
+          <div class="card card--turns"><div class="label">Total Turns</div><div class="value">${entries.length}</div><div class="sub">~${turnsPerDay.toFixed(0)}/day</div>${trendBadge(turnsTrend)}</div>
+          <div class="card card--ratio"><div class="label">Cost / 1k Tokens</div><div class="value">${COST_FMT(costPer1k)}</div></div>
+          <div class="card card--ratio"><div class="label">Avg Tokens / Turn</div><div class="value">${TOKEN_FMT(avgTokensPerTurn)}</div></div>
+          <div class="card card--ratio"><div class="label">Output / Input</div><div class="value">${outInRatio.toFixed(2)}</div></div>
+          <div class="card card--cache"><div class="label">Cache Hit Rate</div><div class="value">${PCT_FMT(cacheHitRate)}</div>${trendBadge(cacheTrend)}</div>
+          <div class="card"><div class="label">Models Used</div><div class="value">${models.length}</div><div class="sub">${models.join(", ")}</div></div>
         `;
 
-        // --- Model aggregates ---
-        const modelAgg = {};
-        for (const e of entries) {
-          if (!modelAgg[e.model])
-            modelAgg[e.model] = {
-              turns: 0,
-              input: 0,
-              output: 0,
-              cacheRead: 0,
-              cost: 0,
-            };
-          const m = modelAgg[e.model];
-          m.turns++;
-          m.input += e.input;
-          m.output += e.output;
-          m.cacheRead += e.cacheRead;
-          m.cost += e.cost;
-        }
-
-        // --- Model table ---
-        document.getElementById("model-table").innerHTML = Object.entries(
-          modelAgg,
-        )
-          .sort((a, b) => b[1].cost - a[1].cost)
-          .map(([model, d]) => {
-            const tok = d.input + d.output + d.cacheRead;
-            const costPer1k = tok > 0 ? (d.cost / tok) * 1000 : 0;
-            const avgTok = d.turns > 0 ? tok / d.turns : 0;
-            const outIn = d.input > 0 ? d.output / d.input : 0;
-            const cachePct = tok > 0 ? d.cacheRead / tok : 0;
-            return `<tr>
-              <td><strong>${model}</strong></td>
-              <td class="mono">${d.turns}</td>
-              <td class="mono">${TOKEN_FMT(d.input)}</td>
-              <td class="mono">${TOKEN_FMT(d.output)}</td>
-              <td class="mono">${TOKEN_FMT(d.cacheRead)}</td>
-              <td class="mono cost">${COST_FMT(d.cost)}</td>
-              <td class="mono">${COST_FMT(costPer1k)}</td>
-              <td class="mono">${TOKEN_FMT(avgTok)}</td>
-              <td class="mono">${outIn.toFixed(2)}</td>
-              <td class="mono">${PCT_FMT(cachePct)}</td>
-            </tr>`;
-          })
-          .join("");
+        renderModelTable(entries);
 
         // --- Recent turns ---
         document.getElementById("recent-table").innerHTML = entries
@@ -524,6 +797,25 @@
         Chart.defaults.font.family =
           "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
         Chart.defaults.font.size = 12;
+
+        // --- Model aggregates for charts ---
+        const modelAgg = {};
+        for (const e of entries) {
+          if (!modelAgg[e.model])
+            modelAgg[e.model] = {
+              turns: 0,
+              input: 0,
+              output: 0,
+              cacheRead: 0,
+              cost: 0,
+            };
+          const m = modelAgg[e.model];
+          m.turns++;
+          m.input += e.input;
+          m.output += e.output;
+          m.cacheRead += e.cacheRead;
+          m.cost += e.cost;
+        }
 
         // --- Daily cost chart ---
         const dailyCost = {};
@@ -615,7 +907,7 @@
               },
             ],
           },
-          { plugins: { legend: { position: "right" } } },
+          { plugins: { legend: { position: "right" } }, maintainAspectRatio: true },
         );
 
         // --- Token distribution (pie) ---
@@ -631,7 +923,7 @@
               },
             ],
           },
-          { plugins: { legend: { position: "right" } } },
+          { plugins: { legend: { position: "right" } }, maintainAspectRatio: true },
         );
       }
 
@@ -642,7 +934,7 @@
           data,
           options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             ...extraOpts,
           },
         });
