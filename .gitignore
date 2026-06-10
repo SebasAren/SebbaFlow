@@ -21,6 +21,7 @@ opencode/.config/systemd/user/opencode-serve.env
 pi/.pi/agent/sessions/
 pi/.pi/agent/settings.json
 pi/.pi/agent/auth.json
+pi/.pi/agent/trust.json
 
 # Tmux runtime artifacts
 tmux-client-*.log
