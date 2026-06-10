@@ -10,7 +10,6 @@
 [daemons.test]
 run = "bun test --watch --parallel --path-ignore-patterns='**/integration.test.ts'"
 dir = "pi/.pi/agent/extensions"
-auto = ["start", "stop"]
 
 # --- Linters (re-run on change) ---
 
