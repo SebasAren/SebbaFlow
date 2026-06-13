@@ -76,8 +76,7 @@ function parseDurationEnv(name: string, fallback: number): number {
 function updateSessionRef(ctx: any): void {
   try {
     const file = ctx?.sessionManager?.getSessionFile?.();
-    currentAgentSessionPath =
-      typeof file === "string" && file.startsWith("/") ? file : undefined;
+    currentAgentSessionPath = typeof file === "string" && file.startsWith("/") ? file : undefined;
   } catch {
     currentAgentSessionPath = undefined;
   }
