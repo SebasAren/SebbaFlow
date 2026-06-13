@@ -1,0 +1,3 @@
+# Python --user installs land here because ~/.local/lib is symlinked into this dir.
+# Wiki/issue tools are TypeScript; no Python belongs in the repo.
+.local/lib/python*/
