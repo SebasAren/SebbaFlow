@@ -1,0 +1,93 @@
+name: Auto-merge paired Renovate pi PRs
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # Every 10 minutes
+  workflow_dispatch:
+
+jobs:
+  auto-merge-pi:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Detect and merge paired pi PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          echo "🔍 Checking for open Renovate pi PRs..."
+
+          # Get all open PRs from Renovate
+          PRS=$(gh pr list --repo "$REPO" --author "app/renovate" --state open \
+                --json number,headRefName,title,mergeable,mergeStateStatus)
+
+          echo "$PRS" | jq -r '.[] | "  #\(.number) [\(.headRefName)] \(.title) (mergeable: \(.mergeable), status: \(.mergeStateStatus))"'
+
+          # Find pi binary PR (branch: renovate/pi-0.x)
+          BINARY_PR=$(echo "$PRS" | jq -r '.[] | select(.headRefName == "renovate/pi-0.x") | .number')
+          BINARY_STATUS=$(echo "$PRS" | jq -r '.[] | select(.headRefName == "renovate/pi-0.x") | .mergeStateStatus')
+
+          # Find pi monorepo PR (branch: renovate/pi-monorepo)
+          MONOREPO_PR=$(echo "$PRS" | jq -r '.[] | select(.headRefName == "renovate/pi-monorepo") | .number')
+          MONOREPO_STATUS=$(echo "$PRS" | jq -r '.[] | select(.headRefName == "renovate/pi-monorepo") | .mergeStateStatus')
+
+          echo ""
+          echo "📋 Binary PR:     ${BINARY_PR:-none} (status: ${BINARY_STATUS:-n/a})"
+          echo "📋 Monorepo PR:   ${MONOREPO_PR:-none} (status: ${MONOREPO_STATUS:-n/a})"
+          echo ""
+
+          # No paired PRs — nothing to do
+          if [ -z "$BINARY_PR" ] && [ -z "$MONOREPO_PR" ]; then
+            echo "✅ No pi PRs open. All good!"
+            exit 0
+          fi
+
+          # Only one PR without its pair — wait
+          if [ -n "$BINARY_PR" ] && [ -z "$MONOREPO_PR" ]; then
+            echo "⏳ Only binary PR #${BINARY_PR} exists. Waiting for monorepo PR..."
+            exit 0
+          fi
+          if [ -z "$BINARY_PR" ] && [ -n "$MONOREPO_PR" ]; then
+            echo "⏳ Only monorepo PR #${MONOREPO_PR} exists. Waiting for binary PR..."
+            exit 0
+          fi
+
+          # Both exist — merge binary first (it'll fail CI due to version sync)
+          echo "🚀 Both PRs found! Merging binary PR #${BINARY_PR} first (admin bypass)..."
+
+          if [ "$BINARY_STATUS" = "BLOCKED" ] || [ "$BINARY_STATUS" = "UNSTABLE" ] || [ "$BINARY_STATUS" = "BEHIND" ]; then
+            echo "   CI failing as expected (version sync mismatch). Admin-merging..."
+          fi
+
+          gh pr merge "$BINARY_PR" --repo "$REPO" --squash --admin --delete-branch || {
+            echo "❌ Failed to merge binary PR #${BINARY_PR}. Check permissions."
+            exit 1
+          }
+
+          echo "✅ Binary PR #${BINARY_PR} merged!"
+          echo "⏳ Waiting 45s for merge commit to land and CI to trigger on monorepo PR..."
+          sleep 45
+
+          # Refresh PR status — monorepo PR should now pass CI
+          NEW_STATUS=$(gh pr view "$MONOREPO_PR" --repo "$REPO" --json mergeStateStatus -q .mergeStateStatus)
+          echo "📋 Monorepo PR #${MONOREPO_PR} status now: ${NEW_STATUS}"
+
+          if [ "$NEW_STATUS" = "CLEAN" ] || [ "$NEW_STATUS" = "UNSTABLE" ]; then
+            echo "🚀 Merging monorepo PR #${MONOREPO_PR}..."
+            gh pr merge "$MONOREPO_PR" --repo "$REPO" --squash --admin --delete-branch || {
+              echo "❌ Failed to merge monorepo PR #${MONOREPO_PR}."
+              exit 1
+            }
+            echo "✅ Monorepo PR #${MONOREPO_PR} merged!"
+          elif [ "$NEW_STATUS" = "BLOCKED" ] || [ "$NEW_STATUS" = "BEHIND" ]; then
+            echo "⏳ CI still running or PR behind base. Will retry next cycle."
+          else
+            echo "⚠️  Unexpected status: ${NEW_STATUS}. Skipping."
+          fi
+
+          echo ""
+          echo "🎉 Done! Pi PRs handled."
