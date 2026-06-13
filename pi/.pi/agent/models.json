@@ -14,6 +14,14 @@
             "zaiToolStream": true
           },
           "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": null,
+            "low": null,
+            "medium": null,
+            "high": "high",
+            "xhigh": "max"
+          },
           "input": ["text"],
           "cost": {
             "input": 0,
