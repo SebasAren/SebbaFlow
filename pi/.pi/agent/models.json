@@ -1,6 +1,16 @@
 {
   "providers": {
+    // apiKey is declared so pi's branch-summarization and compaction auth paths resolve a
+    // real key. Those paths call getApiKeyAndHeaders() with includeFallback:false, which skips
+    // pure env-var resolution (OPENCODE_API_KEY); a provider-level apiKey is returned directly.
+    // Built-in opencode-go models are preserved (no `models` array = override-only entry).
+    // `headers: {}` is a required validation no-op for override-only entries (resolves to undefined).
+    "opencode-go": {
+      "apiKey": "$OPENCODE_API_KEY",
+      "headers": {}
+    },
     "zai": {
+      "apiKey": "$ZAI_API_KEY",
       "models": [
         {
           "id": "glm-5.2",

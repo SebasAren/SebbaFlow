@@ -34,6 +34,7 @@ function createExtension() {
       leafId?: string;
       entries?: Array<{ id: string; type: string; customType?: string; label?: string }>;
       navigateTree?: (targetId: string, options: any) => Promise<{ cancelled: boolean }>;
+      model?: unknown;
     } = {},
   ) {
     const notifications: Array<{ message: string; level: string }> = [];
@@ -64,6 +65,9 @@ function createExtension() {
           });
         },
       },
+      // Default to a truthy model so summarize-enabled navigation tests exercise the
+      // summarize:true path. Pass `model: undefined` explicitly to test the no-model fallback.
+      model: "model" in opts ? opts.model : { id: "test-model" },
       navigateTree: opts.navigateTree ?? (async () => ({ cancelled: false })),
       notifications,
       customCalls,
@@ -270,6 +274,9 @@ describe("tdd-tree extension", () => {
       // Continuation message sent after successful navigation
       expect(sentUserMessages).toHaveLength(1);
       expect(sentUserMessages[0].content).toBe('Continue implementing the "plan" plan.');
+      // Queued as a follow-up so it doesn't throw "already processing" if the
+      // agent is still mid-navigation/summary after navigateTree resolves.
+      expect(sentUserMessages[0].options).toEqual({ deliverAs: "followUp" });
     });
 
     it("no spinner when already at kickoff", async () => {
@@ -293,24 +300,78 @@ describe("tdd-tree extension", () => {
       expect(ctx.customCalls.length).toBe(0);
     });
 
-    it("shows cancelled notification when navigateTree returns null", async () => {
+    it("surfaces navigateTree errors instead of masking them as cancelled", async () => {
       const { commands, makeCtx, sentUserMessages } = createExtension();
       const cmd = commands.find((c) => c.name === "tdd-go-kickoff")!.def;
-      // Simulate navigateTree rejecting (error case)
-      const navigateTree = mock(() => Promise.reject(new Error("summarization failed")));
+      // navigateTree rejects (e.g. summarization/auth failure in newer pi builds).
+      // Previously the extension swallowed this and reported "Navigation cancelled.".
+      const navigateTree = mock(() =>
+        Promise.reject(new Error("No model available for summarization")),
+      );
       const ctx = makeCtx({
         leafId: "current",
         entries: [{ id: "target", type: "custom", label: "tdd-kickoff-plan" }],
         navigateTree,
       });
       await cmd.handler("plan", ctx);
-      // The catch in custom callback resolves with null → "Navigation cancelled"
+      // The real error message is surfaced at error level, not masked as "cancelled".
+      expect(ctx.notifications).toContainEqual({
+        message: "Kickoff navigation failed: No model available for summarization",
+        level: "error",
+      });
+      // No continuation message on failure.
+      expect(sentUserMessages).toHaveLength(0);
+    });
+
+    it("navigates without a summary when no model is available", async () => {
+      const { commands, makeCtx, sentUserMessages } = createExtension();
+      const cmd = commands.find((c) => c.name === "tdd-go-kickoff")!.def;
+      const navigateTree = mock(() => Promise.resolve({ cancelled: false }));
+      const ctx = makeCtx({
+        leafId: "current",
+        entries: [{ id: "target", type: "custom", label: "tdd-kickoff-plan" }],
+        navigateTree,
+        model: undefined,
+      });
+      await cmd.handler("plan", ctx);
+      // summarize:false because no model — avoids the navigateTree throw.
+      expect(navigateTree).toHaveBeenCalledWith(
+        "target",
+        expect.objectContaining({ summarize: false }),
+      );
+      // Warns that the step summary was skipped.
+      expect(ctx.notifications).toContainEqual({
+        message: expect.stringContaining("No model selected"),
+        level: "warning",
+      });
+      // Still navigates and continues the plan.
+      expect(sentUserMessages).toHaveLength(1);
+    });
+
+    it("lets Escape dismiss the loader via BorderedLoader onAbort", async () => {
+      const { commands, makeCtx } = createExtension();
+      const cmd = commands.find((c) => c.name === "tdd-go-kickoff")!.def;
+      // navigateTree never resolves so we can drive the loader manually.
+      const navigateTree = () =>
+        new Promise<{ cancelled: boolean }>(() => {
+          /* never resolves */
+        });
+      const ctx = makeCtx({
+        leafId: "current",
+        entries: [{ id: "target", type: "custom", label: "tdd-kickoff-plan" }],
+        navigateTree: navigateTree as any,
+      });
+      const pending = cmd.handler("plan", ctx);
+      // The factory ran synchronously and registered onAbort on the loader.
+      const loader = ctx.customCalls[0].component;
+      expect(typeof loader.onAbort).toBe("function");
+      // Simulate pressing Escape.
+      loader.onAbort();
+      await pending;
       expect(ctx.notifications).toContainEqual({
         message: "Navigation cancelled.",
         level: "info",
       });
-      // No continuation message on cancellation
-      expect(sentUserMessages).toHaveLength(0);
     });
   });
 

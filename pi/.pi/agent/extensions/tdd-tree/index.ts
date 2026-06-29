@@ -51,8 +51,7 @@ export default function (pi: ExtensionAPI) {
     for (const entry of ctx.sessionManager.getEntries()) {
       if (entry.type === "custom" && entry.customType === "tdd-kickoff") {
         const data = entry.data as
-          | { slug?: string; entryId?: string; labeledAt?: string }
-          | undefined;
+          { slug?: string; entryId?: string; labeledAt?: string } | undefined;
         if (data?.slug && data?.entryId) {
           kickoffEntries.set(data.slug, data.entryId);
           activeSlug = data.slug; // last (most recent) wins
@@ -188,30 +187,60 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // Navigate with summarization, showing a spinner while the LLM summarizes
-    const result = await ctx.ui.custom<{ cancelled: boolean } | null>((tui, theme, _kb, done) => {
+    // Branch summarization needs a model. Without one, navigate without a summary
+    // rather than blocking the TDD workflow (navigateTree throws if summarize && !model).
+    const summarize = ctx.model !== undefined;
+    if (!summarize) {
+      ctx.ui.notify(
+        "No model selected — navigating without a step summary. Use /model to enable summaries.",
+        "warning",
+      );
+    }
+
+    type NavResult = { cancelled: boolean } | { error: string } | null;
+
+    // Navigate, showing a spinner while the LLM summarizes. Surface the real
+    // error from navigateTree instead of masking it as "cancelled".
+    const result = await ctx.ui.custom<NavResult>((tui, theme, _kb, done) => {
       const loader = new BorderedLoader(tui, theme, `Navigating to kickoff "${slug}"...`);
+      let settled = false;
+      const finish = (value: NavResult): void => {
+        if (settled) return; // guard race between Escape-abort and completion
+        settled = true;
+        done(value);
+      };
+      // Canonical BorderedLoader pattern: let Escape dismiss the loader.
+      loader.onAbort = () => finish({ cancelled: true });
 
       ctx
         .navigateTree(targetId, {
-          summarize: true,
-          customInstructions:
-            "Summarize the TDD step work that was done after the kickoff exploration. " +
-            "Focus on: what tests were written, what implementation was added, what was refactored. " +
-            "Keep it concise — this is a handoff to the next step.",
+          summarize,
+          customInstructions: summarize
+            ? "Summarize the TDD step work that was done after the kickoff exploration. " +
+              "Focus on: what tests were written, what implementation was added, what was refactored. " +
+              "Keep it concise — this is a handoff to the next step."
+            : undefined,
           label: `tdd-step-done-${slug}`,
         })
-        .then((r) => done(r))
-        .catch(() => done(null));
+        .then((r) => finish(r))
+        .catch((err) => finish({ error: err instanceof Error ? err.message : String(err) }));
 
       return loader;
     });
 
-    if (!result || result.cancelled) {
+    if (result && "error" in result) {
+      ctx.ui.notify(`Kickoff navigation failed: ${result.error}`, "error");
+    } else if (result && result.cancelled) {
       ctx.ui.notify("Navigation cancelled.", "info");
-    } else {
+    } else if (result) {
       ctx.ui.notify(`Navigated to TDD kickoff for "${slug}". Starting fresh branch.`, "info");
-      pi.sendUserMessage(`Continue implementing the "${slug}" plan.`);
+      // Queue the continuation as a follow-up: navigateTree may leave the agent
+      // mid-processing (branch summary / navigation), and sendUserMessage throws
+      // "Agent is already processing" unless deliverAs is set.
+      pi.sendUserMessage(`Continue implementing the "${slug}" plan.`, { deliverAs: "followUp" });
+    } else {
+      // Defensive: should not happen with the wiring above.
+      ctx.ui.notify("Kickoff navigation did not complete.", "warning");
     }
   }
 
