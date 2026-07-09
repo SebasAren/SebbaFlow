@@ -99,4 +99,12 @@ describe("runVerify", () => {
     expect(result.ok).toBe(true);
     expect(result.output).toContain("ok");
   });
+
+  test("surfaces the error message when a command binary is not found", () => {
+    const result = runVerify(["no-such-binary-xyz-tdd-plan"], tmp);
+    expect(result.ok).toBe(false);
+    // The `$ <cmd>` label already echoes the name; assert on the error reason
+    // ("not found" / ENOENT), which only appears when result.error is surfaced.
+    expect(result.output).toMatch(/not found|ENOENT/i);
+  });
 });

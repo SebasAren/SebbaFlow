@@ -41,8 +41,9 @@ export function loadVerifyConfig(cwd: string): string[] {
  *
  * Each command string is split on whitespace into an argv array and executed
  * via spawnSync (no shell, so no escaping is needed). Combined stdout + stderr
- * is captured with a `$ <command>` label per command. Returns `ok: false` as
- * soon as one command exits non-zero.
+ * (+ the spawn error message, e.g. ENOENT when the binary is missing) is
+ * captured with a `$ <command>` label per command. Returns `ok: false` as
+ * soon as one command exits non-zero or fails to spawn.
  */
 export function runVerify(commands: string[], cwd: string): VerifyResult {
   const parts: string[] = [];
@@ -61,7 +62,8 @@ export function runVerify(commands: string[], cwd: string): VerifyResult {
 
     const stdout = (result.stdout ?? "").trim();
     const stderr = (result.stderr ?? "").trim();
-    const combined = [stdout, stderr].filter(Boolean).join("\n");
+    const errMsg = result.error ? String(result.error.message) : "";
+    const combined = [stdout, stderr, errMsg].filter(Boolean).join("\n");
     if (combined) parts.push(combined);
 
     if (result.status !== 0) {
