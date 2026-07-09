@@ -4,7 +4,7 @@
   "context": "The tdd-plan CLI is a single 387-line bun script at pi/.local/bin/tdd-plan managing TDD plans as JSON in .pi/plans. Only the design command has test coverage. Logic is hard to unit-test because process.argv is parsed at module top level and process.exit is called throughout. Separately, jj does not run git hooks, so commits made during the GREEN phase get zero validation feedback until much later.",
   "architecture": "Entry pi/.local/bin/tdd-plan stays a thin dispatcher (argv to command, errors to exit codes). Modules under pi/.local/bin/lib/: types.ts, plan-io.ts (read write find archive), args.ts (parseArgs + flag helpers), steps.ts (text and JSON step parsing), render.ts (showPlan), commands.ts (cmdCreate cmdPhase etc exported and importable). New lib/verify.ts loadVerifyConfig(cwd) reads .pi/config.json verify array (absent or invalid returns empty), runVerify(commands) runs each via spawnSync with array args and short-circuits on first failure. The green-done path in cmdPhase calls the gate: pass writes plan plus exit 0, fail skips write and reprints output and exit 1, empty config skips with a warning. Config lives at .pi/config.json so it is portable and decoupled from mise.",
   "created": "2026-07-09T13:49:45.979Z",
-  "updated": "2026-07-09T14:07:20.298Z",
+  "updated": "2026-07-09T14:15:53.904Z",
   "steps": [
     {
       "index": 1,
@@ -62,15 +62,15 @@
       "name": "Verify runner",
       "red": {
         "description": "Test runVerify returns ok true with output containing hi for an echo command, and ok false for a failing command. Uses spawnSync with array args (no shell). Captures combined stdout and stderr.",
-        "status": "not_started"
+        "status": "done"
       },
       "green": {
         "description": "Implement runVerify(commands) iterating spawnSync with cwd set to process.cwd, short-circuiting on the first failure and collecting output.",
-        "status": "not_started"
+        "status": "done"
       },
       "refactor": {
         "description": "Extract a runOne helper and consistent per-command output formatting.",
-        "status": "not_started"
+        "status": "done"
       },
       "completed": false
     },

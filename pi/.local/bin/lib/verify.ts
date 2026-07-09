@@ -1,8 +1,14 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export interface VerifyConfig {
   verify: string[];
+}
+
+export interface VerifyResult {
+  ok: boolean;
+  output: string;
 }
 
 /**
@@ -28,4 +34,40 @@ export function loadVerifyConfig(cwd: string): string[] {
   if (!Array.isArray(verify)) return [];
 
   return verify.filter((c): c is string => typeof c === "string");
+}
+
+/**
+ * Run a list of shell command strings, short-circuiting on the first failure.
+ *
+ * Each command string is split on whitespace into an argv array and executed
+ * via spawnSync (no shell, so no escaping is needed). Combined stdout + stderr
+ * is captured with a `$ <command>` label per command. Returns `ok: false` as
+ * soon as one command exits non-zero.
+ */
+export function runVerify(commands: string[], cwd: string): VerifyResult {
+  const parts: string[] = [];
+
+  for (const raw of commands) {
+    const cmd = raw.trim();
+    if (!cmd) continue; // skip blank entries
+
+    const argv = cmd.split(/\s+/);
+    parts.push(`$ ${cmd}`);
+
+    const result = spawnSync(argv[0], argv.slice(1), {
+      cwd,
+      encoding: "utf8",
+    });
+
+    const stdout = (result.stdout ?? "").trim();
+    const stderr = (result.stderr ?? "").trim();
+    const combined = [stdout, stderr].filter(Boolean).join("\n");
+    if (combined) parts.push(combined);
+
+    if (result.status !== 0) {
+      return { ok: false, output: parts.join("\n") };
+    }
+  }
+
+  return { ok: true, output: parts.join("\n") };
 }
