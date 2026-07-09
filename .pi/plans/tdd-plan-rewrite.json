@@ -1,0 +1,137 @@
+{
+  "title": "tdd-plan rewrite + green-gate verification",
+  "slug": "tdd-plan-rewrite",
+  "context": "The tdd-plan CLI is a single 387-line bun script at pi/.local/bin/tdd-plan managing TDD plans as JSON in .pi/plans. Only the design command has test coverage. Logic is hard to unit-test because process.argv is parsed at module top level and process.exit is called throughout. Separately, jj does not run git hooks, so commits made during the GREEN phase get zero validation feedback until much later.",
+  "architecture": "Entry pi/.local/bin/tdd-plan stays a thin dispatcher (argv to command, errors to exit codes). Modules under pi/.local/bin/lib/: types.ts, plan-io.ts (read write find archive), args.ts (parseArgs + flag helpers), steps.ts (text and JSON step parsing), render.ts (showPlan), commands.ts (cmdCreate cmdPhase etc exported and importable). New lib/verify.ts loadVerifyConfig(cwd) reads .pi/config.json verify array (absent or invalid returns empty), runVerify(commands) runs each via spawnSync with array args and short-circuits on first failure. The green-done path in cmdPhase calls the gate: pass writes plan plus exit 0, fail skips write and reprints output and exit 1, empty config skips with a warning. Config lives at .pi/config.json so it is portable and decoupled from mise.",
+  "created": "2026-07-09T13:49:45.979Z",
+  "updated": "2026-07-09T13:57:57.889Z",
+  "steps": [
+    {
+      "index": 1,
+      "name": "Characterization tests for current behavior",
+      "red": {
+        "description": "Write tests covering create, show, list, phase, complete, note, archive, edit, and the text/JSON steps parser, asserting current stdout and JSON shape. These must PASS against the current single-file CLI unchanged, locking behavior before the refactor.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Confirm the full suite passes against the existing tdd-plan with no code changes.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "Group tests by command into describe blocks for readability.",
+        "status": "done"
+      },
+      "completed": false
+    },
+    {
+      "index": 2,
+      "name": "Extract modules behavior-preserving",
+      "red": {
+        "description": "none",
+        "status": "not_started"
+      },
+      "green": {
+        "description": "Move code into pi/.local/bin/lib/{types,plan-io,args,steps,render,commands}.ts. The entry file tdd-plan becomes a thin argv dispatcher. Keep process.argv parsing and process.exit calls at the entry boundary only. All characterization tests from step 1 must still pass unchanged.",
+        "status": "not_started"
+      },
+      "refactor": {
+        "description": "Remove the statOrUndefined-via-require() hack in favor of a proper statSync import. Tidy module imports.",
+        "status": "not_started"
+      },
+      "completed": false
+    },
+    {
+      "index": 3,
+      "name": "Verify config loader",
+      "red": {
+        "description": "Test loadVerifyConfig(cwd) returns the verify array from .pi/config.json when present, and returns an empty array with no throw when the file is absent or malformed.",
+        "status": "not_started"
+      },
+      "green": {
+        "description": "Implement lib/verify.ts loadVerifyConfig reading {verify:[...]} from join(cwd,.pi,config.json). Absent or invalid returns empty array.",
+        "status": "not_started"
+      },
+      "refactor": {
+        "description": "Add a typed VerifyConfig interface and validate it is an array of strings.",
+        "status": "not_started"
+      },
+      "completed": false
+    },
+    {
+      "index": 4,
+      "name": "Verify runner",
+      "red": {
+        "description": "Test runVerify returns ok true with output containing hi for an echo command, and ok false for a failing command. Uses spawnSync with array args (no shell). Captures combined stdout and stderr.",
+        "status": "not_started"
+      },
+      "green": {
+        "description": "Implement runVerify(commands) iterating spawnSync with cwd set to process.cwd, short-circuiting on the first failure and collecting output.",
+        "status": "not_started"
+      },
+      "refactor": {
+        "description": "Extract a runOne helper and consistent per-command output formatting.",
+        "status": "not_started"
+      },
+      "completed": false
+    },
+    {
+      "index": 5,
+      "name": "Green-done gate atomic",
+      "red": {
+        "description": "Test that phase slug N green done marks the phase done, writes JSON, and exits 0 when verify passes; stays in_progress, does NOT write JSON, reprints output, and exits non-zero when verify fails; and skips with a warning plus marks done when the verify config is empty. Uses a temp config pointing at echo and false.",
+        "status": "not_started"
+      },
+      "green": {
+        "description": "Wire runVerify into the cmdPhase green-done path. On fail skip writePlan, print failure plus output, exit 1. On pass writePlan plus print success. Empty command list prints a skip warning and marks done.",
+        "status": "not_started"
+      },
+      "refactor": {
+        "description": "Centralize gate logic in a gateGreenStep helper to keep cmdPhase readable.",
+        "status": "not_started"
+      },
+      "completed": false
+    },
+    {
+      "index": 6,
+      "name": "--no-verify escape hatch",
+      "red": {
+        "description": "Test that phase slug N green done --no-verify does not invoke verify, marks the phase done, writes JSON, and exits 0 even when the config commands would fail.",
+        "status": "not_started"
+      },
+      "green": {
+        "description": "Parse the --no-verify flag in cmdPhase and skip runVerify when set.",
+        "status": "not_started"
+      },
+      "refactor": {
+        "description": "Ensure the flag does not affect other phase actions and is absent from help unless intentional.",
+        "status": "not_started"
+      },
+      "completed": false
+    },
+    {
+      "index": 7,
+      "name": "Repo config plus skill docs",
+      "red": {
+        "description": "none",
+        "status": "not_started"
+      },
+      "green": {
+        "description": "Create .pi/config.json with verify set to mise run lint-changed and mise run typecheck. Update SKILL.md Implementation section to document the green-done verify gate, the --no-verify flag, and .pi/config.json including the absent-config skip-and-warn behavior. Update .mise/tasks/test if new test files need discovery.",
+        "status": "not_started"
+      },
+      "refactor": {
+        "description": "Ensure the SKILL.md CLI reference matches the new flag.",
+        "status": "not_started"
+      },
+      "completed": false
+    }
+  ],
+  "notes": [],
+  "design": {
+    "currentState": "Single-file bun CLI (387 lines). Only the design command is tested. Logic is not importable: process.argv parsed at module top level, process.exit scattered throughout, plus a statOrUndefined-via-require() hack. No verification runs on GREEN commits because jj bypasses git hooks entirely.",
+    "desiredState": "Modular, importable CLI with broad test coverage. green-done atomically runs a configurable verify gate (lint-changed + typecheck) so the agent gets immediate pass-or-fail feedback, with a --no-verify escape hatch for sticky cases.",
+    "patterns": "Characterize-before-refactor: lock current behavior with tests first, then move code under the safety net. spawnSync with array args (no shell escaping, works around Bun.escapeShellArg being undefined). Config-driven verification decoupled from mise for portability. Atomic state transitions: never persist the plan on failure.",
+    "decisions": "Rewrite is structure + tests only, no CLI framework (keep hand-rolled arg parsing). Gate is strict + atomic at green done (Option A). Default command set excludes the full test suite since the step test already passed before green done. Config Option i: .pi/config.json read only by tdd-plan, git hook untouched and out of scope. Absent config = skip gate plus warn. Escape hatch = --no-verify flag on phase only, no env var. Verify commands run in order, short-circuit on first failure for fast focused feedback.",
+    "questions": "Should refactor-done also gate as a follow-up? (explicitly out of v1). Confirm .pi/config.json over .pi/plans/config.json as the config path."
+  }
+}
