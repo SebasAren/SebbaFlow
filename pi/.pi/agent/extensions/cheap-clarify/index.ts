@@ -4,7 +4,7 @@
  * via a TUI questionnaire. Answers are sent back as a user message.
  */
 
-import { complete } from "@earendil-works/pi-ai";
+import { complete } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import {
