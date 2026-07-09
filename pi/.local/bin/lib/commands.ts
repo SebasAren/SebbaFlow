@@ -18,6 +18,7 @@ import {
 } from "./plan-io";
 import { deriveStatus, showPlan } from "./render";
 import { readStepsFromSource } from "./steps";
+import { loadVerifyConfig, runVerify } from "./verify";
 import type { DesignArtifact, PhaseName, PhaseStatus, Plan } from "./types";
 
 function buildSteps(
@@ -152,6 +153,33 @@ export function cmdShow(args: string[]): void {
   showPlan(readPlan(slug));
 }
 
+/**
+ * Run the configured verify gate before a GREEN phase is marked done.
+ *
+ * - No verify config (.pi/config.json) -> print a skip warning and proceed.
+ * - Verify passes -> print success and proceed.
+ * - Verify fails -> throw PlanError (entry exits 1) WITHOUT writing the plan,
+ *   so the phase stays in_progress and the agent must fix before re-running.
+ */
+function gateGreenStep(): void {
+  const commands = loadVerifyConfig(process.cwd());
+  if (commands.length === 0) {
+    console.log(
+      "\u26a0 No verify config (.pi/config.json) \u2014 skipping green gate.",
+    );
+    return;
+  }
+  const result = runVerify(commands, process.cwd());
+  if (result.ok) {
+    console.log("\u2713 Verify passed.");
+    if (result.output.trim()) console.log(result.output);
+    return;
+  }
+  throw new PlanError(
+    `\u2717 Verify failed \u2014 green phase not marked done.\n${result.output}`,
+  );
+}
+
 export function cmdPhase(args: string[]): void {
   const [slug, stepStr, phaseStr, actionStr] = args;
 
@@ -193,6 +221,10 @@ export function cmdPhase(args: string[]): void {
     throw new PlanError(
       `Error: step ${stepNum} not found (plan has ${plan.steps.length} steps)`,
     );
+  }
+
+  if (phase === "green" && actionStr === "done") {
+    gateGreenStep();
   }
 
   step[phase].status = validActions[actionStr];

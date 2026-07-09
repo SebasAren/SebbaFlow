@@ -4,7 +4,7 @@
   "context": "The tdd-plan CLI is a single 387-line bun script at pi/.local/bin/tdd-plan managing TDD plans as JSON in .pi/plans. Only the design command has test coverage. Logic is hard to unit-test because process.argv is parsed at module top level and process.exit is called throughout. Separately, jj does not run git hooks, so commits made during the GREEN phase get zero validation feedback until much later.",
   "architecture": "Entry pi/.local/bin/tdd-plan stays a thin dispatcher (argv to command, errors to exit codes). Modules under pi/.local/bin/lib/: types.ts, plan-io.ts (read write find archive), args.ts (parseArgs + flag helpers), steps.ts (text and JSON step parsing), render.ts (showPlan), commands.ts (cmdCreate cmdPhase etc exported and importable). New lib/verify.ts loadVerifyConfig(cwd) reads .pi/config.json verify array (absent or invalid returns empty), runVerify(commands) runs each via spawnSync with array args and short-circuits on first failure. The green-done path in cmdPhase calls the gate: pass writes plan plus exit 0, fail skips write and reprints output and exit 1, empty config skips with a warning. Config lives at .pi/config.json so it is portable and decoupled from mise.",
   "created": "2026-07-09T13:49:45.979Z",
-  "updated": "2026-07-09T14:15:53.904Z",
+  "updated": "2026-07-09T14:20:10.896Z",
   "steps": [
     {
       "index": 1,
@@ -79,15 +79,15 @@
       "name": "Green-done gate atomic",
       "red": {
         "description": "Test that phase slug N green done marks the phase done, writes JSON, and exits 0 when verify passes; stays in_progress, does NOT write JSON, reprints output, and exits non-zero when verify fails; and skips with a warning plus marks done when the verify config is empty. Uses a temp config pointing at echo and false.",
-        "status": "not_started"
+        "status": "done"
       },
       "green": {
         "description": "Wire runVerify into the cmdPhase green-done path. On fail skip writePlan, print failure plus output, exit 1. On pass writePlan plus print success. Empty command list prints a skip warning and marks done.",
-        "status": "not_started"
+        "status": "done"
       },
       "refactor": {
         "description": "Centralize gate logic in a gateGreenStep helper to keep cmdPhase readable.",
-        "status": "not_started"
+        "status": "done"
       },
       "completed": false
     },

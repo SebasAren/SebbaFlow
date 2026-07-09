@@ -422,3 +422,48 @@ describe("tdd-plan design", () => {
     expect(result.stdout).toContain("No auth");
   });
 });
+
+describe("tdd-plan phase green-done verify gate", () => {
+  const CONFIG = join(TEST_DIR, ".pi", "config.json");
+
+  function writeVerifyConfig(commands: string[]) {
+    writeFileSync(CONFIG, JSON.stringify({ verify: commands }));
+  }
+
+  // The top-level afterEach wipes .pi/plans; also clear any verify config so
+  // it cannot leak between gate tests or into the other describe blocks.
+  afterEach(() => {
+    if (existsSync(CONFIG)) rmSync(CONFIG);
+  });
+
+  test("green done writes plan and exits 0 when verify passes", () => {
+    run(`create gate --title "Gate" --steps '${ONE_STEP_JSON}'`);
+    writeVerifyConfig(["echo all-good"]);
+    const result = run("phase gate 1 green done");
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Verify passed");
+    const plan = readPlanJson("gate");
+    expect(plan.steps[0].green.status).toBe("done");
+  });
+
+  test("green done stays in_progress and skips the write when verify fails", () => {
+    run(`create gate --title "Gate" --steps '${ONE_STEP_JSON}'`);
+    run("phase gate 1 green start"); // mark in_progress first
+    writeVerifyConfig(["false"]);
+    const result = run("phase gate 1 green done");
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("Verify failed");
+    // plan on disk must NOT have advanced to done
+    const plan = readPlanJson("gate");
+    expect(plan.steps[0].green.status).toBe("in_progress");
+  });
+
+  test("green done skips the gate with a warning when no config exists", () => {
+    run(`create gate --title "Gate" --steps '${ONE_STEP_JSON}'`);
+    const result = run("phase gate 1 green done");
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("skipping");
+    const plan = readPlanJson("gate");
+    expect(plan.steps[0].green.status).toBe("done");
+  });
+});
