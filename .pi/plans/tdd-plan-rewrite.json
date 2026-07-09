@@ -4,7 +4,7 @@
   "context": "The tdd-plan CLI is a single 387-line bun script at pi/.local/bin/tdd-plan managing TDD plans as JSON in .pi/plans. Only the design command has test coverage. Logic is hard to unit-test because process.argv is parsed at module top level and process.exit is called throughout. Separately, jj does not run git hooks, so commits made during the GREEN phase get zero validation feedback until much later.",
   "architecture": "Entry pi/.local/bin/tdd-plan stays a thin dispatcher (argv to command, errors to exit codes). Modules under pi/.local/bin/lib/: types.ts, plan-io.ts (read write find archive), args.ts (parseArgs + flag helpers), steps.ts (text and JSON step parsing), render.ts (showPlan), commands.ts (cmdCreate cmdPhase etc exported and importable). New lib/verify.ts loadVerifyConfig(cwd) reads .pi/config.json verify array (absent or invalid returns empty), runVerify(commands) runs each via spawnSync with array args and short-circuits on first failure. The green-done path in cmdPhase calls the gate: pass writes plan plus exit 0, fail skips write and reprints output and exit 1, empty config skips with a warning. Config lives at .pi/config.json so it is portable and decoupled from mise.",
   "created": "2026-07-09T13:49:45.979Z",
-  "updated": "2026-07-09T14:04:50.338Z",
+  "updated": "2026-07-09T14:07:20.298Z",
   "steps": [
     {
       "index": 1,
@@ -45,15 +45,15 @@
       "name": "Verify config loader",
       "red": {
         "description": "Test loadVerifyConfig(cwd) returns the verify array from .pi/config.json when present, and returns an empty array with no throw when the file is absent or malformed.",
-        "status": "not_started"
+        "status": "done"
       },
       "green": {
         "description": "Implement lib/verify.ts loadVerifyConfig reading {verify:[...]} from join(cwd,.pi,config.json). Absent or invalid returns empty array.",
-        "status": "not_started"
+        "status": "done"
       },
       "refactor": {
         "description": "Add a typed VerifyConfig interface and validate it is an array of strings.",
-        "status": "not_started"
+        "status": "done"
       },
       "completed": false
     },
