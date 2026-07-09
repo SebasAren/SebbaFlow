@@ -12,6 +12,6 @@
     "@pi-ext/shared": "workspace:*"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.75.3 || ^0.76.0 || ^0.78.0 || ^0.79.0"
+    "@earendil-works/pi-coding-agent": "^0.80.3"
   }
 }

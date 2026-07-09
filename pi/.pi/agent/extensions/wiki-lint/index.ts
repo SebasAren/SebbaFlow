@@ -26,12 +26,7 @@ export interface LintResult {
 }
 
 export type LintCheck =
-  | "broken-links"
-  | "orphans"
-  | "missing-h1"
-  | "filename"
-  | "empty-pages"
-  | "inbox-orphans";
+  "broken-links" | "orphans" | "missing-h1" | "filename" | "empty-pages" | "inbox-orphans";
 
 export const ALL_CHECKS: LintCheck[] = [
   "broken-links",

@@ -29,10 +29,17 @@ for key in "@earendil-works/pi-ai" "@earendil-works/pi-coding-agent" "@earendil-
   update_dep "$extensions_root/package.json" "$key" "$new_range"
 done
 
-# Update individual extension peerDependencies
-for f in "$extensions_root"/shared/package.json "$extensions_root"/extract-share/package.json "$extensions_root"/pi-notify/package.json "$extensions_root"/git-hooks/package.json "$extensions_root"/todo/package.json; do
+# Update individual extension package.json files that have pi deps
+# (only updates files that actually exist and contain matching keys)
+for f in "$extensions_root"/shared/package.json \
+         "$extensions_root"/extract-share/package.json \
+         "$extensions_root"/pi-notify/package.json \
+         "$extensions_root"/usage-tracker/package.json; do
+  [ -f "$f" ] || continue
   for key in "@earendil-works/pi-coding-agent" "@earendil-works/pi-tui"; do
-    update_dep "$f" "$key" "$new_range"
+    if grep -q "\"$key\"" "$f" 2>/dev/null; then
+      update_dep "$f" "$key" "$new_range"
+    fi
   done
 done
 

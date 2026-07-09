@@ -92,13 +92,7 @@ export async function getParser(extension: string): Promise<Parser | null> {
 
 /** Symbol kinds we care about for outline extraction. */
 export type SymbolKind =
-  | "function"
-  | "class"
-  | "interface"
-  | "type_alias"
-  | "method"
-  | "variable"
-  | "export";
+  "function" | "class" | "interface" | "type_alias" | "method" | "variable" | "export";
 
 /** A single extracted symbol. */
 export interface CodeSymbol {
