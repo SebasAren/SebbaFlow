@@ -16,739 +16,20 @@
  */
 
 import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	readdirSync,
-	renameSync,
-	writeFileSync,
-} from "node:fs";
-import { join } from "node:path";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type PhaseStatus = "not_started" | "in_progress" | "done" | "skipped";
-type PhaseName = "red" | "green" | "refactor";
-
-interface Phase {
-	description: string;
-	status: PhaseStatus;
-}
-
-interface Step {
-	index: number;
-	name: string;
-	red: Phase;
-	green: Phase;
-	refactor: Phase;
-	completed: boolean;
-}
-
-interface DesignArtifact {
-	currentState: string;
-	desiredState: string;
-	patterns: string;
-	decisions: string;
-	questions: string;
-}
-
-interface Plan {
-	title: string;
-	slug: string;
-	context: string;
-	architecture: string;
-	design?: DesignArtifact;
-	created: string;
-	updated: string;
-	steps: Step[];
-	notes: string[];
-}
-
-interface StepInput {
-	name: string;
-	red: string;
-	green: string;
-	refactor?: string;
-}
-
-// Text format parser for agent-friendly step input
-// Format:
-//   STEP 1: Step name
-//   RED: Description
-//   GREEN: Description
-//   REFACTOR: Description (optional, empty if no refactoring)
-//   ---
-//   STEP 2: Next step...
-//   ...
-
-function parseStepsFromText(text: string): StepInput[] {
-	const steps: StepInput[] = [];
-	let currentStep: Partial<StepInput> | null = null;
-
-	// Normalize line endings and split
-	const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-
-	for (const rawLine of lines) {
-		const line = rawLine.trim();
-
-		// Skip empty lines (but not separator)
-		if (!line) continue;
-
-		// Step header
-		const stepMatch = line.match(/^STEP\s+(\d+)\s*:\s*(.+)$/i);
-		if (stepMatch) {
-			// Save previous step if exists
-			if (currentStep) {
-				if (!currentStep.name || !currentStep.red || !currentStep.green) {
-					console.error("Error: Step missing required fields (name, red, green)");
-					process.exit(1);
-				}
-				steps.push(currentStep as StepInput);
-			}
-			currentStep = { name: stepMatch[2] };
-			continue;
-		}
-
-		// Phase descriptions
-		const phaseMatch = line.match(/^(RED|GREEN|REFACTOR)\s*:\s*(.*)$/i);
-		if (phaseMatch) {
-			if (!currentStep) {
-				console.error(`Error: Phase "${phaseMatch[1]}" outside of a step`);
-				process.exit(1);
-			}
-			const key = phaseMatch[1].toLowerCase() as "red" | "green" | "refactor";
-			(currentStep as Record<string, string>)[key] = phaseMatch[2];
-			continue;
-		}
-
-		// Separator (ignore, just for readability)
-		if (line === "---") {
-			continue;
-		}
-
-		// Skip comment lines
-		if (line.startsWith("#")) continue;
-	}
-
-	// Don't forget the last step
-	if (currentStep) {
-		if (!currentStep.name || !currentStep.red || !currentStep.green) {
-			console.error("Error: Step missing required fields (name, red, green)");
-			process.exit(1);
-		}
-		steps.push(currentStep as StepInput);
-	}
-
-	if (steps.length === 0) {
-		console.error("Error: No steps found in input");
-		process.exit(1);
-	}
-
-	return steps;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const PLANS_DIR = join(process.cwd(), ".pi", "plans");
-const ARCHIVE_DIR = join(PLANS_DIR, "archive");
-
-function planPath(slug: string): string {
-	return join(PLANS_DIR, `${slug}.json`);
-}
-
-function archivedPath(slug: string): string {
-	return join(ARCHIVE_DIR, `${slug}.json`);
-}
-
-function readPlan(slug: string): Plan {
-	const path = planPath(slug);
-	if (!existsSync(path)) {
-		// Check archive
-		const archPath = archivedPath(slug);
-		if (existsSync(archPath)) {
-			console.error(`Plan "${slug}" is archived. Unarchive it first.`);
-			process.exit(1);
-		}
-		console.error(`Plan "${slug}" not found.`);
-		process.exit(1);
-	}
-	return JSON.parse(readFileSync(path, "utf8")) as Plan;
-}
-
-function writePlan(plan: Plan): void {
-	plan.updated = new Date().toISOString();
-	mkdirSync(PLANS_DIR, { recursive: true });
-	writeFileSync(planPath(plan.slug), JSON.stringify(plan, null, 2) + "\n");
-}
-
-function phaseEmoji(status: PhaseStatus): string {
-	switch (status) {
-		case "not_started":
-			return "⬜";
-		case "in_progress":
-			return "🔄";
-		case "done":
-			return "✅";
-		case "skipped":
-			return "⏭️";
-	}
-}
-
-function stepIndicator(step: Step): string {
-	if (step.completed) return "✅";
-	if (
-		step.red.status === "in_progress" ||
-		step.green.status === "in_progress" ||
-		step.refactor.status === "in_progress"
-	)
-		return "🔄";
-	return "⬜";
-}
-
-function deriveStatus(plan: Plan): string {
-	const total = plan.steps.length;
-	const completedCount = plan.steps.filter((s) => s.completed).length;
-
-	if (completedCount === total) return "All steps complete ✅";
-
-	for (const step of plan.steps) {
-		if (step.completed) continue;
-		const idx = step.index;
-		if (step.red.status === "in_progress")
-			return `Step ${idx}/${total} — 🔴 RED`;
-		if (step.green.status === "in_progress")
-			return `Step ${idx}/${total} — 🟢 GREEN`;
-		if (step.refactor.status === "in_progress")
-			return `Step ${idx}/${total} — 🔵 REFACTOR`;
-		if (step.red.status === "not_started")
-			return `Step ${idx}/${total} — Not started`;
-		if (step.green.status === "not_started")
-			return `Step ${idx}/${total} — 🟢 GREEN pending`;
-		if (step.refactor.status === "not_started")
-			return `Step ${idx}/${total} — 🔵 REFACTOR pending`;
-	}
-
-	return `Step ${completedCount + 1}/${total} — Not started`;
-}
-
-function parseArgs(args: string[]): Record<string, string> {
-	const result: Record<string, string> = {};
-	for (let i = 0; i < args.length; i++) {
-		if (args[i].startsWith("--") && i + 1 < args.length) {
-			result[args[i].slice(2)] = args[i + 1];
-			i++;
-		}
-	}
-	return result;
-}
-
-function readStepsFromSource(flags: Record<string, string>): StepInput[] {
-	// 1. Check for --steps-file first
-	if (flags["steps-file"]) {
-		const filePath = flags["steps-file"];
-		if (!existsSync(filePath)) {
-			console.error(`Error: Steps file not found: ${filePath}`);
-			process.exit(1);
-		}
-		const content = readFileSync(filePath, "utf8");
-		return parseStepsInput(content);
-	}
-
-	// 2. Check for --steps (inline)
-	if (flags.steps) {
-		return parseStepsInput(flags.steps);
-	}
-
-	console.error("Error: Either --steps or --steps-file is required");
-	process.exit(1);
-}
-
-function parseStepsInput(content: string): StepInput[] {
-	const trimmed = content.trim();
-
-	// Try JSON first
-	if (trimmed.startsWith("[")) {
-		try {
-			const steps = JSON.parse(trimmed) as StepInput[];
-			if (Array.isArray(steps) && steps.length > 0) {
-				return steps;
-			}
-		} catch {
-			// Not valid JSON, fall through to text format
-		}
-	}
-
-	// Fall back to text format
-	return parseStepsFromText(trimmed);
-}
-
-function showPlan(plan: Plan): void {
-	const status = deriveStatus(plan);
-	const total = plan.steps.length;
-	const completedCount = plan.steps.filter((s) => s.completed).length;
-
-	console.log(`# ${plan.title}`);
-	console.log(`Slug: ${plan.slug}`);
-	console.log(`Status: ${status}`);
-	console.log(`Progress: ${completedCount}/${total} steps`);
-	console.log(`Created: ${plan.created.split("T")[0]}`);
-	console.log("");
-
-	if (plan.context) {
-		console.log("## Context");
-		console.log(plan.context);
-		console.log("");
-	}
-
-	if (plan.architecture) {
-		console.log("## Architecture");
-		console.log(plan.architecture);
-		console.log("");
-	}
-
-	if (plan.design) {
-		console.log("## Design Artifact");
-		console.log("");
-		console.log("**Current State:**", plan.design.currentState);
-		console.log("");
-		console.log("**Desired End State:**", plan.design.desiredState);
-		console.log("");
-		console.log("**Patterns to Follow:**", plan.design.patterns);
-		console.log("");
-		console.log("**Resolved Decisions:**", plan.design.decisions);
-		console.log("");
-		console.log("**Open Questions:**", plan.design.questions);
-		console.log("");
-	}
-
-	console.log("## Steps");
-	console.log("");
-
-	for (const step of plan.steps) {
-		const indicator = stepIndicator(step);
-		const name = step.completed ? `~~${step.name}~~` : step.name;
-		console.log(`${indicator} **${step.index}. ${name}**`);
-
-		const r = phaseEmoji(step.red.status);
-		const g = phaseEmoji(step.green.status);
-		const b = phaseEmoji(step.refactor.status);
-		console.log(`   🔴 ${r}  🟢 ${g}  🔵 ${b}`);
-
-		// Show descriptions for phases that are in_progress or not_started
-		// (done phases are history, no need to re-read)
-		for (const phaseName of ["red", "green", "refactor"] as PhaseName[]) {
-			const phase = step[phaseName];
-			if (!phase.description) continue;
-			const label = phaseName === "red" ? "🔴 RED" : phaseName === "green" ? "🟢 GREEN" : "🔵 REFACTOR";
-			if (phase.status === "in_progress" || phase.status === "not_started") {
-				console.log(`   ${label}: ${phase.description}`);
-			}
-		}
-		console.log("");
-	}
-
-	if (plan.notes.length > 0) {
-		console.log("## Notes");
-		for (const note of plan.notes) {
-			console.log(`- ${note}`);
-		}
-		console.log("");
-	}
-
-	// Summary table
-	console.log("## Summary");
-	console.log("");
-	console.log("| Step | 🔴 RED | 🟢 GREEN | 🔵 REFACTOR |");
-	console.log("|------|--------|----------|-------------|");
-	for (const step of plan.steps) {
-		const r = phaseEmoji(step.red.status);
-		const g = phaseEmoji(step.green.status);
-		const b = phaseEmoji(step.refactor.status);
-		const name = step.completed ? `~~${step.index}~~` : `${step.index}`;
-		console.log(`| ${name} | ${r} | ${g} | ${b} |`);
-	}
-	console.log("");
-}
-
-// ---------------------------------------------------------------------------
-// Commands
-// ---------------------------------------------------------------------------
-
-function cmdCreate(args: string[]): void {
-	const slug = args[0];
-	if (!slug) {
-		console.error("Usage: tdd-plan create <slug> --title <title> --steps <json> | --steps-file <path>");
-		process.exit(1);
-	}
-
-	if (existsSync(planPath(slug))) {
-		console.error(`Plan "${slug}" already exists.`);
-		process.exit(1);
-	}
-
-	const flags = parseArgs(args.slice(1));
-	const title = flags.title;
-
-	if (!title) {
-		console.error("Error: --title is required");
-		process.exit(1);
-	}
-
-	// Read steps from --steps-file or --steps
-	const stepsInput = readStepsFromSource(flags);
-
-	const plan: Plan = {
-		title,
-		slug,
-		context: flags.context ?? "",
-		architecture: flags.architecture ?? "",
-		created: new Date().toISOString(),
-		updated: new Date().toISOString(),
-		steps: stepsInput.map((s, i) => ({
-			index: i + 1,
-			name: s.name,
-			red: { description: s.red ?? "", status: "not_started" as PhaseStatus },
-			green: { description: s.green ?? "", status: "not_started" as PhaseStatus },
-			refactor: {
-				description: s.refactor ?? "",
-				status: "not_started" as PhaseStatus,
-			},
-			completed: false,
-		})),
-		notes: flags.notes ? JSON.parse(flags.notes) : [],
-	};
-
-	writePlan(plan);
-	console.log(`Created plan: ${slug}`);
-	console.log("");
-	showPlan(plan);
-}
-
-function cmdEdit(args: string[]): void {
-	const slug = args[0];
-	if (!slug) {
-		console.error("Usage: tdd-plan edit <slug> [--title <title>] [--steps <text> | --steps-file <path>] [--context <text>] [--architecture <text>] [--notes <json>]");
-		process.exit(1);
-	}
-
-	const plan = readPlan(slug);
-	const flags = parseArgs(args.slice(1));
-
-	// Update fields if provided
-	if (flags.title) {
-		plan.title = flags.title;
-	}
-	if (flags.context !== undefined) {
-		plan.context = flags.context;
-	}
-	if (flags.architecture !== undefined) {
-		plan.architecture = flags.architecture;
-	}
-
-	// Update steps if --steps or --steps-file provided
-	if (flags["steps-file"] || flags.steps) {
-		const stepsInput = readStepsFromSource(flags);
-		plan.steps = stepsInput.map((s, i) => ({
-			index: i + 1,
-			name: s.name,
-			red: { description: s.red ?? "", status: "not_started" as PhaseStatus },
-			green: { description: s.green ?? "", status: "not_started" as PhaseStatus },
-			refactor: {
-				description: s.refactor ?? "",
-				status: "not_started" as PhaseStatus,
-			},
-			completed: false,
-		}));
-	}
-
-	// Update notes if provided
-	if (flags.notes !== undefined) {
-		try {
-			plan.notes = JSON.parse(flags.notes);
-		} catch {
-			console.error("Error: --notes must be valid JSON array, e.g. '[\"note1\",\"note2\"]'");
-			process.exit(1);
-		}
-	}
-
-	writePlan(plan);
-	console.log(`Updated plan: ${slug}`);
-	console.log("");
-	showPlan(plan);
-}
-
-function cmdList(): void {
-	mkdirSync(PLANS_DIR, { recursive: true });
-
-	const plans: string[] = [];
-	for (const f of readdirSync(PLANS_DIR)) {
-		if (f.endsWith(".json")) {
-			plans.push(f.replace(/\.json$/, ""));
-		}
-	}
-
-	if (plans.length === 0) {
-		console.log("No plans found.");
-		return;
-	}
-
-	for (const slug of plans) {
-		const plan = readPlan(slug);
-		const status = deriveStatus(plan);
-		const total = plan.steps.length;
-		const done = plan.steps.filter((s) => s.completed).length;
-		console.log(`  ${slug}  —  ${plan.title}  (${done}/${total})  ${status}`);
-	}
-}
-
-function cmdShow(args: string[]): void {
-	const slug = args[0];
-	if (!slug) {
-		// Default to most recently modified plan
-		mkdirSync(PLANS_DIR, { recursive: true });
-		const files = readdirSync(PLANS_DIR)
-			.filter((f) => f.endsWith(".json"))
-			.map((f) => ({
-				name: f,
-				mtime: statOrUndefined(join(PLANS_DIR, f))?.mtime ?? new Date(0),
-			}))
-			.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-
-		if (files.length === 0) {
-			console.log("No plans found.");
-			return;
-		}
-		const plan = readPlan(files[0].name.replace(/\.json$/, ""));
-		showPlan(plan);
-		return;
-	}
-	const plan = readPlan(slug);
-	showPlan(plan);
-}
-
-function cmdPhase(args: string[]): void {
-	const [slug, stepStr, phaseStr, actionStr] = args;
-
-	if (!slug || !stepStr || !phaseStr || !actionStr) {
-		console.error(
-			"Usage: tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip>",
-		);
-		process.exit(1);
-	}
-
-	const stepNum = Number.parseInt(stepStr, 10);
-	if (Number.isNaN(stepNum) || stepNum < 1) {
-		console.error(`Error: step must be a positive integer, got "${stepStr}"`);
-		process.exit(1);
-	}
-
-	const validPhases: PhaseName[] = ["red", "green", "refactor"];
-	if (!validPhases.includes(phaseStr as PhaseName)) {
-		console.error(`Error: phase must be one of ${validPhases.join(", ")}, got "${phaseStr}"`);
-		process.exit(1);
-	}
-	const phase = phaseStr as PhaseName;
-
-	const validActions: Record<string, PhaseStatus> = {
-		start: "in_progress",
-		done: "done",
-		skip: "skipped",
-	};
-	if (!(actionStr in validActions)) {
-		console.error(`Error: action must be start, done, or skip, got "${actionStr}"`);
-		process.exit(1);
-	}
-
-	const plan = readPlan(slug);
-	const step = plan.steps[stepNum - 1];
-	if (!step) {
-		console.error(`Error: step ${stepNum} not found (plan has ${plan.steps.length} steps)`);
-		process.exit(1);
-	}
-
-	step[phase].status = validActions[actionStr];
-	writePlan(plan);
-
-	const statusLabel =
-		actionStr === "start" ? "started" : actionStr === "done" ? "done" : "skipped";
-	console.log(`Step ${stepNum}/${plan.steps.length} ${phase.toUpperCase()} ${statusLabel}`);
-	console.log(`Status: ${deriveStatus(plan)}`);
-}
-
-function cmdComplete(args: string[]): void {
-	const [slug, stepStr] = args;
-	if (!slug || !stepStr) {
-		console.error("Usage: tdd-plan complete <slug> <step>");
-		process.exit(1);
-	}
-
-	const stepNum = Number.parseInt(stepStr, 10);
-	if (Number.isNaN(stepNum) || stepNum < 1) {
-		console.error(`Error: step must be a positive integer, got "${stepStr}"`);
-		process.exit(1);
-	}
-
-	const plan = readPlan(slug);
-	const step = plan.steps[stepNum - 1];
-	if (!step) {
-		console.error(`Error: step ${stepNum} not found (plan has ${plan.steps.length} steps)`);
-		process.exit(1);
-	}
-
-	step.completed = true;
-	// Mark any remaining phases as done/skipped
-	if (step.red.status !== "done") step.red.status = "done";
-	if (step.green.status !== "done") step.green.status = "done";
-	if (step.refactor.status !== "done" && step.refactor.status !== "skipped")
-		step.refactor.status = "done";
-
-	writePlan(plan);
-
-	const done = plan.steps.filter((s) => s.completed).length;
-	console.log(`Step ${stepNum}/${plan.steps.length} complete ✅ (${done}/${plan.steps.length} done)`);
-	console.log(`Status: ${deriveStatus(plan)}`);
-}
-
-function cmdNote(args: string[]): void {
-	const [slug, ...textParts] = args;
-	if (!slug || textParts.length === 0) {
-		console.error("Usage: tdd-plan note <slug> <text>");
-		process.exit(1);
-	}
-
-	const plan = readPlan(slug);
-	plan.notes.push(textParts.join(" "));
-	writePlan(plan);
-	console.log(`Added note to ${slug}`);
-}
-
-function cmdDesign(args: string[]): void {
-	const slug = args[0];
-	if (!slug) {
-		console.error("Usage: tdd-plan design <slug> [--show] [--current-state <text>] [--desired-state <text>] [--patterns <text>] [--decisions <text>] [--questions <text>]");
-		process.exit(1);
-	}
-
-	const flags = parseArgs(args.slice(1));
-
-	// --show mode: display existing design
-	if (args.includes("--show")) {
-		const plan = readPlan(slug);
-		if (!plan.design) {
-			console.error(`No design artifact for plan "${slug}".`);
-			process.exit(1);
-		}
-		console.log("## Design Artifact");
-		console.log("");
-		console.log("**Current State:**", plan.design.currentState);
-		console.log("");
-		console.log("**Desired End State:**", plan.design.desiredState);
-		console.log("");
-		console.log("**Patterns to Follow:**", plan.design.patterns);
-		console.log("");
-		console.log("**Resolved Decisions:**", plan.design.decisions);
-		console.log("");
-		console.log("**Open Questions:**", plan.design.questions);
-		console.log("");
-		return;
-	}
-
-	// Create or update design
-	const plan = readPlan(slug);
-
-	const existing = plan.design;
-	const design: DesignArtifact = {
-		currentState: flags["current-state"] ?? existing?.currentState ?? "",
-		desiredState: flags["desired-state"] ?? existing?.desiredState ?? "",
-		patterns: flags.patterns ?? existing?.patterns ?? "",
-		decisions: flags.decisions ?? existing?.decisions ?? "",
-		questions: flags.questions ?? existing?.questions ?? "",
-	};
-
-	plan.design = design;
-	writePlan(plan);
-
-	const action = existing ? "updated" : "created";
-	console.log(`Design artifact ${action} for: ${slug}`);
-}
-
-function cmdArchive(args: string[]): void {
-	const slug = args[0];
-	if (!slug) {
-		console.error("Usage: tdd-plan archive <slug>");
-		process.exit(1);
-	}
-
-	const src = planPath(slug);
-	if (!existsSync(src)) {
-		console.error(`Plan "${slug}" not found.`);
-		process.exit(1);
-	}
-
-	mkdirSync(ARCHIVE_DIR, { recursive: true });
-	renameSync(src, archivedPath(slug));
-
-	// Update status in archived file
-	const plan = JSON.parse(readFileSync(archivedPath(slug), "utf8")) as Plan;
-	plan.updated = new Date().toISOString();
-	writeFileSync(archivedPath(slug), JSON.stringify(plan, null, 2) + "\n");
-
-	console.log(`Archived plan: ${slug}`);
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
-function statOrUndefined(path: string) {
-	try {
-		const { statSync } = require("node:fs");
-		return statSync(path);
-	} catch {
-		return undefined;
-	}
-}
-
-const command = process.argv[2];
-const args = process.argv.slice(3);
-
-switch (command) {
-	case "create":
-		cmdCreate(args);
-		break;
-	case "list":
-		cmdList();
-		break;
-	case "show":
-		cmdShow(args);
-		break;
-	case "phase":
-		cmdPhase(args);
-		break;
-	case "complete":
-		cmdComplete(args);
-		break;
-	case "note":
-		cmdNote(args);
-		break;
-	case "archive":
-		cmdArchive(args);
-		break;
-	case "design":
-		cmdDesign(args);
-		break;
-	case "edit":
-		cmdEdit(args);
-		break;
-	case undefined:
-	case "help":
-	case "--help":
-	case "-h":
-		console.log(`tdd-plan — TDD plan management CLI
+	cmdArchive,
+	cmdComplete,
+	cmdCreate,
+	cmdDesign,
+	cmdEdit,
+	cmdList,
+	cmdNote,
+	cmdPhase,
+	cmdShow,
+} from "./lib/commands";
+import { PlanError } from "./lib/plan-io";
+
+function printHelp(): void {
+	console.log(`tdd-plan — TDD plan management CLI
 
 Usage:
   tdd-plan create <slug> --title <title> (--steps <json> | --steps-file <path>) [--context <text>] [--architecture <text>] [--notes <json>]
@@ -759,7 +40,6 @@ Usage:
   tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip>
   tdd-plan complete <slug> <step>
   tdd-plan note <slug> <text>
-  tdd-plan design <slug> [--show] [--current-state <text>] [--desired-state <text>] [--patterns <text>] [--decisions <text>] [--questions <text>]
   tdd-plan archive <slug>
 
 Steps JSON format:
@@ -769,9 +49,59 @@ Alternative: --steps-file for better multi-line support:
   tdd-plan create my-plan --title "My Plan" --steps-file steps.json
 
 Plans are stored in .pi/plans/<slug>.json`);
-		break;
-	default:
-		console.error(`Unknown command: ${command}`);
-		console.error("Run 'tdd-plan help' for usage.");
-		process.exit(1);
 }
+
+function main(): void {
+	const command = process.argv[2];
+	const args = process.argv.slice(3);
+
+	try {
+		switch (command) {
+			case "create":
+				cmdCreate(args);
+				break;
+			case "list":
+				cmdList();
+				break;
+			case "show":
+				cmdShow(args);
+				break;
+			case "phase":
+				cmdPhase(args);
+				break;
+			case "complete":
+				cmdComplete(args);
+				break;
+			case "note":
+				cmdNote(args);
+				break;
+			case "archive":
+				cmdArchive(args);
+				break;
+			case "design":
+				cmdDesign(args);
+				break;
+			case "edit":
+				cmdEdit(args);
+				break;
+			case undefined:
+			case "help":
+			case "--help":
+			case "-h":
+				printHelp();
+				break;
+			default:
+				console.error(`Unknown command: ${command}`);
+				console.error("Run 'tdd-plan help' for usage.");
+				process.exit(1);
+		}
+	} catch (e) {
+		if (e instanceof PlanError) {
+			console.error(e.message);
+			process.exit(1);
+		}
+		throw e;
+	}
+}
+
+main();
