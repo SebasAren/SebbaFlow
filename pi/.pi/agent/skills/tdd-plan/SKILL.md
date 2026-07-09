@@ -25,7 +25,7 @@ tdd-plan edit <slug> [--title <title>] [--steps <text>] [--steps-file <path>] [-
 tdd-plan design <slug> [--show] [--current-state <text>] [--desired-state <text>] [--patterns <text>] [--decisions <text>] [--questions <text>]
 tdd-plan list
 tdd-plan show [slug]
-tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip>
+tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip> [--no-verify]
 tdd-plan complete <slug> <step>
 tdd-plan note <slug> <text>
 tdd-plan archive <slug>
@@ -101,6 +101,7 @@ REFACTOR:
 ### Red-Green-Refactor Cycle
 
 At step start:
+
 ```bash
 jj new
 ```
@@ -133,10 +134,20 @@ If validation passes or fails unexpectedly — stop, report.
 tdd-plan phase <slug> <step> green start
 # Write simplest code to pass
 # Confirm it passes
-tdd-plan phase <slug> <step> green done
+tdd-plan phase <slug> <step> green done    # runs the verify gate (see below)
 jj fix
 jj commit -m "<conventional commit>"
 ```
+
+**Verify gate.** `green done` runs the commands listed in `.pi/config.json`
+(`{ "verify": [...] }`) before persisting the phase:
+
+- **Pass** → phase marked done, plan written, exit 0.
+- **Fail** → phase stays `in_progress`, plan **not** written, captured output printed, exit non-zero. Fix and re-run `green done`; do **not** proceed or commit.
+- **No `.pi/config.json`** → gate skipped with a warning (portable default for repos without checks).
+- **`--no-verify`** → `phase ... green done --no-verify` bypasses the gate entirely (for sticky cases where unrelated checks fail). Use sparingly.
+
+Since jj does not run git hooks, this gate is where the agent gets format/lint/typecheck feedback at GREEN time.
 
 #### 🔵 REFACTOR (if applicable)
 
@@ -151,6 +162,7 @@ If refactoring was significant, amend: `jj describe -m "<updated message>"`
 ### User Verification
 
 After committing:
+
 ```bash
 tdd-plan complete <slug> <step>
 ```
@@ -160,6 +172,7 @@ Show: summary, validation output, revision ID. Then stop and ask what's next.
 ### Finish
 
 Squash all step revisions into one feature commit:
+
 ```bash
 jj log  # review stack
 jj squash --from <first-step-rev>..<last-step-rev>

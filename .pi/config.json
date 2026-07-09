@@ -1,0 +1,3 @@
+{
+  "verify": ["mise run lint-changed", "mise run typecheck"]
+}

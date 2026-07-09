@@ -185,7 +185,7 @@ export function cmdPhase(args: string[]): void {
 
   if (!slug || !stepStr || !phaseStr || !actionStr) {
     throw new PlanError(
-      "Usage: tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip>",
+      "Usage: tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip> [--no-verify]",
     );
   }
 

@@ -9,7 +9,7 @@
  *   tdd-plan create <slug> --title "..." --steps '<json>'
  *   tdd-plan list
  *   tdd-plan show [slug]
- *   tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip>
+ *   tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip> [--no-verify]
  *   tdd-plan complete <slug> <step>
  *   tdd-plan note <slug> <text>
  *   tdd-plan archive <slug>
@@ -37,7 +37,7 @@ Usage:
   tdd-plan design <slug> [--show] [--current-state <text>] [--desired-state <text>] [--patterns <text>] [--decisions <text>] [--questions <text>]
   tdd-plan list
   tdd-plan show [slug]
-  tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip>
+  tdd-plan phase <slug> <step> <red|green|refactor> <start|done|skip> [--no-verify]
   tdd-plan complete <slug> <step>
   tdd-plan note <slug> <text>
   tdd-plan archive <slug>
@@ -48,7 +48,13 @@ Steps JSON format:
 Alternative: --steps-file for better multi-line support:
   tdd-plan create my-plan --title "My Plan" --steps-file steps.json
 
-Plans are stored in .pi/plans/<slug>.json`);
+Plans are stored in .pi/plans/<slug>.json
+
+Verify gate:
+  phase ... green done runs the commands in .pi/config.json {verify:[...]} before
+  persisting. On failure the phase stays in_progress and the CLI exits non-zero.
+  An absent .pi/config.json skips the gate with a warning (portable default).
+  --no-verify bypasses the gate entirely.`);
 }
 
 function main(): void {
