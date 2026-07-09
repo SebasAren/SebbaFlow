@@ -4,7 +4,7 @@
   "context": "The tdd-plan CLI is a single 387-line bun script at pi/.local/bin/tdd-plan managing TDD plans as JSON in .pi/plans. Only the design command has test coverage. Logic is hard to unit-test because process.argv is parsed at module top level and process.exit is called throughout. Separately, jj does not run git hooks, so commits made during the GREEN phase get zero validation feedback until much later.",
   "architecture": "Entry pi/.local/bin/tdd-plan stays a thin dispatcher (argv to command, errors to exit codes). Modules under pi/.local/bin/lib/: types.ts, plan-io.ts (read write find archive), args.ts (parseArgs + flag helpers), steps.ts (text and JSON step parsing), render.ts (showPlan), commands.ts (cmdCreate cmdPhase etc exported and importable). New lib/verify.ts loadVerifyConfig(cwd) reads .pi/config.json verify array (absent or invalid returns empty), runVerify(commands) runs each via spawnSync with array args and short-circuits on first failure. The green-done path in cmdPhase calls the gate: pass writes plan plus exit 0, fail skips write and reprints output and exit 1, empty config skips with a warning. Config lives at .pi/config.json so it is portable and decoupled from mise.",
   "created": "2026-07-09T13:49:45.979Z",
-  "updated": "2026-07-09T14:25:52.255Z",
+  "updated": "2026-07-09T14:30:24.991Z",
   "steps": [
     {
       "index": 1,
@@ -21,14 +21,14 @@
         "description": "Group tests by command into describe blocks for readability.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     },
     {
       "index": 2,
       "name": "Extract modules behavior-preserving",
       "red": {
         "description": "none",
-        "status": "skipped"
+        "status": "done"
       },
       "green": {
         "description": "Move code into pi/.local/bin/lib/{types,plan-io,args,steps,render,commands}.ts. The entry file tdd-plan becomes a thin argv dispatcher. Keep process.argv parsing and process.exit calls at the entry boundary only. All characterization tests from step 1 must still pass unchanged.",
@@ -38,7 +38,7 @@
         "description": "Remove the statOrUndefined-via-require() hack in favor of a proper statSync import. Tidy module imports.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     },
     {
       "index": 3,
@@ -55,7 +55,7 @@
         "description": "Add a typed VerifyConfig interface and validate it is an array of strings.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     },
     {
       "index": 4,
@@ -72,7 +72,7 @@
         "description": "Extract a runOne helper and consistent per-command output formatting.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     },
     {
       "index": 5,
@@ -89,7 +89,7 @@
         "description": "Centralize gate logic in a gateGreenStep helper to keep cmdPhase readable.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     },
     {
       "index": 6,
@@ -106,14 +106,14 @@
         "description": "Ensure the flag does not affect other phase actions and is absent from help unless intentional.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     },
     {
       "index": 7,
       "name": "Repo config plus skill docs",
       "red": {
         "description": "none",
-        "status": "skipped"
+        "status": "done"
       },
       "green": {
         "description": "Create .pi/config.json with verify set to mise run lint-changed and mise run typecheck. Update SKILL.md Implementation section to document the green-done verify gate, the --no-verify flag, and .pi/config.json including the absent-config skip-and-warn behavior. Update .mise/tasks/test if new test files need discovery.",
@@ -123,7 +123,7 @@
         "description": "Ensure the SKILL.md CLI reference matches the new flag.",
         "status": "done"
       },
-      "completed": false
+      "completed": true
     }
   ],
   "notes": [],
