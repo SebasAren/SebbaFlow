@@ -223,8 +223,13 @@ export function cmdPhase(args: string[]): void {
     );
   }
 
+  const noVerify = args.includes("--no-verify");
   if (phase === "green" && actionStr === "done") {
-    gateGreenStep();
+    if (noVerify) {
+      console.log("⚠ verify bypassed (--no-verify)");
+    } else {
+      gateGreenStep();
+    }
   }
 
   step[phase].status = validActions[actionStr];

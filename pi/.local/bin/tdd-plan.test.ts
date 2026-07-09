@@ -466,4 +466,15 @@ describe("tdd-plan phase green-done verify gate", () => {
     const plan = readPlanJson("gate");
     expect(plan.steps[0].green.status).toBe("done");
   });
+
+  test("green done --no-verify bypasses the gate even with a failing config", () => {
+    run(`create gate --title "Gate" --steps '${ONE_STEP_JSON}'`);
+    writeVerifyConfig(["false"]);
+    const result = run("phase gate 1 green done --no-verify");
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("bypassed");
+    expect(result.stdout).not.toContain("Verify failed");
+    const plan = readPlanJson("gate");
+    expect(plan.steps[0].green.status).toBe("done");
+  });
 });
