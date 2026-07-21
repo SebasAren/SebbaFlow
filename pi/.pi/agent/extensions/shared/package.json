@@ -11,7 +11,7 @@
   "dependencies": {
     "@langfuse/otel": "^5.2.0",
     "@langfuse/tracing": "^5.2.0",
-    "@opentelemetry/sdk-node": "^0.220.0",
+    "@opentelemetry/sdk-node": "^0.221.0",
     "tree-sitter-cpp": "^0.23.4",
     "tree-sitter-go": "^0.25.0",
     "tree-sitter-javascript": "^0.25.0",
