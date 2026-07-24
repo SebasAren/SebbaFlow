@@ -8,11 +8,10 @@
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   type AgentSession,
-  AuthStorage,
   createAgentSession,
   DefaultResourceLoader,
   getAgentDir,
-  ModelRegistry,
+  ModelRuntime,
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
@@ -27,36 +26,34 @@ import { renderCall, renderResult } from "./render";
 
 // ── Session factory ────────────────────────────────────────────────────────
 
-/** Shared auth/model infrastructure (created once, reused across subagent runs). */
-let authStorage: AuthStorage | undefined;
-let modelRegistry: ModelRegistry | undefined;
+/** Shared model/auth infrastructure (created once, reused across subagent runs). */
+let modelRuntime: ModelRuntime | undefined;
 let settingsManager: SettingsManager | undefined;
 
-function getSharedInfrastructure() {
-  if (!authStorage) authStorage = AuthStorage.create();
-  if (!modelRegistry) modelRegistry = ModelRegistry.create(authStorage);
+async function getSharedInfrastructure() {
+  if (!modelRuntime) modelRuntime = await ModelRuntime.create();
   if (!settingsManager)
     settingsManager = SettingsManager.inMemory({ compaction: { enabled: false } });
-  return { authStorage, modelRegistry, settingsManager };
+  return { modelRuntime, settingsManager };
 }
 
 /** Resolve a model name (e.g. "provider/model-id") to a Model object, or undefined. */
-function resolveModel(modelName?: string): any {
+async function resolveModel(modelName?: string): Promise<any> {
   const name = modelName || getModel();
   if (!name) return undefined;
 
-  const { modelRegistry } = getSharedInfrastructure();
+  const { modelRuntime } = await getSharedInfrastructure();
 
   // Try "provider/model-id" format
   if (name.includes("/")) {
     const slashIdx = name.indexOf("/");
     const provider = name.slice(0, slashIdx);
     const modelId = name.slice(slashIdx + 1);
-    return modelRegistry.find(provider, modelId);
+    return modelRuntime.getModel(provider, modelId);
   }
 
-  // Try matching against all available models by id
-  const all = modelRegistry.getAll();
+  // Try matching against all registered models by id
+  const all = modelRuntime.getModels();
   return all.find((m) => m.id === name);
 }
 
@@ -66,7 +63,7 @@ async function createLibrarianSession(
   cwd: string,
   modelName?: string,
 ): Promise<AgentSession> {
-  const { authStorage, modelRegistry, settingsManager } = getSharedInfrastructure();
+  const { modelRuntime, settingsManager } = await getSharedInfrastructure();
 
   // Use noExtensions + explicit additionalExtensionPaths to load ONLY the
   // extensions the librarian needs (exa-search, context7, wiki-search, wiki-read).
@@ -106,7 +103,7 @@ async function createLibrarianSession(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const model = resolveModel(modelName);
+  const model = await resolveModel(modelName);
 
   const opts: CreateAgentSessionOptions = {
     cwd,
@@ -121,8 +118,7 @@ async function createLibrarianSession(
       "wiki_search",
       "wiki_read",
     ],
-    authStorage,
-    modelRegistry,
+    modelRuntime,
     sessionManager: SessionManager.inMemory(),
     settingsManager,
     resourceLoader: loader,

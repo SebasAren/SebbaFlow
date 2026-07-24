@@ -97,6 +97,23 @@ export const piCodingAgentMock = () => ({
       return {};
     }
   },
+  ModelRuntime: class {
+    static async create() {
+      return new (this as any)();
+    }
+    getModel() {
+      return undefined;
+    }
+    getModels() {
+      return [];
+    }
+    async getAvailable() {
+      return [];
+    }
+    getProviders() {
+      return [];
+    }
+  },
   SessionManager: class {},
   SettingsManager: class {
     static getInstance() {
