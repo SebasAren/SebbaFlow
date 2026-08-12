@@ -11,7 +11,7 @@ jobs:
     name: Full verification (format + lint + typecheck + test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Verify mise and npm pi versions are in sync
         run: bash .github/scripts/check-version-sync.sh
