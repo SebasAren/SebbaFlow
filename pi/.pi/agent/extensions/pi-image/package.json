@@ -6,7 +6,7 @@
   "dependencies": {
     "@pi-ext/shared": "workspace:*",
     "image-size": "^2.0.2",
-    "openai": "^6.35.0"
+    "openai": "^7.0.0"
   },
   "pi": {
     "extensions": ["./index.ts"]
