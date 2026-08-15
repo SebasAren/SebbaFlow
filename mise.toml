@@ -4,7 +4,7 @@ python = "3.14.6"
 "aqua:astral-sh/ruff" = "latest"
 
 # Lua tooling
-lua = "5.5.0"
+lua = "5.5.1"
 "aqua:JohnnyMorganz/StyLua" = "latest"
 lua-language-server = "latest"
 
