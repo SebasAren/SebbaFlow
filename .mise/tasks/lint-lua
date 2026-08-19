@@ -3,9 +3,9 @@
 set -euo pipefail
 
 echo "=== Linting Lua (luacheck) ==="
-LUACHECK_BIN="$(mise where lua@5.5)/luarocks/bin/luacheck"
-if [ -x "$LUACHECK_BIN" ]; then
-  "$LUACHECK_BIN" --config nvim/.config/nvim/.luacheckrc nvim/.config/nvim/lua/ 2>/dev/null || true
+LUACHECK_BIN="$(command -v luacheck || true)"
+if [ -n "$LUACHECK_BIN" ]; then
+  "$LUACHECK_BIN" --config nvim/.config/nvim/.luacheckrc nvim/.config/nvim/lua/
 else
-  echo "WARNING: luacheck not found at $LUACHECK_BIN — skipping Lua lint"
+  echo "WARNING: luacheck not found (brew install luacheck) — skipping Lua lint"
 fi
