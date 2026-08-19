@@ -7,36 +7,3 @@ alias .....="cd ../../../.."
 
 # Homebrew package tracking (brew-sync is stowed to ~/.local/bin/)
 alias brewfile="nvim ~/dotfiles/homebrew/Brewfile"
-
-# Run pre-commit hook before jj commit (jj ignores git hooks natively)
-# Resolves hooks dir via core.hooksPath or .git/hooks; jj's only commit alias is 'ci'
-jj() {
-  if [[ "$1" == @(commit|ci) ]]; then
-    local hooks_dir
-    hooks_dir="$(git rev-parse --git-path hooks 2>/dev/null || echo '.git/hooks')"
-    if [[ -f "$hooks_dir/pre-commit" ]]; then
-      "$hooks_dir/pre-commit" || return 1
-    fi
-  fi
-  command jj "$@"
-}
-
-# Create a jj workspace at ~/.local/share/workspaces/{repo}/{name} and cd into it
-# Usage: jjws <workspace_name>
-# Repo name is derived automatically from the current jj repo root.
-# Requires running inside an existing jj repository.
-jjws() {
-  local repo_name dest
-  if [[ $# -ne 1 ]]; then
-    echo "Usage: jjws <workspace_name>" >&2
-    return 1
-  fi
-  repo_name="$(basename "$(jj workspace root 2>/dev/null)")" || {
-    echo "Error: not inside a jj repository" >&2
-    return 1
-  }
-  dest="$HOME/.local/share/workspaces/$repo_name/$1"
-  mkdir -p "$dest"
-  jj workspace add "$dest" --name "$1" || return 1
-  cd "$dest" || return 1
-}

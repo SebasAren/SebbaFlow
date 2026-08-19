@@ -189,7 +189,7 @@ Don't bundle the whole audit into one mega-diff. Make **one atomic commit per fi
 - One commit per file deletion or archive
 - One commit per content restoration (if you're un-doing a previous over-trim)
 
-Use `jj commit -m "<message>"` between groups to create atomic commits.
+Use `git commit -m "<message>"` between groups to create atomic commits.
 
 ## Usage
 
