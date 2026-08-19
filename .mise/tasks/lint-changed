@@ -26,8 +26,7 @@ done
 if [ ${#lua_files[@]} -gt 0 ]; then
     echo "→ Lua: ${lua_files[*]}"
     stylua "${lua_files[@]}" && recheck+=("${lua_files[@]}") || failed+=("stylua")
-    luacheck_bin="$(mise where lua@5.4)/luarocks/bin/luacheck"
-"$luacheck_bin" --config "$REPO_ROOT/nvim/.config/nvim/.luacheckrc" "${lua_files[@]}" || failed+=("luacheck")
+    luacheck --config "$REPO_ROOT/nvim/.config/nvim/.luacheckrc" "${lua_files[@]}" || failed+=("luacheck")
 fi
 
 # --- TypeScript/JavaScript ---

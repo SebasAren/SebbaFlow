@@ -21,7 +21,7 @@ jobs:
           install: true
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep luacheck
 
       - name: Cache bun dependencies
         uses: actions/cache@v5
@@ -35,9 +35,6 @@ jobs:
       - name: Install bun dependencies
         working-directory: pi/.pi/agent/extensions
         run: bun install --frozen-lockfile
-
-      - name: Install luacheck (Lua linter)
-        run: luarocks install luacheck 2>/dev/null || true
 
       - name: Run mise check
         run: mise run check

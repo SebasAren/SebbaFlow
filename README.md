@@ -40,7 +40,7 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 mise install
 ```
 
-This installs Python 3.12, Lua 5.4, Node, Bun, and tooling (ruff, StyLua, shellcheck, prettier) as defined in `mise.toml`.
+This installs Python 3.12, Node, Bun, and tooling (ruff, StyLua, shellcheck, prettier) as defined in `mise.toml`. Lua and luacheck come from Homebrew (bottled, no compiler needed).
 
 ### 2. Stow packages into `~/.config/`
 

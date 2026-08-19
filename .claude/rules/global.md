@@ -26,6 +26,11 @@ These are external constraints not visible in code, kept here because they apply
 - `Bun.escapeShellArg` is undefined in Bun 1.3.x — pass arrays to `spawnSync` instead.
 - `Bun.makeTempDir` does not exist — use `mkdtempSync` from `node:fs`.
 
+## Lua Tooling on Bluefin
+
+- mise's `lua` tool (vfox plugin) **always compiles from source** and needs `gcc` — unavailable on Bluefin. Never add `lua` to `mise.toml`.
+- Lua interpreter + luacheck come from Homebrew (bottled, no compiler): `brew install luacheck` — it's in `homebrew/Brewfile`.
+
 ## Stow Safety
 
 - Add a `.stowrc` at the repo root with `--target=<home-dir>` and `--ignore=` for non-stowable root files. Prevents accidental `stow */` from pointing to wrong targets.
