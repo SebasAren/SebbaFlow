@@ -29,6 +29,7 @@ function createTestTheme(): Theme {
       dim: 7,
       text: 15,
       thinkingText: 15,
+      thinkingMax: 8,
       userMessageText: 15,
       customMessageText: 15,
       customMessageLabel: 12,

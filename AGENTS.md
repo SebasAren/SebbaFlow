@@ -21,8 +21,7 @@ bashrc/                    # Bash config        → bashrc/AGENTS.md
 tmux/.config/tmux/         # Tmux (deprecated, kept for fallback)
 ghostty/.config/ghostty/   # Ghostty (deprecated, kept for fallback)
 kitty/.config/kitty/       # Kitty             → kitty/README.md
-wt/.config/worktrunk/      # Worktrunk (deprecated, replaced by jj)
-jj/.config/jj/             # jj (jujutsu) version control
+wt/.config/worktrunk/      # Worktrunk (deprecated)
 pi/.pi/                    # Pi agent           → pi/.pi/README.md
 homebrew/                  # brew-sync CLI      → homebrew/AGENTS.md
 obsidian/                  # Wiki & issue tools  → obsidian/AGENTS.md
@@ -57,7 +56,6 @@ Tool directories may have an `AGENTS.md` (path-scoped agent instructions) or a `
 | Mise tasks                     | `.mise/tasks/`                                                                                                                                                                                                                         |
 | Ghostty config                 | `ghostty/.config/ghostty/config.ghostty`                                                                                                                                                                                               |
 | Ghostty docs                   | `ghostty/README.md`                                                                                                                                                                                                                    |
-| jj config                      | `jj/.config/jj/config.toml`                                                                                                                                                                                                            |
 | Pre-commit checks              | `.githooks/pre-commit` runs `mise run pre-commit` (via `core.hooksPath`)                                                                                                                                                               |
 | Usage dashboard                | `usage-dashboard/` — `pitchfork start usage-dash` → `localhost:4813`                                                                                                                                                                   |
 | Quality watchers               | `pitchfork.toml` — use `/skill:pitchfork` to check live status                                                                                                                                                                         |

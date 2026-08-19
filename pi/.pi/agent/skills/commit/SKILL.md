@@ -1,11 +1,11 @@
 ---
 name: commit
-description: Reflect on session, update rules, commit with jj.
+description: Reflect on session, update rules, commit with git.
 ---
 
 # Commit with Reflection
 
-Reflect on the session, persist findings as rules if warranted, then commit with jj.
+Reflect on the session, persist findings as rules if warranted, then commit with git.
 
 ## Step 1: Reflect on Findings
 
@@ -36,6 +36,7 @@ description: Short description
 For path-scoped rules, add `globs: ["pattern/**/*.ext"]`.
 
 **Rules for rules:**
+
 - One topic per file, bullet points, specific not vague
 - Short rules (<300 bytes) merge into broader rules — avoid sprawl
 - Rules vs skills: passive gotchas → rules, action-oriented procedures → skills
@@ -44,26 +45,8 @@ For path-scoped rules, add `globs: ["pattern/**/*.ext"]`.
 
 **What does NOT belong:** derivable implementation details, ephemeral fix recipes, anything already in AGENTS.md/README.md/CONVENTIONS.md, historical narrative.
 
-## Step 3: Run jj fix
+## Step 3: Commit
 
-```bash
-jj fix
-```
+Run `mise run format` (auto-format) and fix any errors, or skip if the user says so.
 
-If errors, surface them. Fix and re-run, or skip if user says so.
-
-## Step 4: Commit
-
-Generate conventional commit message from `jj diff`. No shelling out to another LLM.
-
-```bash
-jj commit -m "<type>(<scope>): <description>"
-```
-
-The bash wrapper intercepts `jj commit`/`jj ci` to run pre-commit hooks.
-
-For selective commits:
-```bash
-jj split --paths <specific-files>
-jj commit -m "<message for selected files>"
-```
+Generate a conventional commit message from the diff. No shelling out to another LLM. Stage what belongs in this commit and commit it — the pre-commit hook (`.githooks/pre-commit`) runs lint, typecheck, and tests, so the commit only lands if they pass. For selective commits, stage only the specific files.

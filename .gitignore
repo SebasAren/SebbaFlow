@@ -58,3 +58,6 @@ wt/.config/worktrunk/approvals*
 # Test coverage output
 coverage/
 .eslintcache
+
+# Pi runtime cache (regenerated on startup)
+/pi/.pi/agent/models-store.json
