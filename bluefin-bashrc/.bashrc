@@ -80,3 +80,8 @@ if [ "${BLING_SOURCED:-0}" -eq 0 ]; then
     # mise activation is handled by ~/.bashrc.d/mise (from the bashrc stow)
     # If not using the bashrc stow, add: eval "$(mise activate bash)"
 fi
+
+# LLM gaming toggle
+alias llmon='systemctl --user start llama-vulkan.service && echo "🟢 LLM started"'
+alias llmoff='systemctl --user stop llama-vulkan.service && echo "🔴 LLM stopped"'
+alias llmtoggle='~/.local/bin/llama-toggle'
