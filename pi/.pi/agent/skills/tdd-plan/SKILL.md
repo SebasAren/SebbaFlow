@@ -7,7 +7,7 @@ description: Plan and implement features with TDD.
 
 Plan a feature using strict TDD discipline, then execute step-by-step. Each step follows Red-Green-Refactor: establish a failing condition, make it pass with minimal code, then refactor. Structural steps (schema, config, scaffolding) skip RED and go straight to implementation + validation.
 
-Uses **jj** for version control. Each step creates a new revision with `jj new`, commits with `jj commit`, and at plan end all revisions are squashed into one feature commit.
+Each step ends with one atomically scoped commit; at plan end all step commits are squashed into a single feature commit.
 
 ## Process
 
@@ -100,11 +100,7 @@ REFACTOR:
 
 ### Red-Green-Refactor Cycle
 
-At step start:
-
-```bash
-jj new
-```
+At step start, the working tree should be clean after the previous step's commit — if not, commit or stash first.
 
 #### Structural steps (`RED: none`)
 
@@ -113,9 +109,10 @@ tdd-plan phase <slug> <step> red skip
 # Implement structural change
 # Run validation command specified in GREEN
 tdd-plan phase <slug> <step> green done
-jj fix
-jj commit -m "<conventional commit>"
+# Then format and commit with a conventional message
 ```
+
+Unlike RED steps, structural steps don't establish a failing condition — just implement, validate, and commit.
 
 #### 🔴 RED
 
@@ -135,9 +132,9 @@ tdd-plan phase <slug> <step> green start
 # Write simplest code to pass
 # Confirm it passes
 tdd-plan phase <slug> <step> green done    # runs the verify gate (see below)
-jj fix
-jj commit -m "<conventional commit>"
 ```
+
+Then format and commit the step with a conventional message.
 
 **Verify gate.** `green done` runs the commands listed in `.pi/config.json`
 (`{ "verify": [...] }`) before persisting the phase:
@@ -147,7 +144,7 @@ jj commit -m "<conventional commit>"
 - **No `.pi/config.json`** → gate skipped with a warning (portable default for repos without checks).
 - **`--no-verify`** → `phase ... green done --no-verify` bypasses the gate entirely (for sticky cases where unrelated checks fail). Use sparingly.
 
-Since jj does not run git hooks, this gate is where the agent gets format/lint/typecheck feedback at GREEN time.
+The verify gate delivers format/lint/typecheck feedback at GREEN time — the pre-commit hook (`.githooks/pre-commit`) re-verifies lint, typecheck, and tests before the commit lands.
 
 #### 🔵 REFACTOR (if applicable)
 
@@ -157,7 +154,7 @@ tdd-plan phase <slug> <step> refactor start
 tdd-plan phase <slug> <step> refactor done
 ```
 
-If refactoring was significant, amend: `jj describe -m "<updated message>"`
+If refactoring was significant, amend the step commit with the updated message.
 
 ### User Verification
 
@@ -167,17 +164,11 @@ After committing:
 tdd-plan complete <slug> <step>
 ```
 
-Show: summary, validation output, revision ID. Then stop and ask what's next.
+Show: summary, validation output, commit hash. Then stop and ask what's next.
 
 ### Finish
 
-Squash all step revisions into one feature commit:
-
-```bash
-jj log  # review stack
-jj squash --from <first-step-rev>..<last-step-rev>
-jj describe -m "feat(<scope>): <feature description>"
-```
+Review the step stack, then squash all step commits into one feature commit with a `feat(<scope>): <description>` message.
 
 Archive if done: `tdd-plan archive <slug>`
 
@@ -191,13 +182,13 @@ Archive if done: `tdd-plan archive <slug>`
 6. **Stop on unexpected failure** — explain and ask user
 7. **One step at a time**
 8. **Respect the plan** — if wrong, pause and discuss
-9. **Run `jj fix` before commit**
+9. **Run `mise run format` before committing**
 10. **Single kickoff point** — `tdd-set-kickoff` once, use `/kickoff` to return
-11. **`jj new` at step start**
+11. **One commit per step** — commit at step end
 
 ## Error Handling
 
 - **Framework not found** → stop and ask
 - **Unexpected pass in RED** → report and ask
 - **Cannot make GREEN pass after 3 attempts** → stop, suggest simplifying
-- **Refactoring breaks validation** → `jj undo`, report, ask
+- **Refactoring breaks validation** → undo the changes, report, ask
