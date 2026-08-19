@@ -11,20 +11,19 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 
 ## What's Inside
 
-| Directory | Tool | Purpose |
-|-----------|------|---------|
-| `kitty/` | **Kitty** | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md) |
-| `pi/` | **Pi Agent** | Coding assistant with 15 custom extensions (explore subagent, librarian, wiki integration, fuzzy edit, and more) |
-| `nvim/` | Neovim | Lazy.nvim, 15 LSP servers, blink.cmp completion, CodeCompanion → [details](nvim/README.md) |
-| `tmux/` | Tmux | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md) |
-| `ghostty/` | Ghostty | (Legacy) GPU-accelerated terminal. Replaced by Kitty |
-| `bashrc/` | Bash | Modular shell config: aliases, secrets, fzf, mise |
-| `wt/` | *(Deprecated)* | Worktrunk — replaced by jj. See `wt/DEPRECATED.md` |
-| `homebrew/` | Homebrew | `brew-sync` CLI + Brewfile for personal packages |
-| `jj/` | **jj** | Jujutsu version control — jj porcelain on git, conventional commits, pre-commit hook |
-| `obsidian/` | Obsidian | Wiki search, issue tracker, and wiki maintenance tools |
-| `bluefin-bashrc/` | Bash | Bluefin base `.bashrc` with inlined bling |
-| `mise/` | mise | Runtime version manager (Python, Lua, Node, Bun) |
+| Directory         | Tool           | Purpose                                                                                                                              |
+| ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `kitty/`          | **Kitty**      | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md) |
+| `pi/`             | **Pi Agent**   | Coding assistant with 15 custom extensions (explore subagent, librarian, wiki integration, fuzzy edit, and more)                     |
+| `nvim/`           | Neovim         | Lazy.nvim, 15 LSP servers, blink.cmp completion, CodeCompanion → [details](nvim/README.md)                                           |
+| `tmux/`           | Tmux           | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                        |
+| `ghostty/`        | Ghostty        | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                 |
+| `bashrc/`         | Bash           | Modular shell config: aliases, secrets, fzf, mise                                                                                    |
+| `wt/`             | _(Deprecated)_ | Worktrunk — deprecated. See `wt/DEPRECATED.md`                                                                                       |
+| `homebrew/`       | Homebrew       | `brew-sync` CLI + Brewfile for personal packages                                                                                     |
+| `obsidian/`       | Obsidian       | Wiki search, issue tracker, and wiki maintenance tools                                                                               |
+| `bluefin-bashrc/` | Bash           | Bluefin base `.bashrc` with inlined bling                                                                                            |
+| `mise/`           | mise           | Runtime version manager (Python, Lua, Node, Bun)                                                                                     |
 
 ## Prerequisites
 
@@ -107,23 +106,23 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) coding
 
 ### Extension Overview
 
-| Extension | Purpose |
-|-----------|---------|
-| **explore** | Subagent-powered codebase reconnaissance with pre-search, file indexing, and semantic reranking |
-| **librarian** | Documentation research subagent (Exa web search + Context7 library docs + personal wiki) |
-| **fuzzy-edit** | Tab-aware fuzzy fallback for the edit tool |
-| **wiki-search** | Hybrid BM25 + vector search with Cohere reranking over personal wiki |
-| **wiki-read** | Scope-safe wiki page reader |
-| **wiki-lint** | Structural health checks for the wiki |
-| **plan-mode** | Read-only mode toggleable via `/plan` |
-| **tdd-tree** | TDD kickoff point labeling in the session tree |
-| **context7** | Up-to-date library documentation lookup (internal-only subagent dep) |
-| **exa-search** | Web search and page fetch via Exa API (internal-only subagent dep) |
-| **claude-rules** | `.claude/rules/` parser with picomatch glob matching |
-| **cheap-clarify** | Cheap-model clarification subagent |
-| **extract-share** | Extract and share assistant messages as PNG or markdown |
-| **pi-image** | Render inline images in terminal output |
-| **pi-notify** | Desktop notifications from pi |
+| Extension         | Purpose                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| **explore**       | Subagent-powered codebase reconnaissance with pre-search, file indexing, and semantic reranking |
+| **librarian**     | Documentation research subagent (Exa web search + Context7 library docs + personal wiki)        |
+| **fuzzy-edit**    | Tab-aware fuzzy fallback for the edit tool                                                      |
+| **wiki-search**   | Hybrid BM25 + vector search with Cohere reranking over personal wiki                            |
+| **wiki-read**     | Scope-safe wiki page reader                                                                     |
+| **wiki-lint**     | Structural health checks for the wiki                                                           |
+| **plan-mode**     | Read-only mode toggleable via `/plan`                                                           |
+| **tdd-tree**      | TDD kickoff point labeling in the session tree                                                  |
+| **context7**      | Up-to-date library documentation lookup (internal-only subagent dep)                            |
+| **exa-search**    | Web search and page fetch via Exa API (internal-only subagent dep)                              |
+| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching                                            |
+| **cheap-clarify** | Cheap-model clarification subagent                                                              |
+| **extract-share** | Extract and share assistant messages as PNG or markdown                                         |
+| **pi-image**      | Render inline images in terminal output                                                         |
+| **pi-notify**     | Desktop notifications from pi                                                                   |
 
 ### Explore Subagent Architecture
 
@@ -172,6 +171,7 @@ See [`pi/.pi/README.md`](pi/.pi/README.md) for the full architecture deep-dive, 
 ### Why GNU Stow?
 
 Stow is minimal and transparent — it just creates symlinks. No daemons, no complex state. The directory structure _is_ the config. This means:
+
 - Git tracks everything naturally
 - No build step or compilation
 - Easy to add/remove packages (`stow -D pkg`)
@@ -184,15 +184,6 @@ Stow is minimal and transparent — it just creates symlinks. No daemons, no com
 ### Why Proton Pass for secrets?
 
 Secrets should never be committed to git. Proton Pass CLI provides encrypted secret injection via templates (`~/.secrets.tpl`). The lazy resolution pattern in `.bashrc.d/secrets` means API keys are only fetched when a tool actually needs them, keeping shell startup fast.
-
-### Why jj (jujutsu)?
-
-[jj](https://jj-vcs.dev/) is a version control system that works as extra porcelain on top of git. It provides:
-- Automatic operation logging with `jj undo`
-- Immutable history with automatic commit evolution (no manual rebasing)
-- Simpler mental model — revisions instead of branches
-- Conventional commits generated via Pi LLM
-- Bash shell wrapper runs `.githooks/pre-commit` (via `core.hooksPath`) before `jj commit`/`jj ci`
 
 ### Why subagents for exploration and research?
 
@@ -222,17 +213,15 @@ GPU-accelerated terminal that replaces both Ghostty and tmux. Provides native ta
 
 Modular config in `bashrc/.bashrc.d/`. Each file handles one concern:
 
-| File | Purpose |
-|------|---------|
-| `config` | Editor, fzf bindings |
-| `alias` | Short aliases |
-| `mise` | Activate mise runtime manager |
-| `secrets` | Lazy Proton Pass integration |
-| `tmux` | Auto-attach/create tmux sessions (skipped inside Kitty) |
+| File      | Purpose                                                 |
+| --------- | ------------------------------------------------------- |
+| `config`  | Editor, fzf bindings                                    |
+| `alias`   | Short aliases                                           |
+| `mise`    | Activate mise runtime manager                           |
+| `secrets` | Lazy Proton Pass integration                            |
+| `tmux`    | Auto-attach/create tmux sessions (skipped inside Kitty) |
 
 | `fnox` | fnox reencryption helper |
-
-
 
 ### Homebrew
 
@@ -245,14 +234,6 @@ brew-sync full        # both: regenerate + install
 ```
 
 On Bluefin, system packages from `/usr/share/ublue-os/homebrew/*.Brewfile` are excluded automatically.
-
-### jj (jujutsu)
-
-Version control as extra porcelain on top of git. Config at `jj/.config/jj/config.toml`.
-
-**Commit messages**: Generated by the Pi LLM via the commit skill, which feeds the diff to pi with conventional commit format instructions. Falls back to a simple `chore: update N files` if pi fails.
-
-**Workflow**: `jj new` per TDD step, `jj commit` at step end, squash all revisions into one feature commit at plan end.
 
 ## Development
 
@@ -272,13 +253,13 @@ mise run lint-shell     # Lint shell scripts with shellcheck
 
 The TypeScript surface (Pi agent extensions and standalone CLIs) is covered by **813+ tests across 64+ files**, all running under [`bun test`](https://bun.sh/docs/cli/test) and executed on every push by GitHub Actions (see [`.github/workflows/test.yml`](.github/workflows/test.yml)).
 
-| Location | Tests | Style |
-|----------|-------|-------|
-| `pi/.pi/agent/extensions/**/*.test.ts` | 689 | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
-| `pi/.local/bin/tdd-plan.test.ts` | 5 | End-to-end CLI tests via `execSync` against the `tdd-plan` binary |
-| `pi/.local/bin/store-memory*.test.ts` | 18 | CLI tests for the `store-memory` skill binary |
-| `obsidian/.local/lib/wiki-search/wiki-search.test.ts` | 41 | Unit tests with real filesystem fixtures for the `wiki-search` CLI |
-| `obsidian/.local/lib/wiki-core/` + `obsidian/.local/lib/issue/` | 60 | Unit tests for wiki frontmatter I/O and issue tracker CLI |
+| Location                                                        | Tests | Style                                                                                              |
+| --------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
+| `pi/.pi/agent/extensions/**/*.test.ts`                          | 689   | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
+| `pi/.local/bin/tdd-plan.test.ts`                                | 5     | End-to-end CLI tests via `execSync` against the `tdd-plan` binary                                  |
+| `pi/.local/bin/store-memory*.test.ts`                           | 18    | CLI tests for the `store-memory` skill binary                                                      |
+| `obsidian/.local/lib/wiki-search/wiki-search.test.ts`           | 41    | Unit tests with real filesystem fixtures for the `wiki-search` CLI                                 |
+| `obsidian/.local/lib/wiki-core/` + `obsidian/.local/lib/issue/` | 60    | Unit tests for wiki frontmatter I/O and issue tracker CLI                                          |
 
 **Run locally:**
 
@@ -299,7 +280,7 @@ bun test obsidian/.local/lib/issue/issue.test.ts
 
 ### Pre-commit Checks
 
-Run `mise run pre-commit` before committing — it executes format + lint + typecheck + tests. The version-controlled hook at `.githooks/pre-commit` invokes it via `core.hooksPath` (set by `mise run setup`). A bash shell wrapper in `~/.bashrc.d/alias` intercepts `jj commit`/`jj ci` since jj has no native hook support.
+Run `mise run pre-commit` before committing — it executes format + lint + typecheck + tests. The version-controlled hook at `.githooks/pre-commit` invokes it via `core.hooksPath` (set by `mise run setup`).
 
 ## Repository Structure
 
@@ -321,7 +302,6 @@ Run `mise run pre-commit` before committing — it executes format + lint + type
 ├── bashrc/                      # Bash
 │   ├── .bashenv                 # Global env vars
 │   └── .bashrc.d/               # Modular sourced scripts
-├── jj/.config/jj/               # jj (jujutsu) config
 ├── wt/                         # Worktrunk (deprecated)
 ├── homebrew/                    # brew-sync CLI + Brewfile
 ├── mise.toml                    # Runtime versions

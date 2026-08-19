@@ -16,7 +16,7 @@ description: Global project conventions — stow, docs structure, and TypeScript
 
 **CONVENTIONS.md**: Source of truth for per-language code style (Lua, Python, Shell, TypeScript). Actionable rules with specific tool commands (e.g., `mise run format-lua`), not vague guidance. Don't duplicate its contents in AGENTS.md or rule files — link to it.
 
-**`pi/.pi/agent/APPEND_SYSTEM.md`**: Personal cross-project workflow only (jj habits, communication preferences). No repo-specific conventions — those go in `.claude/rules/` or `AGENTS.md`.
+**`pi/.pi/agent/APPEND_SYSTEM.md`**: Personal cross-project workflow only (communication preferences). No repo-specific conventions — those go in `.claude/rules/` or `AGENTS.md`.
 
 ## TypeScript / Bun gotchas
 
