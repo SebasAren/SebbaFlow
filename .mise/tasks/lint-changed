@@ -76,14 +76,24 @@ if [ ${#sh_files[@]} -gt 0 ]; then
     shellcheck "${sh_files[@]}" || failed+=("shellcheck")
 fi
 
-# --- Other prettier-formatable files (json, md, yaml, toml) ---
+# --- Other prettier-formatable files (json, md, yaml) ---
 prettier_files=()
 for f in "${files[@]}"; do
-    [[ "$f" == *.json || "$f" == *.md || "$f" == *.yaml || "$f" == *.yml || "$f" == *.toml ]] && prettier_files+=("$f")
+    [[ "$f" == *.json || "$f" == *.md || "$f" == *.yaml || "$f" == *.yml ]] && prettier_files+=("$f")
 done
 if [ ${#prettier_files[@]} -gt 0 ]; then
     echo "→ Other (prettier): ${prettier_files[*]}"
     prettier --write "${prettier_files[@]}" && recheck+=("${prettier_files[@]}") || failed+=("prettier")
+fi
+
+# --- TOML (taplo — prettier has no TOML parser) ---
+toml_files=()
+for f in "${files[@]}"; do
+    [[ "$f" == *.toml ]] && toml_files+=("$f")
+done
+if [ ${#toml_files[@]} -gt 0 ]; then
+    echo "→ TOML (taplo): ${toml_files[*]}"
+    taplo format "${toml_files[@]}" && recheck+=("${toml_files[@]}") || failed+=("taplo")
 fi
 
 # Re-stage files modified by formatters
