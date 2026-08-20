@@ -21,3 +21,13 @@ repo. `stow herdr` descends into the pre-existing dir and links only the config.
 
 Edit `herdr/.config/herdr/config.toml` in the repo — the symlink points at it,
 changes reflect immediately. Validate with `herdr config check`.
+
+## Binary management
+
+Herdr is installed by mise (`github:ogulcancelik/herdr`, pinned `latest` in the
+**global** `~/.config/mise/config.toml` — not this repo's `mise.toml`). Update with
+`mise upgrade github:ogulcancelik/herdr`. Don't use `herdr update` — it installs a
+second, self-managed copy while the mise shim keeps serving the old binary.
+
+After an upgrade, `herdr status` shows `restart_needed: yes` until the herdr
+app is quit and relaunched (server keeps running the old version).
