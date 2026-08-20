@@ -34,6 +34,7 @@ These are external constraints not visible in code, kept here because they apply
 ## Stow Safety
 
 - Add a `.stowrc` at the repo root with `--target=<home-dir>` and `--ignore=` for non-stowable root files. Prevents accidental `stow */` from pointing to wrong targets.
+- Before whole-dir stowing a tool, check whether its config dir also holds runtime state (logs/sockets/session files) — some tools have no XDG state split yet (e.g. herdr). If so, link individual files instead: stow descends into the existing real dir and leaves state out of git.
 
 ## Shellcheck in `.bashrc.d`
 
