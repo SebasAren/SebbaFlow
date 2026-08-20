@@ -167,6 +167,7 @@ Gotchas:
 - `--wait` blocks the parent; for fire-and-forget, drop `--wait` and poll with `agent wait`, or notify via `herdr notification show "$WS idle"`.
 - `blocked` helpers are asking a question — `agent read`, then answer via another `agent prompt`.
 - Switch hooks run synchronously (`mise run setup` can take minutes on a fresh worktree).
+- Linked worktrees share the main repo's `.git/config`. Tell helpers to never run `git config` (their test identity leaks into your commits — use `git -c` or env vars) and to prefer plain clones under /tmp for isolated experiments.
 
 ## Notes
 
