@@ -91,6 +91,8 @@ herdr session attach <name>
 herdr notification show "Title" --body "text" --position top-right [--sound done|none]
 ```
 
+For parallel work on repos managed by wt (worktrunk), prefer wt-created worktrees — they get project hooks and the `wt merge` lifecycle. See the delegation recipe below.
+
 ### Integrations & raw API
 
 ```bash
@@ -129,6 +131,38 @@ herdr agent prompt w13:p1 "review the test coverage in src/api/"
 herdr agent wait w13:p1 --until idle --timeout 300000   # or --until blocked to answer a question
 herdr agent read w13:p1 --source recent --lines 100
 ```
+
+### Delegate to a helper agent in a wt worktree
+
+Parallel work without leaving your pane. wt creates the worktree (hooks run: trust, setup, copy-ignored), herdr adopts it as a workspace, a pi helper works there, `wt merge` lands the result with verification.
+
+**Prereq (once per repo, interactive):** hooks must be pre-approved or non-interactive switches fail with `Cannot prompt for approval` — `wt config approvals add --yes`.
+
+```bash
+# 1. Create worktree, stay in cwd. JSON is the LAST stdout line (hook logs precede it)
+JSON=$(wt switch --create feat-x --no-cd --format json | tail -1)
+WT_PATH=$(echo "$JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["path"])')
+
+# 2. Adopt as unfocused workspace
+RES=$(herdr worktree open --path "$WT_PATH" --no-focus)
+WS=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["workspace"]["workspace_id"])')
+PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])')
+
+# 3. Spawn helper, give task, read result
+herdr agent start helper --kind pi --pane "$PANE"
+herdr agent prompt "$PANE" "task description..." --wait --until idle --timeout 600000
+herdr agent read "$PANE" --source recent --lines 100
+
+# 4. After human review, merge from anywhere and clean up (wt -C targets the worktree)
+wt -C "$WT_PATH" merge
+herdr workspace close "$WS"    # merge.remove already deleted the checkout
+```
+
+Gotchas:
+- The first `agent prompt` after `agent start` may fail `agent_prompt_stalled` (pi cold start misses the 5s working-state window). Retry once.
+- `--wait` blocks the parent; for fire-and-forget, drop `--wait` and poll with `agent wait`, or notify via `herdr notification show "$WS idle"`.
+- `blocked` helpers are asking a question — `agent read`, then answer via another `agent prompt`.
+- Switch hooks run synchronously (`mise run setup` can take minutes on a fresh worktree).
 
 ## Notes
 
