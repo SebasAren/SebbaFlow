@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Auto-format and lint only changed (staged) files"
+#MISE description="Auto-format and lint only changed (staged) files; fails if anything changed (never re-stages)"
 set -euo pipefail
 
 REPO_ROOT="${WT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}"
@@ -15,8 +15,22 @@ fi
 echo "Changed files: ${files[*]}"
 echo "---"
 
+# NEVER run `git add` from this task. When invoked as a pre-commit hook, git hands
+# us the index it will re-read after the hook to build the commit tree (for
+# pathspec-limited commits that is a temp $GIT_DIR/next-index-<pid>, not the real
+# index). Re-staging writes blobs that are referenced only by that index file —
+# no ref or tree points to them, and `git gc`/`git prune` reachability only covers
+# refs and registered worktree indexes. A concurrent prune during the rest of the
+# hook deletes those blobs, and the commit then dies with
+#   error: invalid object <sha> for '<path>' / error: Error building trees
+# after every check already passed. Instead: format, detect what we changed,
+# and fail with instructions to re-stage.
+declare -A content_before=()
+for f in "${files[@]}"; do
+    content_before["$f"]="$(git hash-object -- "$f" 2>/dev/null || true)"
+done
+
 failed=()
-recheck=()
 
 # --- Lua ---
 lua_files=()
@@ -25,7 +39,7 @@ for f in "${files[@]}"; do
 done
 if [ ${#lua_files[@]} -gt 0 ]; then
     echo "→ Lua: ${lua_files[*]}"
-    stylua "${lua_files[@]}" && recheck+=("${lua_files[@]}") || failed+=("stylua")
+    stylua "${lua_files[@]}" || failed+=("stylua")
     luacheck --config "$REPO_ROOT/nvim/.config/nvim/.luacheckrc" "${lua_files[@]}" || failed+=("luacheck")
 fi
 
@@ -41,7 +55,7 @@ done
 if [ ${#ts_files[@]} -gt 0 ]; then
     echo "→ TS/JS: ${ts_files[*]}"
     # Prettier runs from repo root — paths are repo-relative
-    prettier --write "${ts_files[@]}" && recheck+=("${ts_files[@]}") || failed+=("prettier")
+    prettier --write "${ts_files[@]}" || failed+=("prettier")
     # ESLint only has a config in the extensions directory
     if [ ${#ts_ext_files[@]} -gt 0 ]; then
         # Strip the pi/.pi/agent/extensions/ prefix so paths are relative to extensions dir
@@ -60,7 +74,7 @@ for f in "${files[@]}"; do
 done
 if [ ${#py_files[@]} -gt 0 ]; then
     echo "→ Python: ${py_files[*]}"
-    ruff format "${py_files[@]}" && recheck+=("${py_files[@]}") || failed+=("ruff-format")
+    ruff format "${py_files[@]}" || failed+=("ruff-format")
     ruff check --fix "${py_files[@]}" || failed+=("ruff-lint")
 fi
 
@@ -71,7 +85,7 @@ for f in "${files[@]}"; do
 done
 if [ ${#sh_files[@]} -gt 0 ]; then
     echo "→ Shell: ${sh_files[*]}"
-    shfmt -w "${sh_files[@]}" && recheck+=("${sh_files[@]}") || failed+=("shfmt")
+    shfmt -w "${sh_files[@]}" || failed+=("shfmt")
     shellcheck "${sh_files[@]}" || failed+=("shellcheck")
 fi
 
@@ -82,7 +96,7 @@ for f in "${files[@]}"; do
 done
 if [ ${#prettier_files[@]} -gt 0 ]; then
     echo "→ Other (prettier): ${prettier_files[*]}"
-    prettier --write "${prettier_files[@]}" && recheck+=("${prettier_files[@]}") || failed+=("prettier")
+    prettier --write "${prettier_files[@]}" || failed+=("prettier")
 fi
 
 # --- TOML (taplo — prettier has no TOML parser) ---
@@ -92,12 +106,24 @@ for f in "${files[@]}"; do
 done
 if [ ${#toml_files[@]} -gt 0 ]; then
     echo "→ TOML (taplo): ${toml_files[*]}"
-    taplo format "${toml_files[@]}" && recheck+=("${toml_files[@]}") || failed+=("taplo")
+    taplo format "${toml_files[@]}" || failed+=("taplo")
 fi
 
-# Re-stage files modified by formatters
-if [ ${#recheck[@]} -gt 0 ]; then
-    git add --update "${recheck[@]}"
+# Detect files modified by formatters/linters (worktree vs. snapshot taken above).
+# We fail instead of re-staging — see the comment near the top of this file.
+changed=()
+for f in "${files[@]}"; do
+    now="$(git hash-object -- "$f" 2>/dev/null || true)"
+    [[ "${content_before["$f"]:-}" == "$now" ]] || changed+=("$f")
+done
+
+if [ ${#changed[@]} -gt 0 ]; then
+    echo ""
+    echo "Formatters/linters modified ${#changed[@]} file(s):"
+    printf '  %s\n' "${changed[@]}"
+    echo ""
+    echo "Re-stage and commit again:  git add -- ${changed[*]}"
+    exit 1
 fi
 
 # Report

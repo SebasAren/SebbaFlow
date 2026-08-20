@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Format, lint, typecheck, and test"
+#MISE description="Verify staged files (format+lint), typecheck, and test"
 set -euo pipefail
 
 failed=()

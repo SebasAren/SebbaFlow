@@ -157,9 +157,19 @@ export class FileIndex {
       "*.lua",
     ];
 
-    // Try git ls-files first (works in git repos)
+    // Try git ls-files first (works in git repos).
+    // Strip index/env redirection so we always enumerate THIS directory's repo:
+    // when pi runs `mise run test` under the pre-commit hook, GIT_INDEX_FILE
+    // points at the committing repo's index and would silently return that
+    // file list instead (every path then fails stat and the index comes up
+    // empty). Same hazard for fixture repos in tests.
+    const gitEnv = { ...process.env };
+    delete gitEnv.GIT_INDEX_FILE;
+    delete gitEnv.GIT_DIR;
+    delete gitEnv.GIT_WORK_TREE;
     const gitResult = spawnSync("git", ["ls-files", "--", ...exts], {
       cwd: this.cwd,
+      env: gitEnv,
       timeout: 5000,
       encoding: "utf-8",
     });

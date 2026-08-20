@@ -22,6 +22,29 @@ function makeEntry(overrides: Partial<FileEntry> & { path: string }): FileEntry 
   };
 }
 
+/**
+ * Env for git fixture subprocesses.
+ *
+ * `git commit` exports GIT_INDEX_FILE to pre-commit hooks (absolute path for
+ * worktrees and partial-commit next-index files). Our test task runs under
+ * that hook, so every `git` we spawn inherits it: a fixture repo's `git add`
+ * then writes the COMMITTING repo's index instead of the fixture's own,
+ * leaving a phantom staged path whose blob lives only inside the temp repo.
+ * The temp repo is rmSync'd in `finally`, so the commit dies at tree-build
+ * with `error: invalid object ... for 'src/util.ts'` after all checks passed.
+ *
+ * Strip git env redirection so fixture repos stay hermetic.
+ */
+function gitFixtureEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.GIT_INDEX_FILE;
+  delete env.GIT_DIR;
+  delete env.GIT_WORK_TREE;
+  delete env.GIT_OBJECT_DIRECTORY;
+  delete env.GIT_COMMON_DIR;
+  return env;
+}
+
 function buildPlan(overrides: Partial<QueryPlan>): QueryPlan {
   return {
     intent: "define",
@@ -525,10 +548,13 @@ describe("FileIndex.build", () => {
 
       // Init git repo so enumerateFiles uses git ls-files
       const { spawnSync } = require("node:child_process") as { spawnSync: any };
-      spawnSync("git", ["init"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.email", "test@test.com"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir });
-      spawnSync("git", ["add", "."], { cwd: tmpDir });
+      spawnSync("git", ["init"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["config", "user.email", "test@test.com"], {
+        cwd: tmpDir,
+        env: gitFixtureEnv(),
+      });
+      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["add", "."], { cwd: tmpDir, env: gitFixtureEnv() });
 
       const index = new FileIndex(tmpDir);
       const truncated = await index.build();
@@ -581,10 +607,13 @@ describe("FileIndex.build", () => {
       writeFileSync(join(tmpDir, "src", "utils.ts"), `export function helper() {}\n`);
 
       const { spawnSync } = require("node:child_process") as { spawnSync: any };
-      spawnSync("git", ["init"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.email", "test@test.com"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir });
-      spawnSync("git", ["add", "."], { cwd: tmpDir });
+      spawnSync("git", ["init"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["config", "user.email", "test@test.com"], {
+        cwd: tmpDir,
+        env: gitFixtureEnv(),
+      });
+      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["add", "."], { cwd: tmpDir, env: gitFixtureEnv() });
 
       const index = new FileIndex(tmpDir);
       await index.build();
@@ -673,10 +702,13 @@ export function parse() {}`,
       );
 
       const { spawnSync } = require("node:child_process") as { spawnSync: any };
-      spawnSync("git", ["init"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.email", "test@test.com"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir });
-      spawnSync("git", ["add", "."], { cwd: tmpDir });
+      spawnSync("git", ["init"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["config", "user.email", "test@test.com"], {
+        cwd: tmpDir,
+        env: gitFixtureEnv(),
+      });
+      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["add", "."], { cwd: tmpDir, env: gitFixtureEnv() });
 
       const index = new FileIndex(tmpDir);
       await index.build();
@@ -700,10 +732,13 @@ export function parse() {}`,
       );
 
       const { spawnSync } = require("node:child_process") as { spawnSync: any };
-      spawnSync("git", ["init"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.email", "test@test.com"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir });
-      spawnSync("git", ["add", "."], { cwd: tmpDir });
+      spawnSync("git", ["init"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["config", "user.email", "test@test.com"], {
+        cwd: tmpDir,
+        env: gitFixtureEnv(),
+      });
+      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["add", "."], { cwd: tmpDir, env: gitFixtureEnv() });
 
       const index = new FileIndex(tmpDir);
       await index.build();
@@ -726,10 +761,13 @@ export function util() {}`,
       );
 
       const { spawnSync } = require("node:child_process") as { spawnSync: any };
-      spawnSync("git", ["init"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.email", "test@test.com"], { cwd: tmpDir });
-      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir });
-      spawnSync("git", ["add", "."], { cwd: tmpDir });
+      spawnSync("git", ["init"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["config", "user.email", "test@test.com"], {
+        cwd: tmpDir,
+        env: gitFixtureEnv(),
+      });
+      spawnSync("git", ["config", "user.name", "Test"], { cwd: tmpDir, env: gitFixtureEnv() });
+      spawnSync("git", ["add", "."], { cwd: tmpDir, env: gitFixtureEnv() });
 
       const index = new FileIndex(tmpDir);
       await index.build();
