@@ -20,7 +20,7 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 | `tmux/`           | Tmux           | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
 | `ghostty/`        | Ghostty        | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
 | `bashrc/`         | Bash           | Modular shell config: aliases, secrets, fzf, mise                                                                                     |
-| `wt/`             | _(Deprecated)_ | Worktrunk — deprecated. See `wt/DEPRECATED.md`                                                                                        |
+| `wt/`             | **Worktrunk**  | Git worktree CLI — parallel work + agent delegation → [details](wt/AGENTS.md)                                                           |
 | `homebrew/`       | Homebrew       | `brew-sync` CLI + Brewfile for personal packages                                                                                      |
 | `obsidian/`       | Obsidian       | Wiki search, issue tracker, and wiki maintenance tools                                                                                |
 | `bluefin-bashrc/` | Bash           | Bluefin base `.bashrc` with inlined bling                                                                                             |
@@ -305,7 +305,9 @@ Run `mise run pre-commit` before committing — it executes format + lint + type
 ├── bashrc/                      # Bash
 │   ├── .bashenv                 # Global env vars
 │   └── .bashrc.d/               # Modular sourced scripts
-├── wt/                         # Worktrunk (deprecated)
+├── wt/                         # Worktrunk (wt)
+│   ├── AGENTS.md               # Package docs (hooks, stow layout)
+│   └── .config/worktrunk/      # wt config (state stays outside repo)
 ├── homebrew/                    # brew-sync CLI + Brewfile
 ├── mise.toml                    # Runtime versions
 ├── .mise/tasks/                 # mise tasks (pre-commit, format, lint, test, etc.)

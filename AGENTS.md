@@ -22,7 +22,7 @@ tmux/.config/tmux/         # Tmux (deprecated, kept for fallback)
 ghostty/.config/ghostty/   # Ghostty (deprecated, kept for fallback)
 kitty/.config/kitty/       # Kitty             → kitty/README.md
 herdr/.config/herdr/       # Herdr (config only) → herdr/AGENTS.md
-wt/.config/worktrunk/      # Worktrunk (deprecated)
+wt/                        # Worktrunk (wt) → wt/AGENTS.md
 pi/.pi/                    # Pi agent           → pi/.pi/README.md
 homebrew/                  # brew-sync CLI      → homebrew/AGENTS.md
 obsidian/                  # Wiki & issue tools  → obsidian/AGENTS.md
