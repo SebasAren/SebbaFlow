@@ -34,8 +34,8 @@ herdr agent wait w15:p1 --until idle --timeout 60000
 herdr agent read w15:p1 --source recent --lines 100
 ```
 
-- `agent start`: pane must be at an interactive shell prompt. Kinds: `pi`, `claude`, `codex`, `gemini`, `cursor`, `devin`, `opencode`, `copilot`, `kimi`, `droid`, `amp`, `grok`, and more (`herdr agent start --help`). Readiness detection is built in — no output-matching needed.
-- `agent prompt --wait`: from a non-working state, the agent must start working within 5s of submission or it fails with `agent_prompt_stalled`. Then matches `idle|done|blocked` by default, or exact `--until` states.
+- `agent start`: pane must be at an interactive shell prompt. Kinds: `pi`, `claude`, `codex`, `gemini`, `cursor`, `devin`, `opencode`, `copilot`, `kimi`, `droid`, `amp`, `grok`, and more (`herdr agent start --help`). Readiness detection is built in — no output-matching needed. Agent CLI args pass through after `--` (e.g. `-- --approve` for pi).
+- `agent prompt --wait`: from a non-working state, the agent must start working within 5s of submission or it fails with `agent_prompt_stalled`. Then matches `idle|done|blocked` by default, or exact `--until` states. Avoid `--until idle` here (see fast-turn gotcha below) — the default set already includes idle.
 - `agent wait`: state-based, returns immediately if already in a matching state. Default matches `idle|done|blocked`; repeat `--until` for multiple states. Without `--timeout`, waits indefinitely.
 - Also: `agent list`, `agent get`, `agent focus`, `agent rename`, `agent send-keys`, `agent attach` (attach to the agent's terminal directly), `agent explain` (debug detection).
 
@@ -120,7 +120,7 @@ herdr pane read "$NEW" --source recent --lines 20
 ```bash
 NEW=$(herdr pane split --current --direction right --no-focus | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
 herdr agent start worker --kind pi --pane "$NEW"
-herdr agent prompt "$NEW" "explore the test setup in src/" --wait --until idle --timeout 300000
+herdr agent prompt "$NEW" "explore the test setup in src/" --wait --timeout 300000
 herdr agent read "$NEW" --source recent --lines 100
 ```
 
@@ -148,9 +148,10 @@ RES=$(herdr worktree open --path "$WT_PATH" --no-focus)
 WS=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["workspace"]["workspace_id"])')
 PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])')
 
-# 3. Spawn helper, give task, read result
-herdr agent start helper --kind pi --pane "$PANE"
-herdr agent prompt "$PANE" "task description..." --wait --until idle --timeout 600000
+# 3. Spawn helper, give task, read result. --approve pre-trusts project-local .pi files:
+# a fresh worktree has no saved pi trust decision, and its startup trust dialog blocks prompting
+herdr agent start helper --kind pi --pane "$PANE" -- --approve
+herdr agent prompt "$PANE" "task description..." --wait --timeout 600000
 herdr agent read "$PANE" --source recent --lines 100
 
 # 4. After human review, merge from anywhere and clean up (wt -C targets the worktree)
@@ -159,7 +160,10 @@ herdr workspace close "$WS"    # merge.remove already deleted the checkout
 ```
 
 Gotchas:
-- The first `agent prompt` after `agent start` may fail `agent_prompt_stalled` (pi cold start misses the 5s working-state window). Retry once.
+
+- **Trust dialog stall**: a fresh worktree has no saved pi trust decision, so pi shows its project-trust dialog at startup — while `agent start` already reports ready. The first `agent prompt` then fails `agent_prompt_stalled`. Prevent it with `-- --approve` on `agent start` (trusts project-local files for that run; use only for repos you control). If already stuck, `agent read` the pane and accept the dialog before prompting.
+- The first `agent prompt` after `agent start` may also fail `agent_prompt_stalled` from a genuine pi cold start (misses the 5s working-state window). Retry once.
+- **Fast-turn wait stall (herdr 0.8.0)**: `agent prompt --wait --until idle` on a turn that finishes quickly stalls for the full `--timeout`, then returns the final state as success. Default states (`idle|done|blocked`) return promptly — prefer them. For exact-state needs, use the two-step pattern (`agent prompt`, then `agent wait --until idle`) — `agent wait` matches immediately if the state is already settled.
 - `--wait` blocks the parent; for fire-and-forget, drop `--wait` and poll with `agent wait`, or notify via `herdr notification show "$WS idle"`.
 - `blocked` helpers are asking a question — `agent read`, then answer via another `agent prompt`.
 - Switch hooks run synchronously (`mise run setup` can take minutes on a fresh worktree).
