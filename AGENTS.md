@@ -21,6 +21,7 @@ bashrc/                    # Bash config        → bashrc/AGENTS.md
 tmux/.config/tmux/         # Tmux (deprecated, kept for fallback)
 ghostty/.config/ghostty/   # Ghostty (deprecated, kept for fallback)
 kitty/.config/kitty/       # Kitty             → kitty/README.md
+herdr/.config/herdr/       # Herdr (config only) → herdr/AGENTS.md
 wt/.config/worktrunk/      # Worktrunk (deprecated)
 pi/.pi/                    # Pi agent           → pi/.pi/README.md
 homebrew/                  # brew-sync CLI      → homebrew/AGENTS.md
@@ -53,6 +54,8 @@ Tool directories may have an `AGENTS.md` (path-scoped agent instructions) or a `
 | Tmux docs                      | `tmux/README.md` (legacy)                                                                                                                                                                                                              |
 | Kitty config                   | `kitty/.config/kitty/kitty.conf`                                                                                                                                                                                                       |
 | Kitty docs                     | `kitty/README.md`                                                                                                                                                                                                                      |
+| Herdr config                   | `herdr/.config/herdr/config.toml` (single-file stow; runtime state stays in `~/.config/herdr/`)                                                                                                                                        |
+| Herdr docs                     | `herdr/AGENTS.md`                                                                                                                                                                                                                      |
 | Mise tasks                     | `.mise/tasks/`                                                                                                                                                                                                                         |
 | Ghostty config                 | `ghostty/.config/ghostty/config.ghostty`                                                                                                                                                                                               |
 | Ghostty docs                   | `ghostty/README.md`                                                                                                                                                                                                                    |

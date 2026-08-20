@@ -11,19 +11,20 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 
 ## What's Inside
 
-| Directory         | Tool           | Purpose                                                                                                                              |
-| ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `kitty/`          | **Kitty**      | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md) |
-| `pi/`             | **Pi Agent**   | Coding assistant with 15 custom extensions (explore subagent, librarian, wiki integration, fuzzy edit, and more)                     |
-| `nvim/`           | Neovim         | Lazy.nvim, 15 LSP servers, blink.cmp completion, CodeCompanion → [details](nvim/README.md)                                           |
-| `tmux/`           | Tmux           | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                        |
-| `ghostty/`        | Ghostty        | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                 |
-| `bashrc/`         | Bash           | Modular shell config: aliases, secrets, fzf, mise                                                                                    |
-| `wt/`             | _(Deprecated)_ | Worktrunk — deprecated. See `wt/DEPRECATED.md`                                                                                       |
-| `homebrew/`       | Homebrew       | `brew-sync` CLI + Brewfile for personal packages                                                                                     |
-| `obsidian/`       | Obsidian       | Wiki search, issue tracker, and wiki maintenance tools                                                                               |
-| `bluefin-bashrc/` | Bash           | Bluefin base `.bashrc` with inlined bling                                                                                            |
-| `mise/`           | mise           | Runtime version manager (Python, Lua, Node, Bun)                                                                                     |
+| Directory         | Tool           | Purpose                                                                                                                               |
+| ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `kitty/`          | **Kitty**      | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md)  |
+| `herdr/`          | **Herdr**      | Terminal workspace manager for AI coding agents (shell is running inside it). Config only — runtime state stays in `~/.config/herdr/` |
+| `pi/`             | **Pi Agent**   | Coding assistant with 15 custom extensions (explore subagent, librarian, wiki integration, fuzzy edit, and more)                      |
+| `nvim/`           | Neovim         | Lazy.nvim, 15 LSP servers, blink.cmp completion, CodeCompanion → [details](nvim/README.md)                                            |
+| `tmux/`           | Tmux           | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
+| `ghostty/`        | Ghostty        | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
+| `bashrc/`         | Bash           | Modular shell config: aliases, secrets, fzf, mise                                                                                     |
+| `wt/`             | _(Deprecated)_ | Worktrunk — deprecated. See `wt/DEPRECATED.md`                                                                                        |
+| `homebrew/`       | Homebrew       | `brew-sync` CLI + Brewfile for personal packages                                                                                      |
+| `obsidian/`       | Obsidian       | Wiki search, issue tracker, and wiki maintenance tools                                                                                |
+| `bluefin-bashrc/` | Bash           | Bluefin base `.bashrc` with inlined bling                                                                                             |
+| `mise/`           | mise           | Runtime version manager (Python, Lua, Node, Bun)                                                                                      |
 
 ## Prerequisites
 
@@ -291,6 +292,8 @@ Run `mise run pre-commit` before committing — it executes format + lint + type
 │   └── README.md                # Extension documentation
 ├── kitty/.config/kitty/         # Kitty (terminal + multiplexer)
 │   └── kitty.conf               # Main config
+├── herdr/.config/herdr/         # Herdr (terminal workspace manager)
+│   └── config.toml              # Main config (single-file link; state stays local)
 ├── nvim/.config/nvim/           # Neovim
 │   ├── lua/config/              # Core config (LSP, keymaps, diagnostics)
 │   ├── lua/plugins/             # Plugin specs (Lazy.nvim)
