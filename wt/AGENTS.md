@@ -35,10 +35,16 @@ Worktrees live under `~/.local/share/worktrees/<repo>/<branch>`, not inside the 
 
 Project hook config: `.config/wt.toml` in the repo root. All hook commands must be **pre-approved once** (`wt config approvals add --yes`, interactive) before they run non-interactively — approvals are stored in the global runtime `~/.config/worktrunk/approvals.toml`.
 
-| Lifecycle  | Command                                                |
-| ---------- | ------------------------------------------------------ |
-| pre-start  | `mise trust`, `mise run setup`                         |
-| post-start | `wt step copy-ignored`                                 |
-| post-switch| tmux rename-window (inline, no-op outside tmux)         |
-| pre-commit | `mise run pre-commit`                                  |
-| pre-merge  | `mise run check`                                       |
+| Lifecycle   | Command                                         |
+| ----------- | ----------------------------------------------- |
+| pre-start   | `mise trust`, `mise run setup`                  |
+| post-start  | `wt step copy-ignored`                          |
+| post-switch | tmux rename-window (inline, no-op outside tmux) |
+| pre-commit  | `mise run pre-commit`                           |
+| pre-merge   | `mise run check`                                |
+
+## Gotcha: `wt merge` can leave the main repo "bare"
+
+Observed (wt 0.74.0): `wt merge` targeting `main` from a linked worktree sets `core.bare = true` on the main `.git/config` (needed to move the checked-out target ref) — if the flip-back is lost (background worktree removal racing), the main checkout stays "bare": `git status` fails with `must be run in a work tree`, the merge lands only the ref (index/worktree keep pre-merge content).
+
+Fix: `git config core.bare false`, then `git restore --source=HEAD --staged --worktree -- <files changed by the merge>`. Check after any `wt merge`: `git rev-parse --is-bare-repository` must print `false`.
