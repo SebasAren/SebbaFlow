@@ -1,7 +1,12 @@
 onboarding = false
 
 [theme]
-name = "tokyo-night"
+name = "catppuccin"
 
+auto_switch = false
 [ui]
 agent_panel_sort = "priority"
+
+status_indicators = "symbols"
+[ui.toast]
+delivery = "system"
