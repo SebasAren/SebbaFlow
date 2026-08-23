@@ -8,48 +8,49 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) AI cod
 
 These spawn a separate (cheaper/faster) model to handle reconnaissance, research, or knowledge capture — keeping the parent agent focused on the actual task.
 
-| Extension | Purpose | Config |
-|-----------|---------|--------|
-| **explore** | Codebase reconnaissance with pre-search, file indexing, and semantic reranking | `CHEAP_MODEL` env var |
-| **librarian** | Documentation research via Exa web search + Context7 library docs + personal wiki | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
-| **wiki-stash** | Persist conversation knowledge to Obsidian wiki without interrupting the session | `~/Documents/wiki/` |
-| **cheap-clarify** | Cheap-model clarification subagent for ambiguous prompts | `CHEAP_MODEL` env var |
+| Extension         | Purpose                                                                           | Config                            |
+| ----------------- | --------------------------------------------------------------------------------- | --------------------------------- |
+| **explore**       | Codebase reconnaissance with pre-search, file indexing, and semantic reranking    | `CHEAP_MODEL` env var             |
+| **librarian**     | Documentation research via Exa web search + Context7 library docs + personal wiki | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
+| **wiki-stash**    | Persist conversation knowledge to Obsidian wiki without interrupting the session  | `~/Documents/wiki/`               |
+| **cheap-clarify** | Cheap-model clarification subagent for ambiguous prompts                          | `CHEAP_MODEL` env var             |
 
 ### Editing & Safety
 
-| Extension | Purpose |
-|-----------|---------|
+| Extension      | Purpose                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------ |
 | **fuzzy-edit** | Tab-aware fuzzy fallback for the edit tool — handles indentation and whitespace mismatches |
-| **plan-mode** | Read-only mode toggleable via `/plan`, with execution via `/plan-execute` |
+| **plan-mode**  | Read-only mode toggleable via `/plan`, with execution via `/plan-execute`                  |
 
 ### Research & Documentation
 
-| Extension | Purpose | Config |
-|-----------|---------|--------|
-| **context7** | Up-to-date library documentation search and retrieval | `CONTEXT7_API_KEY` |
-| **exa-search** | Web search and page content fetching via Exa API | `EXA_API_KEY` |
+| Extension      | Purpose                                               | Config             |
+| -------------- | ----------------------------------------------------- | ------------------ |
+| **context7**   | Up-to-date library documentation search and retrieval | `CONTEXT7_API_KEY` |
+| **exa-search** | Web search and page content fetching via Exa API      | `EXA_API_KEY`      |
 
 ### Knowledge Management
 
-| Extension | Purpose |
-|-----------|---------|
-| **wiki-search** | Hybrid BM25 + vector search with Cohere reranking over `~/Documents/wiki/` |
-| **wiki-read** | Scope-safe wiki page reader |
-| **wiki-lint** | Structural health checks: broken links, orphans, missing titles, stale files |
+| Extension          | Purpose                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| **wiki-search**    | Hybrid BM25 + vector search with Cohere reranking over `~/Documents/wiki/`         |
+| **wiki-read**      | Scope-safe wiki page reader                                                        |
+| **wiki-lint**      | Structural health checks: broken links, orphans, missing titles, stale files       |
+| **session-memory** | `session_search`/`session_read` over past session transcripts (librarian-internal) |
 
 ### Workflow & Session
 
-| Extension | Purpose |
-|-----------|---------|
-| **todo** | Todo management (`list`/`add`/`toggle`/`clear`) with state persisted in session entries |
-| **tdd-tree** | TDD kickoff point labeling in the session tree for structured plan execution |
-| **cache-control** | LLM cache hint injection for cost optimization |
-| **claude-rules** | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading |
+| Extension         | Purpose                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| **todo**          | Todo management (`list`/`add`/`toggle`/`clear`) with state persisted in session entries |
+| **tdd-tree**      | TDD kickoff point labeling in the session tree for structured plan execution            |
+| **cache-control** | LLM cache hint injection for cost optimization                                          |
+| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading       |
 
 ### Shared Library
 
-| Package | Purpose |
-|---------|---------|
+| Package    | Purpose                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------- |
 | **shared** | `runSubagent()` runner with retry logic, loop detection, budget management, usage tracking; rendering utilities; test mocks |
 
 ---
@@ -88,16 +89,16 @@ User query  (e.g. "how does the worktree scope extension detect worktree boundar
 
 ### Key Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| Synthetic documents for reranking | First 500 chars of source files are mostly imports. Building documents from `path + description + exports + symbols` gives the reranker clean semantic signal. |
-| No snippet injection | First 50 lines of TS/JS files are almost always import blocks, biasing the subagent toward wrong initial guesses. The reranker-ordered tier list is sufficient signal. |
-| 5-second build cap with truncation warning | Large repos shouldn't block the pipeline. The cap is surfaced in results so the subagent knows the index may be incomplete. |
-| Real-time invalidation on edits | When the parent agent edits a file, it's dropped from the index so subsequent explores see fresh data. |
-| LRU cache bounded at 5 repos | Long sessions across many repos don't leak memory. |
-| Intent precedence: change > use > arch > define | "How is X used?" queries get caller weighting (use), not entry-point boosting (arch). |
-| Second-order proximity | Files two hops from top matches in the `importedBy` graph get a small boost, surfacing consumer-of-consumer files. |
-| `spawnSync` with array args everywhere | Eliminates shell metacharacter bugs — no shell escaping needed. |
+| Decision                                        | Rationale                                                                                                                                                              |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Synthetic documents for reranking               | First 500 chars of source files are mostly imports. Building documents from `path + description + exports + symbols` gives the reranker clean semantic signal.         |
+| No snippet injection                            | First 50 lines of TS/JS files are almost always import blocks, biasing the subagent toward wrong initial guesses. The reranker-ordered tier list is sufficient signal. |
+| 5-second build cap with truncation warning      | Large repos shouldn't block the pipeline. The cap is surfaced in results so the subagent knows the index may be incomplete.                                            |
+| Real-time invalidation on edits                 | When the parent agent edits a file, it's dropped from the index so subsequent explores see fresh data.                                                                 |
+| LRU cache bounded at 5 repos                    | Long sessions across many repos don't leak memory.                                                                                                                     |
+| Intent precedence: change > use > arch > define | "How is X used?" queries get caller weighting (use), not entry-point boosting (arch).                                                                                  |
+| Second-order proximity                          | Files two hops from top matches in the `importedBy` graph get a small boost, surfacing consumer-of-consumer files.                                                     |
+| `spawnSync` with array args everywhere          | Eliminates shell metacharacter bugs — no shell escaping needed.                                                                                                        |
 
 ### Usage Patterns
 
@@ -139,28 +140,34 @@ User query  (e.g. "how do I use TanStack Query's optimistic updates?")
   │     past research, and personal knowledge artifacts.
   │     Returns: wiki page content.
   │
-  └─► Subagent  (tools: web_search, web_fetch, context7_search, context7_docs, wiki_search, wiki_read)
-        Synthesizes findings from all three sources into a coherent answer.
+  ├─► Past Sessions (session-memory)
+  │     session_search/session_read over rendered transcripts of previous
+  │     sessions in the current working directory (live session excluded).
+  │     Returns: matches with session handle + message number, transcript ranges.
+  │
+  └─► Subagent  (tools: web_search, web_fetch, context7_search, context7_docs, wiki_search, wiki_read, session_search, session_read)
+        Synthesizes findings from all four sources into a coherent answer.
         Configured with context-appropriate budgets (60 calls / 240s timeout).
-        Structured output: Sources / Findings / Summary.
+        Structured output: Sources / Findings / Open Threads.
 ```
 
 ### Source Selection
 
-| Source | When it's used | Example queries |
-|--------|---------------|-----------------|
-| Web Search | General web research, tutorials, blog posts | "react server components best practices" |
-| Library Docs | Specific API lookups, migration guides | "next.js 14 config options" |
-| Personal Wiki | Known topics previously ingested | "our team's coding conventions" |
+| Source        | When it's used                                        | Example queries                                      |
+| ------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| Web Search    | General web research, tutorials, blog posts           | "react server components best practices"             |
+| Library Docs  | Specific API lookups, migration guides                | "next.js 14 config options"                          |
+| Personal Wiki | Known topics previously ingested                      | "our team's coding conventions"                      |
+| Past Sessions | Prior work, decisions, debugging history in this repo | "what did we decide about the session-memory tools?" |
 
 ### Key Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| Subagent synthesizes, not parent | Raw search results are verbose and context-heavy. The subagent consumes them and returns only the relevant synthesized answer. |
-| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its six required extensions explicitly. |
-| Internal-only extensions | `exa-search` and `context7` register their tools only when loaded by the librarian subagent, using `PI_LIBRARIAN_LOAD` env var gating. See [Internal-Only Extensions docs](extensions/AGENTS.md#internal-only-extensions). |
-| Budget tailored to source mix | 60 max tool calls / 240s timeout — conservatively sized for chaining searches across multiple sources. |
+| Decision                              | Rationale                                                                                                                                                                                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subagent synthesizes, not parent      | Raw search results are verbose and context-heavy. The subagent consumes them and returns only the relevant synthesized answer.                                                                                                                |
+| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its seven required extensions explicitly.                                                                                 |
+| Internal-only extensions              | `exa-search`, `context7`, and `session-memory` register their tools only when loaded by the librarian subagent, using `PI_LIBRARIAN_LOAD` env var gating. See [Internal-Only Extensions docs](extensions/AGENTS.md#internal-only-extensions). |
+| Budget tailored to source mix         | 60 max tool calls / 240s timeout — conservatively sized for chaining searches across multiple sources.                                                                                                                                        |
 
 ### Usage Patterns
 
@@ -185,15 +192,15 @@ librarian(query="deployment pipeline", library="our-monorepo")
 
 ## When to Use Which: explore vs librarian
 
-| Scenario | Tool | Why |
-|----------|------|-----|
-| Find files, trace dependencies, understand local architecture | **explore** | Has file index, syntax-aware reranking, reads local source. |
-| Look up an API, library docs, or best practices | **librarian** | Has web search, library docs, and wiki access. |
-| Check if an existing implementation exists in the repo | **explore** | Searches actual source files and symbols. |
-| Research how to use a package or framework | **librarian** | Searches docs, examples, and tutorials online. |
-| Scout a large codebase before editing | **explore** | Scout-then-deepen pattern with `thoroughness="quick"`. |
-| Consult personal / previously ingested knowledge | **librarian** | Has wiki_search/wiki_read under the hood. |
-| Need both local context and external docs | **both** | Call explore + librarian in parallel for independent concerns. |
+| Scenario                                                      | Tool          | Why                                                            |
+| ------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| Find files, trace dependencies, understand local architecture | **explore**   | Has file index, syntax-aware reranking, reads local source.    |
+| Look up an API, library docs, or best practices               | **librarian** | Has web search, library docs, and wiki access.                 |
+| Check if an existing implementation exists in the repo        | **explore**   | Searches actual source files and symbols.                      |
+| Research how to use a package or framework                    | **librarian** | Searches docs, examples, and tutorials online.                 |
+| Scout a large codebase before editing                         | **explore**   | Scout-then-deepen pattern with `thoroughness="quick"`.         |
+| Consult personal / previously ingested knowledge              | **librarian** | Has wiki_search/wiki_read under the hood.                      |
+| Need both local context and external docs                     | **both**      | Call explore + librarian in parallel for independent concerns. |
 
 ---
 

@@ -20,7 +20,8 @@
     "extract-share",
     "pi-notify",
     "pi-image",
-    "usage-tracker"
+    "usage-tracker",
+    "session-memory"
   ],
   "devDependencies": {
     "@eslint/js": "^10.0.0",

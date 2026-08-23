@@ -1,0 +1,137 @@
+{
+  "title": "session-memory: session_search + session_read tools for the librarian subagent",
+  "slug": "session-memory",
+  "context": "Repo: dotfiles, extensions workspace at pi/.pi/agent/extensions (bun workspaces + bun test). Verify gate: .pi/config.json = mise run lint-changed + mise run typecheck. Grill-me alignment settled: two tools mirroring wiki_search/wiki_read, hosted ONLY in the librarian subagent (gate on PI_LIBRARIAN_LOAD like exa-search/context7), conversation-only transcript rendering (user+assistant text; assistant toolCall blocks collapsed to one-line summaries; toolResult messages and thinking blocks dropped), main-path tree flattening (last-entry-wins, walk parentId to root), deterministic 1..N numbering over rendered messages shared by both tools, previous sessions only (exclude live parent session via PI_PARENT_SESSION_FILE env set by librarian from ctx.sessionManager.getSessionFile()), smart-case regex search, CHEAP_MODEL.",
+  "architecture": "Session storage: ~/.pi/agent/sessions/--<encoded-cwd>--/<ISO-ts>_<uuid>.jsonl, JSONL tree entries linked by id/parentId (docs/session-format.md). Encoding (not exported from SDK root, reimplement locally): resolvePath(cwd).replace(/^[/\\\\]/,'').replace(/[/\\\\:]/g,'-') wrapped in '--'. Roles in message entries: user, assistant, toolResult (+ bashExecution, custom, branchSummary, compactionSummary — treat non user/assistant as skipped). New extension dir pi/.pi/agent/extensions/session-memory (package @pi-ext/session-memory, pi.extensions [./index.ts], tsconfig extends base). Pure helpers exported for tests: sessionDirFor(cwd, agentDir), parseSessionFile(lines) -> {entries, mainPath}, renderTranscript(messages) -> numbered lines, executeSessionSearch(params, ctx-ish), executeSessionRead(params). Librarian changes (librarian/index.ts + constants.ts): additionalExtensionPaths += session-memory, tools allowlist += session_search/session_read, set PI_PARENT_SESSION_FILE (with finally cleanup) before loader.reload(), prompt widened: mission includes past session history, tools listed, output format Sources/Findings/Open Threads, routing: session tools preferred over wiki for repo-history questions. Exa-search integration.test.ts is the pattern for gating tests; wiki-read for execute tests with temp dirs.",
+  "created": "2026-08-23T16:51:50.311Z",
+  "updated": "2026-08-23T17:12:01.066Z",
+  "steps": [
+    {
+      "index": 1,
+      "name": "Scaffold session-memory extension with PI_LIBRARIAN_LOAD gating",
+      "red": {
+        "description": "none (structural)",
+        "status": "done"
+      },
+      "green": {
+        "description": "Create pi/.pi/agent/extensions/session-memory/{package.json,tsconfig.json,index.ts}. package.json: name @pi-ext/session-memory, pi.extensions [\"./index.ts\"], deps @earendil-works/pi-coding-agent + @pi-ext/shared (workspace:*, needed by integration tests for @pi-ext/shared/test-mocks). tsconfig extends ../tsconfig.base.json. index.ts: default export gated on parseInt(process.env.PI_LIBRARIAN_LOAD) < 1 returning early; registers session_search and session_read via pi.registerTool with TypeBox params (search: query string, limit optional number default 20; read: session string, offset optional number default 1, limit optional number default 50), execute throws Error(\"not implemented\") for now. Add \"session-memory\" to root package.json workspaces. Write integration.test.ts following exa-search pattern: mock.module for @earendil-works/pi-coding-agent + typebox; assert 0 tools registered when env unset, 2 when PI_LIBRARIAN_LOAD=1. Validate: bun test session-memory && bunx tsc --noEmit -p session-memory/tsconfig.json",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 2,
+      "name": "sessionDirFor — encode cwd to session directory path",
+      "red": {
+        "description": "Write session-dir.test.ts: sessionDirFor(\"/var/home/sebas/dotfiles\", \"/tmp/agent\") === \"/tmp/agent/sessions/--var-home-sebas-dotfiles--\"; sessionDirFor(\"C:\\\\Users\\\\x:y\", ...) replaces \\ and : with -; leading slash stripped; must NOT create the directory (assert missing after call). Run bun test — fails (function not exported).",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement sessionDirFor(cwd: string, agentDir: string): string in index.ts: path.resolve(cwd).replace(/^[/\\\\]/, \"\").replace(/[/\\\\:]/g, \"-\") wrapped as \"--<encoded>--\", joined with agentDir/sessions. No mkdir.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "Move to own module session-dir.ts with colocated test if index.ts grows.",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 3,
+      "name": "Parse session JSONL, flatten main path, render numbered transcript",
+      "red": {
+        "description": "Write transcript.test.ts with inline fixture JSONL: session header, model_change, user msg (text), assistant msg (thinking + toolCall + text), toolResult msg, then a fork: two assistant entries sharing the same parentId (abandoned retry), then final user msg. Assertions: parseSessionFile returns entries with id/parentId; flattenMainPath picks the LAST entry's chain (abandoned branch dropped); renderTranscript outputs lines \"N. [HH:MM] <role>: <text>\" numbered 1..N over user+assistant only; assistant toolCall rendered as one line \"[tool: <name> <first-arg-40-chars>]\" (or merged into message line); thinking and toolResult content absent. Fails: functions not exported.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement parseSessionFile(lines: string[]) → SessionEntry[]; flattenMainPath(entries) → entry[] walking last message entry → root via parentId map; renderTranscript(entries) → RenderedMessage[] {number, role, time, text} where toolCall blocks collapse to \"→ <name>(<first 40 chars of first arg>)\".",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "Extract entry-type narrow helpers if the render function branches deeply.",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 4,
+      "name": "executeSessionSearch — smart-case regex over previous sessions",
+      "red": {
+        "description": "Write search.test.ts: mkdtempSync temp agentDir; create sessions/--encoded--/ with two finished session files (different dates) and one live parent file (registered via process.env.PI_PARENT_SESSION_FILE pointing at it). Call executeSessionSearch({query:\"devstral\"}). Expect: matches from both files only, each with session handle (file basename), date, message number N, role, excerpt ≤200 chars; PI_PARENT_SESSION_FILE file excluded. Smart-case: query \"foo\" matches \"Foo\" but \"Foo\" does not match \"foo\" (second fixture case). limit truncates. No matches → returns \"No matches\" text (not a throw). Unparsable JSONL lines skipped silently. Fails: not implemented.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement executeSessionSearch(params, agentDir, cwd): list *.jsonl in sessionDirFor(cwd, agentDir) sorted newest first, skip parent file, parse+flatten+render each, regex-test rendered text with smart-case flags (i when query is all-lowercase), collect matches, format text output. Wire session_search execute to it, resolving agentDir via getAgentDir() and cwd via resolveRealCwd(ctx.cwd). Errors (missing dir) thrown, per repo rule.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "Share \"load sessions\" (list+parse+flatten+render) between search and read as loadSessions(agentDir, cwd, exclude).",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 5,
+      "name": "executeSessionRead — numbered transcript ranges with date disambiguation",
+      "red": {
+        "description": "Write read.test.ts on the same fixture layout: executeSessionRead({session: \"<exact basename>.jsonl\", offset: 2, limit: 3}) returns lines numbered 2..4 in same numbering as search reported (consistency assertion: message number from step-4 result appears at that offset); output header includes total message count; offset beyond end → empty window note; session given as unique date prefix \"2026-04-02\" resolves to the single matching file; ambiguous date prefix (two files same day) throws error listing candidates; unknown session throws.",
+        "status": "done"
+      },
+      "green": {
+        "description": "Implement executeSessionRead(params, agentDir, cwd): resolve session arg (exact basename, basename prefix, or date prefix → 0 matches: throw not found, >1: throw candidates list), load session, slice rendered messages [offset, offset+limit), render with original numbers + total header. Wire session_read execute.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 6,
+      "name": "Librarian wiring + prompt update",
+      "red": {
+        "description": "Write/update librarian tests: constants.test.ts (or extend existing librarian tests) asserting LIBRARIAN_SYSTEM_PROMPT mentions session_search, session_read, \"past session\", output sections exactly \"## Sources\", \"## Findings\", \"## Open Threads\"; and index-level test asserting the exported extension-path/tool arrays (refactor librarian/index.ts to export SESSION_EXTENSION_PATHS and SESSION_TOOL_NAMES or equivalent) include session-memory/session_search/session_read. RED fails against current constants/index.",
+        "status": "done"
+      },
+      "green": {
+        "description": "librarian/index.ts: add session-memory to additionalExtensionPaths, session_search + session_read to tools allowlist; around loader.reload() set process.env.PI_PARENT_SESSION_FILE = ctx.sessionManager?.getSessionFile?.() captured in execute, delete in finally (mirror PI_LIBRARIAN_LOAD handling); pass ctx file into createLibrarianSession signature. constants.ts: widen mission (\"research external documentation AND past session history in this repo\"), add both tools to AVAILABLE TOOLS with usage guidance (session_search for what-we-did/decided questions, session_read to pull ranges by handle+message number), replace output format sections with Sources (docs + sessions with dates) / Findings (content, quotes) / Open Threads (unresolved items), add routing rule: repo-history questions prefer session tools over wiki.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "",
+        "status": "done"
+      },
+      "completed": true
+    },
+    {
+      "index": 7,
+      "name": "End-to-end integration test + docs",
+      "red": {
+        "description": "none (validation step — consistency should already hold)",
+        "status": "done"
+      },
+      "green": {
+        "description": "Add integration.test.ts cases in session-memory exercising registerTool'd tools via stub pi API with temp HOME: full flow search→read where the message number returned by search is the line returned by read at that offset; parent exclusion via env end-to-end. Update pi/.pi/README.md extension catalog (session-memory entry: purpose, librarian-internal) and pi/.pi/agent/extensions/AGENTS.md internal-only list (session-memory alongside exa-search/context7). Run full suite: cd pi/.pi/agent/extensions && bun test --parallel && bunx tsc --noEmit per project with tsconfig.",
+        "status": "done"
+      },
+      "refactor": {
+        "description": "Final pass: consistent naming, no dead exports, mise run format.",
+        "status": "done"
+      },
+      "completed": true
+    }
+  ],
+  "notes": [],
+  "design": {
+    "currentState": "Pi auto-saves every conversation as JSONL tree files under ~/.pi/agent/sessions/--<encoded-cwd>--/ but nothing can query them: no extension reads past sessions, the wiki (librarian's only local memory source) is rarely used, and the main agent has no way to recall past decisions. Session format knowledge is tribal; raw JSONL is noisy (tool calls, branch trees, JSON escaping) and unusable with plain grep.",
+    "desiredState": "A librarian-internal extension session-memory registers two tools when loaded by the librarian subagent (PI_LIBRARIAN_LOAD gate): session_search (smart-case regex over rendered conversation-only transcripts, returns session handle + message number + matched excerpt, excluding the live parent session via PI_PARENT_SESSION_FILE) and session_read (deterministic numbered transcript ranges, offset/limit, date-prefix session disambiguation). Librarian prompt/allowlist/paths updated; main agent context untouched. Cheap model does the digging; main agent gets the synthesis.",
+    "patterns": "Gating: exa-search/context7 top-of-export PI_LIBRARIAN_LOAD check. Tool shape: wiki-search/wiki-read (TypeBox params, content+details result, throw on error not return). Subagent session: librarian createLibrarianSession with noExtensions+additionalExtensionPaths+explicit tools allowlist, env-var signaling around loader.reload() with finally cleanup. Tests: mock.module with @pi-ext/shared/test-mocks factories; unit tests colocated; integration.test.ts per extension; temp dirs for fs fixtures (mkdtempSync from node:fs — Bun.makeTempDir does not exist).",
+    "decisions": "Two tools (search+read) not one combined tool — mirrors wiki_search/wiki_read, keeps results small. Conversation-only rendering (user+assistant text, toolCall collapsed to one line, toolResult/thinking dropped) — tool results judged not useful for recall. Main-path flattening, last entry wins via parentId walk — retries/forks invisible, numbering deterministic across both tools. Librarian hosting on CHEAP_MODEL over a new subagent — same infra, zero main-agent tool surface, wiki stays as secondary source until it withers. Exclusion via PI_PARENT_SESSION_FILE env (refcounted like PI_LIBRARIAN_LOAD not needed — single parent per process; set/unset in finally). Date-prefix lookup added to session_read (cheap disambiguation for 'last Tuesday' queries).",
+    "questions": "None blocking. Deferred: semantic/embedding search if sessions fully replace the wiki; multi-fork sessions beyond last-entry-wins sanity-checked with fixture only."
+  }
+}

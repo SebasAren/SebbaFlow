@@ -21,10 +21,54 @@ import * as path from "node:path";
 
 import { resolveRealCwd, runSubagent, getModel, startSubagentTrace } from "@pi-ext/shared";
 
-import { LIBRARIAN_SYSTEM_PROMPT } from "./constants";
+import { LIBRARIAN_SYSTEM_PROMPT, LIBRARIAN_SUMMARY_REMINDER } from "./constants";
 import { renderCall, renderResult } from "./render";
 
 // ── Session factory ────────────────────────────────────────────────────────
+
+/** Tools the librarian subagent may use (its full allowlist). */
+export const LIBRARIAN_TOOL_NAMES = [
+  "web_search",
+  "web_fetch",
+  "context7_search",
+  "context7_docs",
+  "wiki_search",
+  "wiki_read",
+  "session_search",
+  "session_read",
+] as const;
+
+/** Extension dirs loaded into the librarian subagent session. */
+export function getLibrarianExtensionDirs(agentDir = getAgentDir()): string[] {
+  const extensionsDir = path.join(agentDir, "extensions");
+  return [
+    "exa-search",
+    "context7",
+    "wiki-search",
+    "wiki-read",
+    "usage-tracker",
+    "session-memory",
+  ].map((name) => path.join(extensionsDir, name));
+}
+
+/**
+ * Run an async fn with PI_PARENT_SESSION_FILE set (excluded from
+ * session_search/session_read as the live parent session). Restores the
+ * previous value afterwards.
+ */
+export async function runWithParentSession<T>(
+  file: string | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const prev = process.env.PI_PARENT_SESSION_FILE;
+  if (file) process.env.PI_PARENT_SESSION_FILE = file;
+  try {
+    return await fn();
+  } finally {
+    if (prev !== undefined) process.env.PI_PARENT_SESSION_FILE = prev;
+    else delete process.env.PI_PARENT_SESSION_FILE;
+  }
+}
 
 /** Shared model/auth infrastructure (created once, reused across subagent runs). */
 let modelRuntime: ModelRuntime | undefined;
@@ -66,23 +110,18 @@ async function createLibrarianSession(
   const { modelRuntime, settingsManager } = await getSharedInfrastructure();
 
   // Use noExtensions + explicit additionalExtensionPaths to load ONLY the
-  // extensions the librarian needs (exa-search, context7, wiki-search, wiki-read).
+  // extensions the librarian needs (exa-search, context7, wiki-search,
+  // wiki-read, usage-tracker, session-memory).
   // This prevents loading herdr-agent-state in the subagent session, which would
   // cause false "idle" state transitions in herdr.
-  const extensionsDir = path.join(getAgentDir(), "extensions");
   const loader = new DefaultResourceLoader({
     cwd,
     agentDir: getAgentDir(),
     systemPromptOverride: () => systemPrompt,
     noExtensions: true,
     // usage-tracker: count librarian turns in the usage dashboard.
-    additionalExtensionPaths: [
-      path.join(extensionsDir, "exa-search"),
-      path.join(extensionsDir, "context7"),
-      path.join(extensionsDir, "wiki-search"),
-      path.join(extensionsDir, "wiki-read"),
-      path.join(extensionsDir, "usage-tracker"),
-    ],
+    // session-memory: session_search/session_read for past session history.
+    additionalExtensionPaths: getLibrarianExtensionDirs(),
   });
 
   // Signal to internal-only extensions (exa-search, context7) that they
@@ -110,14 +149,7 @@ async function createLibrarianSession(
     // Explicitly allowlist only the extension tools the librarian needs.
     // This prevents the librarian subagent from calling itself (recursion)
     // and disables built-in filesystem tools that don't belong here.
-    tools: [
-      "web_search",
-      "web_fetch",
-      "context7_search",
-      "context7_docs",
-      "wiki_search",
-      "wiki_read",
-    ],
+    tools: [...LIBRARIAN_TOOL_NAMES],
     modelRuntime,
     sessionManager: SessionManager.inMemory(),
     settingsManager,
@@ -207,44 +239,44 @@ export default function (pi: ExtensionAPI) {
         if (params.focus) {
           query += ` Focus on ${params.focus}.`;
         }
-        query +=
-          `\n\n[CRITICAL: Your final assistant turn MUST contain a plain-text message with ` +
-          `## Sources, ## Documentation, ## Key Findings, and ## Recommendations sections. ` +
-          `Stop calling tools once you have enough information and write the summary. ` +
-          `A final turn with only tool calls is a failed response.]`;
+        query += `\n\n${LIBRARIAN_SUMMARY_REMINDER}`;
 
         const maxToolCalls = params.maxToolCalls ?? 60;
         const timeoutMs = params.timeoutMs ?? 240_000;
 
-        const result = await runSubagent({
-          cwd: realCwd,
-          query,
-          systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
-          createSession: createLibrarianSession,
-          timeoutMs,
-          signal,
-          onUpdate: onUpdate
-            ? (update) => {
-                onUpdate({
-                  content: [{ type: "text", text: update.text }],
-                  details: {
-                    model: getModel(),
-                    query: params.query,
-                    recentCalls: update.recentCalls,
-                  },
-                });
-              }
-            : undefined,
-          onToolCall: (info) => {
-            const toolSpan = child(info.toolName, {
-              input: { argsSummary: info.argsSummary },
-              metadata: { success: info.success, durationMs: info.durationMs },
-            });
-            toolSpan.end();
-          },
-          loopDetection: true,
-          maxToolCalls,
-        });
+        // Exclude the live parent session from session-memory tools during the run
+        const parentFile = ctx.sessionManager?.getSessionFile?.();
+        const result = await runWithParentSession(parentFile, () =>
+          runSubagent({
+            cwd: realCwd,
+            query,
+            systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
+            createSession: createLibrarianSession,
+            timeoutMs,
+            signal,
+            onUpdate: onUpdate
+              ? (update) => {
+                  onUpdate({
+                    content: [{ type: "text", text: update.text }],
+                    details: {
+                      model: getModel(),
+                      query: params.query,
+                      recentCalls: update.recentCalls,
+                    },
+                  });
+                }
+              : undefined,
+            onToolCall: (info) => {
+              const toolSpan = child(info.toolName, {
+                input: { argsSummary: info.argsSummary },
+                metadata: { success: info.success, durationMs: info.durationMs },
+              });
+              toolSpan.end();
+            },
+            loopDetection: true,
+            maxToolCalls,
+          }),
+        );
 
         const isError = result.exitCode !== 0 || !!result.errorMessage;
 
