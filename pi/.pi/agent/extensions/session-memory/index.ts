@@ -33,6 +33,12 @@ export interface SessionEntry {
   id?: string;
   parentId?: string | null;
   timestamp?: string;
+  /** Real v3 files envelop role/content in a nested "message" object. */
+  message?: {
+    role?: string;
+    content?: SessionContentBlock[];
+    [key: string]: unknown;
+  };
   role?: string;
   content?: SessionContentBlock[];
   [key: string]: unknown;
@@ -122,17 +128,19 @@ export function renderTranscript(entries: SessionEntry[]): RenderedMessage[] {
   const rendered: RenderedMessage[] = [];
   for (const entry of flattenMainPath(entries)) {
     if (entry.type !== "message") continue;
-    if (entry.role !== "user" && entry.role !== "assistant") continue;
+    const role = entry.message?.role ?? entry.role;
+    if (role !== "user" && role !== "assistant") continue;
+    const content = entry.message?.content ?? entry.content ?? [];
 
     const lines: string[] = [];
-    for (const block of entry.content ?? []) {
+    for (const block of content) {
       if (block.type === "text" && block.text) lines.push(block.text);
       else if (block.type === "toolCall") lines.push(renderToolCall(block));
       // thinking, image, and other block types are dropped.
     }
     rendered.push({
       number: rendered.length + 1,
-      role: entry.role,
+      role,
       time: entryTime(entry.timestamp),
       text: lines.join("\n"),
     });

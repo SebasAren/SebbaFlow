@@ -25,6 +25,53 @@ describe("parseSessionFile", () => {
   });
 });
 
+describe("real session format (enveloped message payload)", () => {
+  // Real v3 files wrap role/content in a nested "message" object:
+  // {"type":"message",...,"message":{"role":"user","content":[...]}}
+  const REAL_LINES: string[] = [
+    '{"type":"session","version":3,"id":"s1","timestamp":"2026-08-23T11:40:17.960Z","cwd":"/repo"}',
+    '{"type":"model_change","id":"m1","parentId":null,"timestamp":"2026-08-23T11:40:20.679Z"}',
+    JSON.stringify({
+      type: "message",
+      id: "r1",
+      parentId: "m1",
+      timestamp: "2026-08-23T16:30:24.542Z",
+      message: { role: "user", content: [{ type: "text", text: "add a session search tool" }] },
+    }),
+    JSON.stringify({
+      type: "message",
+      id: "r2",
+      parentId: "r1",
+      timestamp: "2026-08-23T16:30:35.609Z",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "internal reasoning" },
+          { type: "text", text: "Sure, two tools" },
+        ],
+      },
+    }),
+    JSON.stringify({
+      type: "message",
+      id: "r3",
+      parentId: "r2",
+      timestamp: "2026-08-23T16:31:07.845Z",
+      message: { role: "toolResult", toolCallId: "t1", content: [] },
+    }),
+  ];
+
+  it("renders enveloped messages with the same numbering rules", () => {
+    const rendered = renderTranscript(parseSessionFile(REAL_LINES));
+    expect(rendered.map((m) => [m.number, m.role])).toEqual([
+      [1, "user"],
+      [2, "assistant"],
+    ]);
+    expect(rendered[0].text).toBe("add a session search tool");
+    expect(rendered[1].text).toBe("Sure, two tools");
+    expect(rendered[1].time).toBe("16:30");
+  });
+});
+
 describe("flattenMainPath", () => {
   it("walks the last entry to the root, dropping abandoned branches", () => {
     const entries = parseSessionFile(FIXTURE_LINES);
