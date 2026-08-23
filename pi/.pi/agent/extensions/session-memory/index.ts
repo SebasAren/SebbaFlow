@@ -13,7 +13,7 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { resolveRealCwd } from "@pi-ext/shared";
 import { Type } from "typebox";
 import { join, resolve } from "node:path";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
 /**
  * Encode a working directory into pi's session directory path
@@ -39,6 +39,7 @@ export interface SessionEntry {
     content?: SessionContentBlock[];
     [key: string]: unknown;
   };
+  summary?: string;
   role?: string;
   content?: SessionContentBlock[];
   [key: string]: unknown;
@@ -127,6 +128,20 @@ function entryTime(timestamp?: string): string {
 export function renderTranscript(entries: SessionEntry[]): RenderedMessage[] {
   const rendered: RenderedMessage[] = [];
   for (const entry of flattenMainPath(entries)) {
+    if (entry.type === "compaction") {
+      // Compaction summaries distill prior work/decisions — keep them as
+      // synthetic assistant messages so history queries see them.
+      const summary = typeof entry.summary === "string" ? entry.summary : "";
+      if (summary) {
+        rendered.push({
+          number: rendered.length + 1,
+          role: "assistant",
+          time: entryTime(entry.timestamp),
+          text: `[compaction summary]\n${summary}`,
+        });
+      }
+      continue;
+    }
     if (entry.type !== "message") continue;
     const role = entry.message?.role ?? entry.role;
     if (role !== "user" && role !== "assistant") continue;
@@ -173,7 +188,12 @@ export interface SessionSearchOptions {
   cwd: string;
   /** Live parent session file to exclude (defaults to PI_PARENT_SESSION_FILE). */
   parentFile?: string;
+  /** Cap for session_read total output characters (default 20000). */
+  maxOutputChars?: number;
 }
+
+/** Skip session files larger than this (bytes) — protects the event loop. */
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 export interface SessionSearchResult {
   text: string;
@@ -217,10 +237,30 @@ export async function executeSessionSearch(
   }
 
   const dir = sessionDirFor(opts.cwd, opts.agentDir);
-  const files = listSessionFiles(dir, opts.parentFile ?? process.env.PI_PARENT_SESSION_FILE);
+  const parent = opts.parentFile ?? process.env.PI_PARENT_SESSION_FILE;
+  if (!existsSync(dir)) {
+    // Encoding-drift tripwire: if sibling session dirs exist, our local
+    // reimplementation of pi's cwd encoding may have diverged from the SDK.
+    const sessionsRoot = join(opts.agentDir, "sessions");
+    const siblings = existsSync(sessionsRoot) ? readdirSync(sessionsRoot).length : 0;
+    return {
+      text:
+        `No matches for ${JSON.stringify(params.query)} — no session directory for this cwd.` +
+        (siblings > 0
+          ? ` (warning: ${siblings} session directories exist for other cwds — encoding drift?)`
+          : ""),
+      matches: [],
+    };
+  }
+  const files = listSessionFiles(dir, parent);
 
   const matches: SessionSearchMatch[] = [];
+  let skipped = 0;
   outer: for (const file of files) {
+    if (statSync(join(dir, file)).size > MAX_FILE_BYTES) {
+      skipped++;
+      continue;
+    }
     const raw = readFileSync(join(dir, file), "utf-8");
     const messages = renderTranscript(parseSessionFile(raw.split("\n")));
     for (const message of messages) {
@@ -237,9 +277,12 @@ export async function executeSessionSearch(
       }
     }
   }
-
   if (matches.length === 0) {
-    return { text: `No matches for ${JSON.stringify(params.query)} in past sessions.`, matches };
+    const note = skipped > 0 ? ` (skipped ${skipped} file(s) over ${MAX_FILE_BYTES >> 20}MB)` : "";
+    return {
+      text: `No matches for ${JSON.stringify(params.query)} in past sessions.${note}`,
+      matches,
+    };
   }
 
   const lines: string[] = [];
@@ -250,6 +293,9 @@ export async function executeSessionSearch(
       lines.push(`${m.session} (${m.date})`);
     }
     lines.push(`  ${m.number}. [${m.time}] ${m.role}: ${m.excerpt}`);
+  }
+  if (skipped > 0) {
+    lines.push(`(skipped ${skipped} file(s) over ${MAX_FILE_BYTES >> 20}MB)`);
   }
   return { text: lines.join("\n"), matches };
 }
@@ -264,20 +310,18 @@ export interface SessionReadResult {
 }
 
 /** Resolve a session handle (exact name, name prefix, or date prefix) to a file. */
-function resolveSessionFile(dir: string, session: string): string {
-  const files = existsSync(dir)
-    ? readdirSync(dir)
-        .filter((f) => f.endsWith(".jsonl"))
-        .sort()
-        .reverse()
-    : [];
+function resolveSessionFile(dir: string, session: string, parentFile?: string): string {
+  const files = listSessionFiles(dir, parentFile);
   const exact = files.find((f) => f === session || f === `${session}.jsonl`);
   if (exact) return exact;
   const prefixed = files.filter((f) => f.startsWith(session));
   if (prefixed.length === 1) return prefixed[0];
   if (prefixed.length > 1) {
+    const shown = prefixed.slice(0, 10);
+    const more = prefixed.length - shown.length;
     throw new Error(
-      `Ambiguous session ${JSON.stringify(session)} — matches ${prefixed.length} files:\n${prefixed.join("\n")}`,
+      `Ambiguous session ${JSON.stringify(session)} — matches ${prefixed.length} files:\n${shown.join("\n")}` +
+        (more > 0 ? `\n…and ${more} more` : ""),
     );
   }
   throw new Error(`Session ${JSON.stringify(session)} not found in ${dir}`);
@@ -290,17 +334,27 @@ export async function executeSessionRead(
 ): Promise<SessionReadResult> {
   const offset = params.offset ?? 1;
   const limit = params.limit ?? 50;
+  const maxChars = opts.maxOutputChars ?? 20_000;
   const dir = sessionDirFor(opts.cwd, opts.agentDir);
-  const file = resolveSessionFile(dir, params.session);
+  const file = resolveSessionFile(
+    dir,
+    params.session,
+    opts.parentFile ?? process.env.PI_PARENT_SESSION_FILE,
+  );
 
   const raw = readFileSync(join(dir, file), "utf-8");
   const messages = renderTranscript(parseSessionFile(raw.split("\n")));
   const window = messages.filter((m) => m.number >= offset && m.number < offset + limit);
 
   const date = file.slice(0, 10);
-  const header = `${file} (${date}) — ${messages.length} messages, showing ${offset}-${Math.min(offset + limit - 1, messages.length)}`;
-  const body =
+  const first = offset;
+  const last = Math.max(offset - 1, Math.min(offset + limit - 1, messages.length));
+  const header = `${file} (${date}) — ${messages.length} messages, showing ${first}-${last}`;
+  let body =
     window.length > 0 ? window.map(formatMessage).join("\n") : "No messages in this window.";
+  if (header.length + body.length > maxChars) {
+    body = `${body.slice(0, Math.max(0, maxChars - header.length))}\n[truncated — narrow the offset/limit window]`;
+  }
 
   return {
     text: `${header}\n${body}`,
@@ -354,8 +408,9 @@ export default function sessionMemoryExtension(pi: ExtensionAPI): void {
     label: "Session Search",
     description:
       "Search past agent sessions in this working directory (previous sessions only; the current one is excluded). " +
-      "Returns matches with session handle, date, message number, role, and excerpt. " +
-      "Use message numbers with session_read to pull surrounding context.",
+      "Returns matches with session handle, date, message number, role, and excerpt (times are UTC). " +
+      "Use message numbers with session_read to pull surrounding context. " +
+      "The query is a regex: escape metacharacters to search literally; on 'Invalid search pattern' retry with the text escaped.",
     promptSnippet: "Search past session transcripts",
     parameters: SessionSearchParams,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {

@@ -108,6 +108,42 @@ describe("executeSessionRead", () => {
     expect(result.text).toContain("msg one about alpha");
   });
 
+  it("rejects reading the excluded parent session even by exact name", async () => {
+    const dir = sessionDirFor(CWD, agentDir);
+    const parent = join(dir, FILE);
+    await expect(
+      executeSessionRead(
+        { session: FILE, offset: 1, limit: 2 },
+        { agentDir, cwd: CWD, parentFile: parent },
+      ),
+    ).rejects.toThrow(/not found/);
+  });
+
+  it("still reads the second session while the first is excluded", async () => {
+    const dir = sessionDirFor(CWD, agentDir);
+    const parent = join(dir, FILE);
+    const result = await executeSessionRead(
+      { session: "2026-04-02T12", offset: 1, limit: 2 },
+      { agentDir, cwd: CWD, parentFile: parent },
+    );
+    expect(result.text).toContain("2026-04-02T12-30-00-000Z_eeee5555.jsonl");
+  });
+
+  it("caps total output characters with a truncation note", async () => {
+    const result = await executeSessionRead(
+      { session: FILE, offset: 1, limit: 6 },
+      { agentDir, cwd: CWD, maxOutputChars: 100 },
+    );
+    expect(result.text.length).toBeLessThanOrEqual(100 + 200); // cap + truncation note allowance
+    expect(result.text).toContain("truncated");
+  });
+
+  it("header shows a sane range when offset is beyond the end", async () => {
+    const result = await executeSessionRead({ session: FILE, offset: 99 }, { agentDir, cwd: CWD });
+    expect(result.text).not.toMatch(/showing 99-\d+ -/);
+    expect(result.text).toContain("showing 99-98");
+  });
+
   it("throws with candidate list for an ambiguous date prefix", async () => {
     // Both fixture files start with 2026-04-02T1 (candidates listed newest-first)
     await expect(
@@ -119,6 +155,19 @@ describe("executeSessionRead", () => {
     await expect(
       executeSessionRead({ session: "1999-01-01", offset: 1 }, { agentDir, cwd: CWD }),
     ).rejects.toThrow(/not found/i);
+  });
+
+  it("caps the ambiguity candidate list at 10 with an 'and N more' note", async () => {
+    const dir = sessionDirFor(CWD, agentDir);
+    for (let i = 0; i < 12; i++) {
+      writeFileSync(
+        join(dir, `2026-04-05T10-${String(i).padStart(2, "0")}-00-000Z_f${i}.jsonl`),
+        "\n",
+      );
+    }
+    await expect(
+      executeSessionRead({ session: "2026-04-05", offset: 1 }, { agentDir, cwd: CWD }),
+    ).rejects.toThrow(/and 2 more/);
   });
 
   it("notes an empty window when offset is beyond the end", async () => {

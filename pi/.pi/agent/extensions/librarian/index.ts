@@ -208,9 +208,9 @@ export default function (pi: ExtensionAPI) {
     name: "librarian",
     label: "Librarian",
     description: [
-      "Delegate documentation research to a subagent with access to web search (Exa), library docs (Context7), and your personal wiki.",
+      "Delegate research to a subagent with access to web search (Exa), library docs (Context7), your personal wiki, and past session history in this repo.",
       "Useful for looking up APIs, finding examples, checking best practices, reading external docs, and consulting your curated wiki knowledge.",
-      "The librarian agent can search the web, fetch library documentation, and search/read pages from your personal wiki.",
+      "The librarian agent can search the web, fetch library documentation, search/read your personal wiki, and search/read past sessions in this working directory (past work, decisions, debugging history).",
       "You may call librarian up to 4 times in parallel to research different topics simultaneously.",
       "When looking up a specific library or framework, provide the 'library' parameter to scope the search.",
       "Use 'focus' to narrow results: docs, examples, api, best-practices, or changelog.",

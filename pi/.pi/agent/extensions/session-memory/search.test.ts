@@ -108,6 +108,23 @@ describe("executeSessionSearch", () => {
     expect(result.matches).toHaveLength(0);
   });
 
+  it("skips files above the per-file byte cap and notes skipped count", async () => {
+    // One big file (> 5MB of padding inside a text block) + one small match
+    const bigPad = "x".repeat(6 * 1024 * 1024);
+    writeSession(agentDir, "2026-04-06T10-00-00-000Z_bigfile99.jsonl", [
+      ["user", `huge padding ${bigPad} capped-marker`],
+    ]);
+    const result = await executeSessionSearch({ query: "capped-marker" }, { agentDir, cwd: CWD });
+    expect(result.text).toContain("skipped 1");
+    expect(result.matches).toHaveLength(0);
+  });
+
+  it("warns when the session dir is missing but sibling session dirs exist (encoding drift)", async () => {
+    const emptyCwd = "/nonexistent-cwd-for-drift-test";
+    const result = await executeSessionSearch({ query: "anything" }, { agentDir, cwd: emptyCwd });
+    expect(result.text).toMatch(/no session directory for|sessions exist/i);
+  });
+
   it("skips invalid JSONL lines silently", async () => {
     const dir = sessionDirFor(CWD, agentDir);
     writeFileSync(

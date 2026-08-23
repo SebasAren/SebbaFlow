@@ -8,12 +8,12 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) AI cod
 
 These spawn a separate (cheaper/faster) model to handle reconnaissance, research, or knowledge capture — keeping the parent agent focused on the actual task.
 
-| Extension         | Purpose                                                                           | Config                            |
-| ----------------- | --------------------------------------------------------------------------------- | --------------------------------- |
-| **explore**       | Codebase reconnaissance with pre-search, file indexing, and semantic reranking    | `CHEAP_MODEL` env var             |
-| **librarian**     | Documentation research via Exa web search + Context7 library docs + personal wiki | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
-| **wiki-stash**    | Persist conversation knowledge to Obsidian wiki without interrupting the session  | `~/Documents/wiki/`               |
-| **cheap-clarify** | Cheap-model clarification subagent for ambiguous prompts                          | `CHEAP_MODEL` env var             |
+| Extension         | Purpose                                                                                    | Config                            |
+| ----------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
+| **explore**       | Codebase reconnaissance with pre-search, file indexing, and semantic reranking             | `CHEAP_MODEL` env var             |
+| **librarian**     | Research via Exa web search + Context7 library docs + personal wiki + past session history | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
+| **wiki-stash**    | Persist conversation knowledge to Obsidian wiki without interrupting the session           | `~/Documents/wiki/`               |
+| **cheap-clarify** | Cheap-model clarification subagent for ambiguous prompts                                   | `CHEAP_MODEL` env var             |
 
 ### Editing & Safety
 
@@ -192,15 +192,15 @@ librarian(query="deployment pipeline", library="our-monorepo")
 
 ## When to Use Which: explore vs librarian
 
-| Scenario                                                      | Tool          | Why                                                            |
-| ------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
-| Find files, trace dependencies, understand local architecture | **explore**   | Has file index, syntax-aware reranking, reads local source.    |
-| Look up an API, library docs, or best practices               | **librarian** | Has web search, library docs, and wiki access.                 |
-| Check if an existing implementation exists in the repo        | **explore**   | Searches actual source files and symbols.                      |
-| Research how to use a package or framework                    | **librarian** | Searches docs, examples, and tutorials online.                 |
-| Scout a large codebase before editing                         | **explore**   | Scout-then-deepen pattern with `thoroughness="quick"`.         |
-| Consult personal / previously ingested knowledge              | **librarian** | Has wiki_search/wiki_read under the hood.                      |
-| Need both local context and external docs                     | **both**      | Call explore + librarian in parallel for independent concerns. |
+| Scenario                                                       | Tool          | Why                                                            |
+| -------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| Find files, trace dependencies, understand local architecture  | **explore**   | Has file index, syntax-aware reranking, reads local source.    |
+| Look up an API, library docs, or best practices                | **librarian** | Has web search, library docs, and wiki access.                 |
+| Check if an existing implementation exists in the repo         | **explore**   | Searches actual source files and symbols.                      |
+| Research how to use a package or framework                     | **librarian** | Searches docs, examples, and tutorials online.                 |
+| Scout a large codebase before editing                          | **explore**   | Scout-then-deepen pattern with `thoroughness="quick"`.         |
+| Recall past work, decisions, or debugging history in this repo | **librarian** | Has session_search/session_read under the hood.                |
+| Need both local context and external docs                      | **both**      | Call explore + librarian in parallel for independent concerns. |
 
 ---
 

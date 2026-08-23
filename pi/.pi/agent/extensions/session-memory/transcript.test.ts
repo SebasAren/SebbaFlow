@@ -106,6 +106,62 @@ describe("renderTranscript", () => {
   });
 });
 
+describe("compaction summaries", () => {
+  // Compaction entries carry a distilled "summary" of prior work — render as a
+  // synthetic assistant message so decision history survives.
+  const LINES: string[] = [
+    JSON.stringify({
+      type: "session",
+      version: 3,
+      id: "s1",
+      timestamp: "2026-08-01T10:00:00.000Z",
+      cwd: "/repo",
+    }),
+    JSON.stringify({
+      type: "model_change",
+      id: "m1",
+      parentId: null,
+      timestamp: "2026-08-01T10:00:00.000Z",
+    }),
+    JSON.stringify({
+      type: "message",
+      id: "u1",
+      parentId: "m1",
+      timestamp: "2026-08-01T10:00:10.000Z",
+      message: { role: "user", content: [{ type: "text", text: "hello" }] },
+    }),
+    JSON.stringify({
+      type: "compaction",
+      id: "c1",
+      parentId: "u1",
+      timestamp: "2026-08-01T10:01:00.000Z",
+      summary: "## Progress\n- built the session-memory tools",
+    }),
+    JSON.stringify({
+      type: "message",
+      id: "u2",
+      parentId: "c1",
+      timestamp: "2026-08-01T10:02:00.000Z",
+      message: { role: "user", content: [{ type: "text", text: "thanks" }] },
+    }),
+  ];
+
+  it("renders the compaction summary as a synthetic assistant message", () => {
+    const rendered = renderTranscript(parseSessionFile(LINES));
+    expect(rendered.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+    expect(rendered[1].text).toContain("[compaction summary]");
+    expect(rendered[1].text).toContain("built the session-memory tools");
+    expect(rendered[1].time).toBe("10:01");
+  });
+
+  it("skips compaction entries without a summary", () => {
+    const noSummary = parseSessionFile(LINES).map((e) =>
+      e.type === "compaction" ? { ...e, summary: undefined } : e,
+    );
+    expect(renderTranscript(noSummary).map((m) => m.role)).toEqual(["user", "user"]);
+  });
+});
+
 describe("formatMessage", () => {
   it("renders a numbered line", () => {
     const [first] = renderTranscript(parseSessionFile(FIXTURE_LINES));
