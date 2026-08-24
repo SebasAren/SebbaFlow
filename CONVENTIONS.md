@@ -60,7 +60,7 @@ See `.claude/rules/global.md` for stow conventions (auto-injected on every sessi
 - Never commit secrets or credentials to the repo
 - Use `~/.secrets.tpl` with Proton Pass CLI template syntax: `{{ pass://path/to/key }}`
 - Secrets are resolved lazily on first use, not at shell startup
-- API keys needed: `EXA_API_KEY`, `CONTEXT7_API_KEY` (for pi extensions)
+- Full key list: `bashrc/.secrets.tpl` — Exa, Context7, OpenRouter, Langfuse, and more (pi extensions, wiki-search reranking, model providers)
 
 ## File Organization
 
