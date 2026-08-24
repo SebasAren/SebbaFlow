@@ -1,9 +1,0 @@
-{
-  "name": "@pi-ext/wiki-search",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "pi": {
-    "extensions": ["./index.ts"]
-  }
-}

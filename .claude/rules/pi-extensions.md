@@ -35,7 +35,6 @@ globs:
 - **`registerCommand` handlers receive `ExtensionCommandContext`, not `ExtensionContext`**. Command context extends base context with session-tree methods (`navigateTree`, `fork`, `newSession`, `waitForIdle`). Passing `ExtensionContext` as the handler param type causes a compile error when calling `navigateTree` — extract shared navigation logic into a helper typed with `ExtensionCommandContext`.
 - **`renderCall` component reuse**: Reuse `context.lastComponent` instead of creating new `Text()` each call — causes duplicate renders. Use the inline pattern `(context.lastComponent as Text | undefined) ?? new Text("", 0, 0)` rather than importing `reuseOrCreateText` from `@pi-ext/shared` — the shared helper's return type can trigger `@typescript-eslint/no-unsafe-*` violations through workspace dependency type resolution.
 - **Tool errors must be thrown, not returned**: Never catch errors in `execute()` and return them as text content — the framework treats returned results as successful calls. The model can't distinguish a failed edit from a successful one, which breaks retry logic. Always `throw new Error(...)` and let the framework handle error propagation.
-- **OpenRouter image generation: `modalities: ["image"]` only**: Including `"text"` in the modalities array causes a 404 (`No endpoints found that support the requested output modalities: image, text`) because no OpenRouter endpoint supports both output modalities simultaneously.
 - **Subagent output formatting**: Explore/librarian subagent thinking is concatenated text, not markdown. Split on sentence boundaries (`. `, `: `, `! `, `? `), not newlines. Use `splitIntoSentences()` from `@pi-ext/shared`.
 - **Subagent thinking lacks spaces**: Output often has no space after periods. Use `\s*` (not `\s+`) after `[.!?]` in the regex.
 - **Subagent sessions must use `noExtensions: true`**: Loading extensions in a subagent session causes `herdr-agent-state.ts` to register its idle-detection hooks in the subagent, leaking false "idle" state transitions to herdr. Use `noExtensions: true` on `DefaultResourceLoader` and list needed extension paths explicitly in `additionalExtensionPaths` (e.g. `path.join(getAgentDir(), "extensions", "exa-search")`). See explore and librarian for the pattern.
@@ -89,4 +88,4 @@ globs:
 3. The librarian's session factory sets `PI_LIBRARIAN_LOAD` to a refcounted integer before calling `loader.reload()`, then unsets it in a `finally` block.
 4. The refcount supports concurrent librarian calls (up to 4 parallel).
 
-**What stays exposed to the main agent:** `wiki_search`, `wiki_read`, `explore`, `librarian`, and all non-external-source tools.
+**What stays exposed to the main agent:** `explore`, `librarian`, and all non-external-source tools.

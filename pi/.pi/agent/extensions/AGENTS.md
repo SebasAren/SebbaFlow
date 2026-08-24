@@ -20,9 +20,9 @@ pi/.pi/agent/extensions/
     └── integration.test.ts  # Load + register cycle
 ```
 
-## Tests (689 tests across 57 files)
+## Tests (528 tests across 41 files)
 
-- **Unit tests**: `*.test.ts` next to the source file (e.g., `fuzzy-edit/fuzzy-match.test.ts`).
+- **Unit tests**: `*.test.ts` next to the source file (e.g., `librarian/wiring.test.ts`).
 - **Integration tests**: one `integration.test.ts` per extension — verifies the extension loads, registers its tools/commands, and handles missing API keys gracefully.
 - **Runner**: `bun test --parallel` from this directory (recurses into all workspace packages). No Jest, no Vitest. **Always use `--parallel`** — without it, tests share a single process and env var / mock state leaks between files, causing false failures.
 

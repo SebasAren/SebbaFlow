@@ -8,19 +8,10 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) AI cod
 
 These spawn a separate (cheaper/faster) model to handle reconnaissance, research, or knowledge capture — keeping the parent agent focused on the actual task.
 
-| Extension         | Purpose                                                                                    | Config                            |
-| ----------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
-| **explore**       | Codebase reconnaissance with pre-search, file indexing, and semantic reranking             | `CHEAP_MODEL` env var             |
-| **librarian**     | Research via Exa web search + Context7 library docs + personal wiki + past session history | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
-| **wiki-stash**    | Persist conversation knowledge to Obsidian wiki without interrupting the session           | `~/Documents/wiki/`               |
-| **cheap-clarify** | Cheap-model clarification subagent for ambiguous prompts                                   | `CHEAP_MODEL` env var             |
-
-### Editing & Safety
-
-| Extension      | Purpose                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| **fuzzy-edit** | Tab-aware fuzzy fallback for the edit tool — handles indentation and whitespace mismatches |
-| **plan-mode**  | Read-only mode toggleable via `/plan`, with execution via `/plan-execute`                  |
+| Extension     | Purpose                                                                                    | Config                            |
+| ------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
+| **explore**   | Codebase reconnaissance with pre-search, file indexing, and semantic reranking             | `CHEAP_MODEL` env var             |
+| **librarian** | Research via Exa web search + Context7 library docs + past session history                  | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
 
 ### Research & Documentation
 
@@ -33,19 +24,16 @@ These spawn a separate (cheaper/faster) model to handle reconnaissance, research
 
 | Extension          | Purpose                                                                            |
 | ------------------ | ---------------------------------------------------------------------------------- |
-| **wiki-search**    | Hybrid BM25 + vector search with Cohere reranking over `~/Documents/wiki/`         |
-| **wiki-read**      | Scope-safe wiki page reader                                                        |
-| **wiki-lint**      | Structural health checks: broken links, orphans, missing titles, stale files       |
 | **session-memory** | `session_search`/`session_read` over past session transcripts (librarian-internal) |
 
 ### Workflow & Session
 
-| Extension         | Purpose                                                                                 |
-| ----------------- | --------------------------------------------------------------------------------------- |
-| **todo**          | Todo management (`list`/`add`/`toggle`/`clear`) with state persisted in session entries |
-| **tdd-tree**      | TDD kickoff point labeling in the session tree for structured plan execution            |
-| **cache-control** | LLM cache hint injection for cost optimization                                          |
-| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading       |
+| Extension         | Purpose                                                                           |
+| ----------------- | --------------------------------------------------------------------------------- |
+| **tdd-tree**      | TDD kickoff point labeling in the session tree for structured plan execution      |
+| **extract-share** | Extract assistant messages as PNG or markdown for sharing                         |
+| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                      |
+| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading |
 
 ### Shared Library
 
@@ -135,18 +123,13 @@ User query  (e.g. "how do I use TanStack Query's optimistic updates?")
   │     changelogs, and migration guides. Can target a specific library.
   │     Returns: structured documentation chunks.
   │
-  ├─► Personal Wiki (Obsidian)
-  │     Searches and reads from ~/Documents/wiki/ for curated notes,
-  │     past research, and personal knowledge artifacts.
-  │     Returns: wiki page content.
-  │
   ├─► Past Sessions (session-memory)
   │     session_search/session_read over rendered transcripts of previous
   │     sessions in the current working directory (live session excluded).
   │     Returns: matches with session handle + message number, transcript ranges.
   │
-  └─► Subagent  (tools: web_search, web_fetch, context7_search, context7_docs, wiki_search, wiki_read, session_search, session_read)
-        Synthesizes findings from all four sources into a coherent answer.
+  └─► Subagent  (tools: web_search, web_fetch, context7_search, context7_docs, session_search, session_read)
+        Synthesizes findings from all three sources into a coherent answer.
         Configured with context-appropriate budgets (60 calls / 240s timeout).
         Structured output: Sources / Findings / Open Threads.
 ```
@@ -157,7 +140,6 @@ User query  (e.g. "how do I use TanStack Query's optimistic updates?")
 | ------------- | ----------------------------------------------------- | ---------------------------------------------------- |
 | Web Search    | General web research, tutorials, blog posts           | "react server components best practices"             |
 | Library Docs  | Specific API lookups, migration guides                | "next.js 14 config options"                          |
-| Personal Wiki | Known topics previously ingested                      | "our team's coding conventions"                      |
 | Past Sessions | Prior work, decisions, debugging history in this repo | "what did we decide about the session-memory tools?" |
 
 ### Key Design Decisions
@@ -165,7 +147,7 @@ User query  (e.g. "how do I use TanStack Query's optimistic updates?")
 | Decision                              | Rationale                                                                                                                                                                                                                                     |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Subagent synthesizes, not parent      | Raw search results are verbose and context-heavy. The subagent consumes them and returns only the relevant synthesized answer.                                                                                                                |
-| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its seven required extensions explicitly.                                                                                 |
+| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its required extensions explicitly.                                                                                                                 |
 | Internal-only extensions              | `exa-search`, `context7`, and `session-memory` register their tools only when loaded by the librarian subagent, using `PI_LIBRARIAN_LOAD` env var gating. See [Internal-Only Extensions docs](extensions/AGENTS.md#internal-only-extensions). |
 | Budget tailored to source mix         | 60 max tool calls / 240s timeout — conservatively sized for chaining searches across multiple sources.                                                                                                                                        |
 
@@ -183,9 +165,6 @@ librarian(query="useCallback vs useMemo", library="react")
 # Focused search
 librarian(query="TanStack Query optimistic updates", focus="examples")
 librarian(query="Next.js 15 upgrade guide", focus="changelog")
-
-# Wiki-backed research (library: known, from wiki)
-librarian(query="deployment pipeline", library="our-monorepo")
 ```
 
 ---
@@ -195,7 +174,7 @@ librarian(query="deployment pipeline", library="our-monorepo")
 | Scenario                                                       | Tool          | Why                                                            |
 | -------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
 | Find files, trace dependencies, understand local architecture  | **explore**   | Has file index, syntax-aware reranking, reads local source.    |
-| Look up an API, library docs, or best practices                | **librarian** | Has web search, library docs, and wiki access.                 |
+| Look up an API, library docs, or best practices                | **librarian** | Has web search and library docs.                                |
 | Check if an existing implementation exists in the repo         | **explore**   | Searches actual source files and symbols.                      |
 | Research how to use a package or framework                     | **librarian** | Searches docs, examples, and tutorials online.                 |
 | Scout a large codebase before editing                          | **explore**   | Scout-then-deepen pattern with `thoroughness="quick"`.         |
@@ -208,7 +187,7 @@ librarian(query="deployment pipeline", library="our-monorepo")
 
 ### Shared Subagent Runner
 
-All subagent-based extensions (explore, librarian, wiki-stash) use `runSubagent()` from `@pi-ext/shared`, which provides:
+All subagent-based extensions (explore, librarian) use `runSubagent()` from `@pi-ext/shared`, which provides:
 
 - **Retry logic**: Same-model retries with exponential backoff, then fallback to a secondary model
 - **Loop detection**: Detects when the subagent repeats the same tool calls

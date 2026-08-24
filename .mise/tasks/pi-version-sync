@@ -33,7 +33,6 @@ done
 # (only updates files that actually exist and contain matching keys)
 for f in "$extensions_root"/shared/package.json \
          "$extensions_root"/extract-share/package.json \
-         "$extensions_root"/pi-notify/package.json \
          "$extensions_root"/usage-tracker/package.json; do
   [ -f "$f" ] || continue
   for key in "@earendil-works/pi-coding-agent" "@earendil-works/pi-tui"; do

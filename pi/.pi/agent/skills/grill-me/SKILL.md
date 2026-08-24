@@ -64,5 +64,4 @@ Push back on each answer:
 | Routing | When |
 |---------|------|
 | **TDD plan** | Well-scoped, clear pass/fail conditions | `→ /skill:tdd-plan <description>` |
-| **Plan mode** | Exploratory, config-oriented | `→ /plan` |
 | **Just do it** | Alignment was the only blocker | Proceed directly |

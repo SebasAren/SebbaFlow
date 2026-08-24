@@ -32,8 +32,6 @@ export const LIBRARIAN_TOOL_NAMES = [
   "web_fetch",
   "context7_search",
   "context7_docs",
-  "wiki_search",
-  "wiki_read",
   "session_search",
   "session_read",
 ] as const;
@@ -41,14 +39,9 @@ export const LIBRARIAN_TOOL_NAMES = [
 /** Extension dirs loaded into the librarian subagent session. */
 export function getLibrarianExtensionDirs(agentDir = getAgentDir()): string[] {
   const extensionsDir = path.join(agentDir, "extensions");
-  return [
-    "exa-search",
-    "context7",
-    "wiki-search",
-    "wiki-read",
-    "usage-tracker",
-    "session-memory",
-  ].map((name) => path.join(extensionsDir, name));
+  return ["exa-search", "context7", "usage-tracker", "session-memory"].map((name) =>
+    path.join(extensionsDir, name),
+  );
 }
 
 /**
@@ -110,8 +103,8 @@ async function createLibrarianSession(
   const { modelRuntime, settingsManager } = await getSharedInfrastructure();
 
   // Use noExtensions + explicit additionalExtensionPaths to load ONLY the
-  // extensions the librarian needs (exa-search, context7, wiki-search,
-  // wiki-read, usage-tracker, session-memory).
+  // extensions the librarian needs (exa-search, context7, usage-tracker,
+  // session-memory).
   // This prevents loading herdr-agent-state in the subagent session, which would
   // cause false "idle" state transitions in herdr.
   const loader = new DefaultResourceLoader({
@@ -208,9 +201,9 @@ export default function (pi: ExtensionAPI) {
     name: "librarian",
     label: "Librarian",
     description: [
-      "Delegate research to a subagent with access to web search (Exa), library docs (Context7), your personal wiki, and past session history in this repo.",
-      "Useful for looking up APIs, finding examples, checking best practices, reading external docs, and consulting your curated wiki knowledge.",
-      "The librarian agent can search the web, fetch library documentation, search/read your personal wiki, and search/read past sessions in this working directory (past work, decisions, debugging history).",
+      "Delegate research to a subagent with access to web search (Exa), library docs (Context7), and past session history in this repo.",
+      "Useful for looking up APIs, finding examples, checking best practices, reading external docs, and recalling past work, decisions, and debugging history in this working directory.",
+      "The librarian agent can search the web, fetch library documentation, and search/read past sessions in this working directory.",
       "You may call librarian up to 4 times in parallel to research different topics simultaneously.",
       "When looking up a specific library or framework, provide the 'library' parameter to scope the search.",
       "Use 'focus' to narrow results: docs, examples, api, best-practices, or changelog.",

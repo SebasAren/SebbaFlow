@@ -43,7 +43,7 @@ Separate observation from interpretation. Check for confounding factors. Never s
 **Trigger:** `/skill:obsidian-wiki-ingest` (processes `raw/inbox/`) or `/skill:obsidian-wiki-ingest <path-or-url>`.
 
 1. **Detect and classify** inbox contents → move to appropriate `raw/` subdirectory
-2. **Duplicate check** — `wiki_search` for existing coverage, check `wiki/sources/<slug>.md`
+2. **Duplicate check** — `~/.local/bin/wiki-search "<topic>"` for existing coverage, check `wiki/sources/<slug>.md`
 3. **Read the source** — `read` for files, `web_fetch` for URLs, `yt-dlp` for YouTube transcripts
 4. **Evaluate credibility** — apply source skepticism tiers
 5. **Discuss takeaways** — surface flagged claims for user review

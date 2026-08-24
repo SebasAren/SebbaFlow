@@ -11,13 +11,17 @@ Answer questions from the wiki at `~/Documents/wiki/`. All domains welcome.
 
 Stop when you have enough to answer.
 
-### Step 1 — wiki_search
+### Step 1 — Search via the `wiki-search` CLI
 
-```
-wiki_search:0 {"query": "<keywords>", "top": 5}
+Run via the `bash` tool:
+
+```bash
+~/.local/bin/wiki-search "<keywords>" --top 5
 ```
 
-Returns `content[0].text` (snippets) and `details.paths` (full paths). Snippets are match context, not summaries — `read` the full files.
+Returns ranked page paths with match context. Match context is not a summary — `read` the full files.
+
+Add `--semantic` for concept-level queries, `--no-rerank` for a faster BM25-only pass, `--context N` for more surrounding lines.
 
 Try multiple search terms with wiki-specific terminology (e.g., "agent swarm" not "multi-agent AI").
 

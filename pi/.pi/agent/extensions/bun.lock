@@ -21,13 +21,6 @@
         "typescript-eslint": "^8.0.0",
       },
     },
-    "cheap-clarify": {
-      "name": "@pi-ext/cheap-clarify",
-      "version": "1.0.0",
-      "dependencies": {
-        "@pi-ext/shared": "workspace:*",
-      },
-    },
     "claude-rules": {
       "name": "@pi-ext/claude-rules",
       "version": "1.0.0",
@@ -70,42 +63,12 @@
         "@earendil-works/pi-coding-agent": "^0.80.3 || ^0.81.0 || ^0.84.0",
       },
     },
-    "fuzzy-edit": {
-      "name": "@pi-ext/fuzzy-edit",
-      "version": "1.0.0",
-      "dependencies": {
-        "diff": "^9.0.0",
-      },
-    },
     "librarian": {
       "name": "@pi-ext/librarian",
       "version": "1.0.0",
       "dependencies": {
         "@pi-ext/shared": "workspace:*",
       },
-    },
-    "pi-image": {
-      "name": "@pi-ext/pi-image",
-      "version": "1.0.0",
-      "dependencies": {
-        "@pi-ext/shared": "workspace:*",
-        "image-size": "^2.0.2",
-        "openai": "^7.0.0",
-      },
-    },
-    "pi-notify": {
-      "name": "@pi-ext/pi-notify",
-      "version": "1.0.0",
-      "dependencies": {
-        "@pi-ext/shared": "workspace:*",
-      },
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "^0.80.3 || ^0.81.0 || ^0.84.0",
-      },
-    },
-    "plan-mode": {
-      "name": "@pi-ext/plan-mode",
-      "version": "1.0.0",
     },
     "session-memory": {
       "name": "@pi-ext/session-memory",
@@ -151,21 +114,6 @@
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "^0.80.3 || ^0.81.0 || ^0.84.0",
       },
-    },
-    "wiki-lint": {
-      "name": "@pi-ext/wiki-lint",
-      "version": "1.0.0",
-    },
-    "wiki-read": {
-      "name": "@pi-ext/wiki-read",
-      "version": "1.0.0",
-      "dependencies": {
-        "@pi-ext/shared": "workspace:*",
-      },
-    },
-    "wiki-search": {
-      "name": "@pi-ext/wiki-search",
-      "version": "1.0.0",
     },
   },
   "packages": {
@@ -361,8 +309,6 @@
 
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.41.1", "", {}, "sha512-/UhIkaZgPutTFmQ7RnIJGgDXZmtEJ7Dvi86xNTFWcnRxVRNk/aotsqDJYeEvDP+FSMB2SdW+pQzNMcWP0rwuNA=="],
 
-    "@pi-ext/cheap-clarify": ["@pi-ext/cheap-clarify@workspace:cheap-clarify"],
-
     "@pi-ext/claude-rules": ["@pi-ext/claude-rules@workspace:claude-rules"],
 
     "@pi-ext/context7": ["@pi-ext/context7@workspace:context7"],
@@ -373,15 +319,7 @@
 
     "@pi-ext/extract-share": ["@pi-ext/extract-share@workspace:extract-share"],
 
-    "@pi-ext/fuzzy-edit": ["@pi-ext/fuzzy-edit@workspace:fuzzy-edit"],
-
     "@pi-ext/librarian": ["@pi-ext/librarian@workspace:librarian"],
-
-    "@pi-ext/pi-image": ["@pi-ext/pi-image@workspace:pi-image"],
-
-    "@pi-ext/pi-notify": ["@pi-ext/pi-notify@workspace:pi-notify"],
-
-    "@pi-ext/plan-mode": ["@pi-ext/plan-mode@workspace:plan-mode"],
 
     "@pi-ext/session-memory": ["@pi-ext/session-memory@workspace:session-memory"],
 
@@ -390,12 +328,6 @@
     "@pi-ext/tdd-tree": ["@pi-ext/tdd-tree@workspace:tdd-tree"],
 
     "@pi-ext/usage-tracker": ["@pi-ext/usage-tracker@workspace:usage-tracker"],
-
-    "@pi-ext/wiki-lint": ["@pi-ext/wiki-lint@workspace:wiki-lint"],
-
-    "@pi-ext/wiki-read": ["@pi-ext/wiki-read@workspace:wiki-read"],
-
-    "@pi-ext/wiki-search": ["@pi-ext/wiki-search@workspace:wiki-search"],
 
     "@protobufjs/aspromise": ["@protobufjs/aspromise@1.1.2", "", {}, "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="],
 
@@ -607,8 +539,6 @@
 
     "ignore": ["ignore@7.0.5", "", {}, "sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg=="],
 
-    "image-size": ["image-size@2.0.2", "", { "bin": { "image-size": "bin/image-size.js" } }, "sha512-IRqXKlaXwgSMAMtpNzZa1ZAe8m+Sa1770Dhk8VkSsP9LS+iHD62Zd8FQKs8fbPiagBE7BzoFX23cxFnwshpV6w=="],
-
     "import-in-the-middle": ["import-in-the-middle@3.0.1", "", { "dependencies": { "acorn": "^8.15.0", "acorn-import-attributes": "^1.9.5", "cjs-module-lexer": "^2.2.0", "module-details-from-path": "^1.0.4" } }, "sha512-pYkiyXVL2Mf3pozdlDGV6NAObxQx13Ae8knZk1UJRJ6uRW/ZRmTGHlQYtrsSl7ubuE5F8CD1z+s1n4RHNuTtuA=="],
 
     "imurmurhash": ["imurmurhash@0.1.4", "", {}, "sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA=="],
@@ -673,7 +603,7 @@
 
     "node-gyp-build": ["node-gyp-build@4.8.4", "", { "bin": { "node-gyp-build": "bin.js", "node-gyp-build-optional": "optional.js", "node-gyp-build-test": "build-test.js" } }, "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ=="],
 
-    "openai": ["openai@7.4.0", "", { "peerDependencies": { "@aws-sdk/credential-provider-node": ">=3.972.0 <4", "@smithy/hash-node": ">=4.3.0 <5", "@smithy/signature-v4": ">=5.4.0 <6", "ws": "^8.18.0", "zod": "^3.25 || ^4.0" }, "optionalPeers": ["@aws-sdk/credential-provider-node", "@smithy/hash-node", "@smithy/signature-v4", "ws", "zod"] }, "sha512-+C9Muit5x8j9R8ej8ZzVgKcrVDtqFqTy9gxFdov0EItLgU68zrJtF9ZeT0cyqJQW9S3PCJkdFgADtRGquRBtew=="],
+    "openai": ["openai@6.40.0", "", { "peerDependencies": { "ws": "^8.18.0", "zod": "^3.25 || ^4.0" }, "optionalPeers": ["ws", "zod"] }, "sha512-MWtTjd/gQt4jpbji61NTgFWJLoY/PdRJ6wG9/ZDRMYNMlBKrCrSlkLI+KgHP1vR1qT6LKSAyAqIxno6lcK9JiA=="],
 
     "optionator": ["optionator@0.9.4", "", { "dependencies": { "deep-is": "^0.1.3", "fast-levenshtein": "^2.0.6", "levn": "^0.4.1", "prelude-ls": "^1.2.1", "type-check": "^0.4.0", "word-wrap": "^1.2.5" } }, "sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g=="],
 
@@ -806,8 +736,6 @@
     "@earendil-works/pi-agent-core/diff": ["diff@8.0.4", "", {}, "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw=="],
 
     "@earendil-works/pi-agent-core/typebox": ["typebox@1.3.7", "", {}, "sha512-meKuifc33Pccx0O6PdIzYMq3Og8zvP4TIi/a+Bw3AEMZMxOD0+RHGQvpglEe6Zdy3wZ8nqn/j95h8LUZLk/6Hg=="],
-
-    "@earendil-works/pi-ai/openai": ["openai@6.40.0", "", { "peerDependencies": { "ws": "^8.18.0", "zod": "^3.25 || ^4.0" }, "optionalPeers": ["ws", "zod"] }, "sha512-MWtTjd/gQt4jpbji61NTgFWJLoY/PdRJ6wG9/ZDRMYNMlBKrCrSlkLI+KgHP1vR1qT6LKSAyAqIxno6lcK9JiA=="],
 
     "@earendil-works/pi-ai/typebox": ["typebox@1.3.7", "", {}, "sha512-meKuifc33Pccx0O6PdIzYMq3Og8zvP4TIi/a+Bw3AEMZMxOD0+RHGQvpglEe6Zdy3wZ8nqn/j95h8LUZLk/6Hg=="],
 

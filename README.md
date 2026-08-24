@@ -15,7 +15,7 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 | ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `kitty/`          | **Kitty**      | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md)  |
 | `herdr/`          | **Herdr**      | Terminal workspace manager for AI coding agents (shell is running inside it). Config only — runtime state stays in `~/.config/herdr/` |
-| `pi/`             | **Pi Agent**   | Coding assistant with 15 custom extensions (explore subagent, librarian, wiki integration, fuzzy edit, and more)                      |
+| `pi/`             | **Pi Agent**   | Coding assistant with 9 custom extensions (explore subagent, librarian research subagent, and more)                                  |
 | `nvim/`           | Neovim         | Lazy.nvim, 15 LSP servers, blink.cmp completion, CodeCompanion → [details](nvim/README.md)                                            |
 | `tmux/`           | Tmux           | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
 | `ghostty/`        | Ghostty        | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
@@ -110,20 +110,13 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) coding
 | Extension         | Purpose                                                                                         |
 | ----------------- | ----------------------------------------------------------------------------------------------- |
 | **explore**       | Subagent-powered codebase reconnaissance with pre-search, file indexing, and semantic reranking |
-| **librarian**     | Documentation research subagent (Exa web search + Context7 library docs + personal wiki)        |
-| **fuzzy-edit**    | Tab-aware fuzzy fallback for the edit tool                                                      |
-| **wiki-search**   | Hybrid BM25 + vector search with Cohere reranking over personal wiki                            |
-| **wiki-read**     | Scope-safe wiki page reader                                                                     |
-| **wiki-lint**     | Structural health checks for the wiki                                                           |
-| **plan-mode**     | Read-only mode toggleable via `/plan`                                                           |
+| **librarian**     | Documentation research subagent (Exa web search + Context7 library docs + session history)      |
 | **tdd-tree**      | TDD kickoff point labeling in the session tree                                                  |
 | **context7**      | Up-to-date library documentation lookup (internal-only subagent dep)                            |
 | **exa-search**    | Web search and page fetch via Exa API (internal-only subagent dep)                              |
 | **claude-rules**  | `.claude/rules/` parser with picomatch glob matching                                            |
-| **cheap-clarify** | Cheap-model clarification subagent                                                              |
 | **extract-share** | Extract and share assistant messages as PNG or markdown                                         |
-| **pi-image**      | Render inline images in terminal output                                                         |
-| **pi-notify**     | Desktop notifications from pi                                                                   |
+| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                                      |
 
 ### Explore Subagent Architecture
 
@@ -252,13 +245,13 @@ mise run lint-shell     # Lint shell scripts with shellcheck
 
 ### Testing
 
-The TypeScript surface (Pi agent extensions and standalone CLIs) is covered by **813+ tests across 64+ files**, all running under [`bun test`](https://bun.sh/docs/cli/test) and executed on every push by GitHub Actions (see [`.github/workflows/test.yml`](.github/workflows/test.yml)).
+The TypeScript surface (Pi agent extensions and standalone CLIs) is covered by **692 tests across 50 files**, all running under [`bun test`](https://bun.sh/docs/cli/test) and executed on every push by GitHub Actions (see [`.github/workflows/test.yml`](.github/workflows/test.yml)).
 
 | Location                                                        | Tests | Style                                                                                              |
 | --------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
-| `pi/.pi/agent/extensions/**/*.test.ts`                          | 689   | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
-| `pi/.local/bin/tdd-plan.test.ts`                                | 5     | End-to-end CLI tests via `execSync` against the `tdd-plan` binary                                  |
-| `pi/.local/bin/store-memory*.test.ts`                           | 18    | CLI tests for the `store-memory` skill binary                                                      |
+| `pi/.pi/agent/extensions/**/*.test.ts`                          | 528   | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
+| `pi/.local/bin/tdd-plan.test.ts` + `pi/.local/bin/lib/`         | 46    | End-to-end CLI tests via `execSync` against the `tdd-plan` binary                                  |
+| `pi/.local/bin/store-memory*.test.ts`                           | 17    | CLI tests for the `store-memory` skill binary                                                      |
 | `obsidian/.local/lib/wiki-search/wiki-search.test.ts`           | 41    | Unit tests with real filesystem fixtures for the `wiki-search` CLI                                 |
 | `obsidian/.local/lib/wiki-core/` + `obsidian/.local/lib/issue/` | 60    | Unit tests for wiki frontmatter I/O and issue tracker CLI                                          |
 
@@ -288,7 +281,7 @@ Run `mise run pre-commit` before committing — it executes format + lint + type
 ```
 .
 ├── pi/.pi/                      # Pi agent
-│   ├── agent/extensions/        # 15 custom extensions
+│   ├── agent/extensions/        # 9 custom extensions (+ shared library)
 │   └── README.md                # Extension documentation
 ├── kitty/.config/kitty/         # Kitty (terminal + multiplexer)
 │   └── kitty.conf               # Main config

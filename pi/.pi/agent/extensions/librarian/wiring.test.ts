@@ -28,7 +28,6 @@ describe("librarian wiring", () => {
     expect(LIBRARIAN_TOOL_NAMES).toContain("session_search");
     expect(LIBRARIAN_TOOL_NAMES).toContain("session_read");
     expect(LIBRARIAN_TOOL_NAMES).toContain("web_search");
-    expect(LIBRARIAN_TOOL_NAMES).toContain("wiki_read");
   });
 
   it("extension paths include session-memory", () => {

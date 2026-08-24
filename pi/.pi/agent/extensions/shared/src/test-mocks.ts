@@ -26,21 +26,11 @@
 
 /**
  * Complete mock for `@earendil-works/pi-coding-agent`.
- * Covers every export used by any extension:
- *   - `createEditTool` (fuzzy-edit)
- *   - `withFileMutationQueue` (fuzzy-edit)
+ * Covers every export used by any extension.
  */
 export const piCodingAgentMock = () => ({
   getMarkdownTheme: () => ({}),
   getSettingsListTheme: () => ({}),
-  // v0.68+: only factory forms remain; removed prebuilt read/bash/write/find/grep/ls tools
-  createEditTool: () => ({
-    description: "edit tool",
-    execute: () => {
-      throw new Error("Could not find oldText in file.");
-    },
-  }),
-  withFileMutationQueue: (_path: string, fn: () => Promise<any>) => fn(),
   renderDiff: (text: string) => text,
   highlightCode: (text: string) => text.split("\n"),
   getLanguageFromPath: () => undefined,
@@ -129,7 +119,7 @@ export const piCodingAgentMock = () => ({
  * Complete mock for `@earendil-works/pi-tui`.
  * Covers every export used by any extension:
  *   - `Container`, `Markdown`, `Spacer`, `Text` (explore, librarian, wt-worktree)
- *   - `Key` (plan-mode)
+ *   - `Key` (claude-rules, explore, librarian, shared)
  *
  * Text and Container have `.text` / `.children` access but NO `render()` method.
  * For tests that need `render()` (e.g. rendering unit tests), use `piTuiRenderMock`
