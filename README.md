@@ -16,7 +16,7 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 | `kitty/`          | **Kitty**     | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md)  |
 | `herdr/`          | **Herdr**     | Terminal workspace manager for AI coding agents (shell is running inside it). Config only — runtime state stays in `~/.config/herdr/` |
 | `pi/`             | **Pi Agent**  | Coding assistant with 9 custom extensions (explore subagent, librarian research subagent, and more)                                   |
-| `nvim/`           | Neovim        | Lazy.nvim, 15 LSP servers, blink.cmp completion, CodeCompanion → [details](nvim/README.md)                                            |
+| `nvim/`           | Neovim        | Lazy.nvim, 15 LSP servers, blink.cmp AI completion (Codestral + Minuet-AI) → [details](nvim/README.md)                                |
 | `tmux/`           | Tmux          | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
 | `ghostty/`        | Ghostty       | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
 | `bashrc/`         | Bash          | Modular shell config: aliases, secrets, fzf, mise                                                                                     |
@@ -190,7 +190,7 @@ Running the main model (e.g. Claude) to grep through files burns tokens on outpu
 
 → **[Full details in `nvim/README.md`](nvim/README.md)**
 
-Lazy.nvim with 15 LSP servers, blink.cmp completion (Codestral + Minuet-AI), conform.nvim formatting, nvim-dap debugging, and CodeCompanion.nvim AI coding.
+Lazy.nvim with 15 LSP servers, blink.cmp completion (Codestral + Minuet-AI), conform.nvim formatting, nvim-dap debugging, and neotest testing. Requires Neovim 0.11+.
 
 ### Tmux (Legacy)
 

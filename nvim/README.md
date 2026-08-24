@@ -1,5 +1,7 @@
 # Neovim Configuration
 
+Requires **Neovim 0.11+** (native `vim.lsp.config` / `vim.lsp.enable`).
+
 Lazy.nvim-based Neovim config with 15 LSP servers, AI-assisted completion, and extensive plugin suite.
 
 ## Setup
@@ -22,7 +24,7 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 
 ### LSP
 
-15 servers managed via `nvim-lspconfig` + Mason. Per-server configs in `lsp/*.lua`. Key servers:
+15 servers registered via native `vim.lsp.config` / `vim.lsp.enable` (Neovim 0.11+). Mason (`:Mason`) installs servers; `mason-lspconfig` bridges install names. Per-server configs in `lsp/*.lua`. Key servers:
 
 | Server       | Language                |
 | ------------ | ----------------------- |
@@ -37,15 +39,15 @@ TypeScript/Vue is primarily handled by [typescript-tools.nvim](https://github.co
 ### Formatting & Linting
 
 - **[conform.nvim](https://github.com/stevearc/conform.nvim)** — StyLua, prettierd, black+isort. Format on save.
-- **[nvim-lint](https://github.com/mfussenegger/nvim-lint)** — ruff, luacheck, hadolint.
+- **[nvim-lint](https://github.com/mfussenegger/nvim-lint)** — ruff, hadolint (Lua lints via `lua_ls` LSP)
 
 ### Debugging
 
 nvim-dap + nvim-dap-ui for JavaScript/TypeScript and Python.
 
-### AI Coding
+### Testing
 
-[CodeCompanion.nvim](https://github.com/olimorris/codecompanion.nvim) with Venice AI adapter.
+neotest with `<leader>t` prefix.
 
 ## Customization
 
