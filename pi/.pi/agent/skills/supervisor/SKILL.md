@@ -25,7 +25,8 @@ Orchestrate up to 3 parallel pi workers, each in its own wt worktree adopted as 
 ```
 You are a worker in a wt worktree. Rules:
 - Never write outside this worktree. Never touch live/deployed state
-  (in this repo: NEVER run `stow`).
+  (substitute the invoking repo's live-state commands — e.g. in the dotfiles
+  repo: NEVER run `stow`).
 - Never run `git config` (shared .git/config leaks identity) — use `git -c` or env vars.
 - Commit atomically with conventional commits. Do NOT merge or rebase onto main —
   the supervisor merges after verifying.
@@ -75,10 +76,10 @@ Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktr
 wt -C "$WT_PATH" merge    # pre-merge hook runs mise run check — the only gate
 ```
 
-- **Green** → squash-merge lands, worktree removed. Then sanity-check the main checkout:
+- **Green** → squash-merge lands, worktree removed. Then close the orphaned herdr workspace: `herdr workspace close "$WS"` (parked tasks keep theirs for inspection). Sanity-check the main checkout:
   `git rev-parse --is-bare-repository` must print `false` — if not, see the bare-repo fix in `wt/AGENTS.md`.
 - **Red** → failed attempt: prompt the worker to fix (that's attempt 1), re-merge. Still red after **2 attempts** → park: keep worktree + branch, report, move on.
-- **Conflict** → resolve **in the worker's worktree**: rebase onto main there, fix, commit, re-merge (re-verification runs automatically). Escalations: semantic conflict (symbol renamed/moved under the worker's code) → bounce to the worker, it has context; unresolvable → park for human.
+- **Conflict** → the **supervisor** resolves it in the worker's worktree (worker rules forbid rebase): rebase onto main there via `wt -C "$WT_PATH"` / `git -C`, fix, commit, re-merge (re-verification runs automatically). Escalations: semantic conflict (symbol renamed/moved under the worker's code) → bounce to the worker, it has context; unresolvable → park for human.
 - After each merge, report one status line: task, result, branch.
 
 ### 4. Report
