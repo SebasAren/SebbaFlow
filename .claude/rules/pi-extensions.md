@@ -29,6 +29,10 @@ globs:
 - **Exclude test files from tsconfig `include`**: Tests that mock modules can conflict with real types. Bun's test runner doesn't typecheck.
 - **Bun parser: trailing commas after class expressions in objects**: `class {}` as an object property value must have a trailing comma. Missing comma reports the error on the _next_ property line, not where the comma is missing, making it hard to spot.
 
+## Extension Catalog
+
+- **No wiki tooling in pi — deliberate**: `wiki-search`/`wiki-read`/`wiki-lint` extensions, `obsidian-wiki-*` skills, and `store-memory` were intentionally removed (bf32f31, 80ffab1); pi's agent surface has no wiki access. Do not re-add — the wiki pipeline (ingest/lint/CLI tooling) lives in the `obsidian/` stow package, invoked directly via bash, not through pi extensions/skills.
+
 ## Extension Architecture
 
 - **`turn_end` message shape**: The `turn_end` event's `message` carries `model`, `errorMessage`, `usage`, and `content` fields not declared in the exported `AgentSessionEvent` types. Define a local `SdkTurnEndMessage` interface (or `any`-cast) to access them safely; do not spread `(msg as any)` across multiple lines.
