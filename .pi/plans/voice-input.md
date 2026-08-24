@@ -17,6 +17,7 @@ Pi's extension system supports: custom tools (`pi.registerTool()`), keyboard sho
 **Effort:** ~10 min | **Risk:** Low | **Dependencies:** Deepgram API key or local model download
 
 Two community extensions exist:
+
 - [yukukotani/pi-voice](https://github.com/yukukotani/pi-voice) — headless daemon, push-to-talk via global hotkey
 - [codexstar69/pi-listen](https://github.com/codexstar69/pi-listen) — full pi extension, in-editor integration
 
@@ -35,10 +36,10 @@ pi install npm:@codexstar/pi-listen
 
 ### Backend options
 
-| Backend | Latency | Requires | Cost |
-|---------|---------|----------|------|
-| Deepgram (cloud) | Real-time streaming | API key | $200 free credit |
-| 19 local models (sherpa-onnx) | 2–10s after release | Model download (43MB–1.8GB) | Free forever |
+| Backend                       | Latency             | Requires                    | Cost             |
+| ----------------------------- | ------------------- | --------------------------- | ---------------- |
+| Deepgram (cloud)              | Real-time streaming | API key                     | $200 free credit |
+| 19 local models (sherpa-onnx) | 2–10s after release | Model download (43MB–1.8GB) | Free forever     |
 
 ### Key features
 
@@ -86,40 +87,42 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("voice", {
     description: "Voice control (on/off/dictate/test)",
-    handler: async (args, ctx) => { /* ... */ },
+    handler: async (args, ctx) => {
+      /* ... */
+    },
   });
 }
 ```
 
 ### Implementation concerns
 
-| Concern | Approach |
-|---------|----------|
-| Audio capture | Shell out to `rec` (sox) or `ffmpeg` to WAV buffer |
-| STT engine | `sherpa-onnx` (Node/WASM) or spawn `faster-whisper` Python subprocess |
-| Push-to-talk | `registerShortcut` for hold detection; or `Ctrl+Shift+V` toggle |
-| Live preview | `ctx.ui.setWidget("voice", [...transcriptLines])` above editor |
-| Submit | `pi.sendUserMessage(transcript)` or `ctx.ui.setEditorText(transcript)` |
-| Status | `ctx.ui.setStatus("voice", "🎙️ listening...")` in footer |
-| State | `pi.appendEntry("voice-state", {...})` for session persistence |
+| Concern       | Approach                                                               |
+| ------------- | ---------------------------------------------------------------------- |
+| Audio capture | Shell out to `rec` (sox) or `ffmpeg` to WAV buffer                     |
+| STT engine    | `sherpa-onnx` (Node/WASM) or spawn `faster-whisper` Python subprocess  |
+| Push-to-talk  | `registerShortcut` for hold detection; or `Ctrl+Shift+V` toggle        |
+| Live preview  | `ctx.ui.setWidget("voice", [...transcriptLines])` above editor         |
+| Submit        | `pi.sendUserMessage(transcript)` or `ctx.ui.setEditorText(transcript)` |
+| Status        | `ctx.ui.setStatus("voice", "🎙️ listening...")` in footer               |
+| State         | `pi.appendEntry("voice-state", {...})` for session persistence         |
 
 ### STT engine options
 
-| Engine | Speed | Languages | Setup |
-|--------|-------|-----------|-------|
-| sherpa-onnx (Node) | Fast, in-process | Up to 57 | `npm install sherpa-onnx` |
-| faster-whisper (Python subprocess) | 4x faster than whisper | 99+ | Python + pip |
-| whisper.cpp (binary) | Very fast, C++ | 99+ | Pre-built binary |
+| Engine                             | Speed                  | Languages | Setup                     |
+| ---------------------------------- | ---------------------- | --------- | ------------------------- |
+| sherpa-onnx (Node)                 | Fast, in-process       | Up to 57  | `npm install sherpa-onnx` |
+| faster-whisper (Python subprocess) | 4x faster than whisper | 99+       | Python + pip              |
+| whisper.cpp (binary)               | Very fast, C++         | 99+       | Pre-built binary          |
 
 ### Top local models by quality
 
-| Model | Accuracy | Speed | Size | Languages | Notes |
-|-------|----------|-------|------|-----------|-------|
-| Parakeet TDT v3 | ●●●●○ | ●●●●○ | 671 MB | 25 (auto-detect) | Best overall. WER 6.3%. |
-| Parakeet TDT v2 | ●●●●● | ●●●●○ | 661 MB | English | Best English. WER 6.0%. |
-| Whisper Turbo | ●●●●○ | ●●○○○ | 1.0 GB | 57 | Broadest language support. |
-| Moonshine v2 Tiny | ●●○○○ | ●●●●● | 43 MB | English | 34ms latency. Raspberry Pi friendly. |
-| SenseVoice Small | ●●●○○ | ●●●●● | 228 MB | zh/en/ja/ko/yue | Best for CJK languages. |
+| Model             | Accuracy | Speed | Size   | Languages        | Notes                                |
+| ----------------- | -------- | ----- | ------ | ---------------- | ------------------------------------ |
+| Parakeet TDT v3   | ●●●●○    | ●●●●○ | 671 MB | 25 (auto-detect) | Best overall. WER 6.3%.              |
+| Parakeet TDT v2   | ●●●●●    | ●●●●○ | 661 MB | English          | Best English. WER 6.0%.              |
+| Whisper Turbo     | ●●●●○    | ●●○○○ | 1.0 GB | 57               | Broadest language support.           |
+| Moonshine v2 Tiny | ●●○○○    | ●●●●● | 43 MB  | English          | 34ms latency. Raspberry Pi friendly. |
+| SenseVoice Small  | ●●●○○    | ●●●●● | 228 MB | zh/en/ja/ko/yue  | Best for CJK languages.              |
 
 ### Pros / Cons
 
@@ -132,7 +135,7 @@ export default function (pi: ExtensionAPI) {
 
 **Effort:** ~1 hour | **Risk:** Low | **Dependencies:** TalkType or whis CLI
 
-Run a system-wide voice daemon that works with pi *and every other app*. No pi extension needed.
+Run a system-wide voice daemon that works with pi _and every other app_. No pi extension needed.
 
 ### Setup
 
@@ -217,16 +220,16 @@ The most ambitious plan — a first-class voice experience with live streaming, 
 
 ### Feature matrix
 
-| Feature | Implementation |
-|---------|---------------|
-| Live streaming transcript | Deepgram WebSocket → `ctx.ui.setWidget()` with partial results |
-| Offline fallback | If no internet, auto-switch to sherpa-onnx batch mode |
-| Voice commands | "hey pi, compact" → `/compact`, "switch model" → `/model`, "commit" → commit flow |
-| Waveform visualization | Custom TUI component showing mic level in footer |
-| Settings panel | `SelectList` overlay with backend/language/model/hotkey tabs |
-| Hold SPACE recording | Intercept space via custom editor component (like `modal-editor.ts`) |
-| Continuous dictation | `/voice dictate` for long-form, VAD-based sentence boundary |
-| Typing cooldown | Ignore voice activation within 400ms of keyboard input |
+| Feature                   | Implementation                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| Live streaming transcript | Deepgram WebSocket → `ctx.ui.setWidget()` with partial results                    |
+| Offline fallback          | If no internet, auto-switch to sherpa-onnx batch mode                             |
+| Voice commands            | "hey pi, compact" → `/compact`, "switch model" → `/model`, "commit" → commit flow |
+| Waveform visualization    | Custom TUI component showing mic level in footer                                  |
+| Settings panel            | `SelectList` overlay with backend/language/model/hotkey tabs                      |
+| Hold SPACE recording      | Intercept space via custom editor component (like `modal-editor.ts`)              |
+| Continuous dictation      | `/voice dictate` for long-form, VAD-based sentence boundary                       |
+| Typing cooldown           | Ignore voice activation within 400ms of keyboard input                            |
 
 ### Push-to-talk via SPACE hold
 
@@ -267,12 +270,12 @@ class VoiceAwareEditor extends CustomEditor {
 
 ## Recommendation
 
-| Plan | Time | Offline | Live Streaming | pi Integration | Best For |
-|------|------|---------|----------------|----------------|----------|
-| **A: pi-listen** | 10 min | ✅ | ✅ (Deepgram) | ✅ Native ext | Trying voice immediately |
-| **B: Custom ext** | 2–4 days | ✅ | ❌ (batch) | ✅ Deep | Learning + customization |
-| **C: TalkType daemon** | 1 hour | ✅ | ❌ | ❌ (clipboard) | System-wide dictation |
-| **D: Full hybrid** | 1–2 weeks | ✅ (fallback) | ✅ (cloud) | ✅ Deepest | Production voice experience |
+| Plan                   | Time      | Offline       | Live Streaming | pi Integration | Best For                    |
+| ---------------------- | --------- | ------------- | -------------- | -------------- | --------------------------- |
+| **A: pi-listen**       | 10 min    | ✅            | ✅ (Deepgram)  | ✅ Native ext  | Trying voice immediately    |
+| **B: Custom ext**      | 2–4 days  | ✅            | ❌ (batch)     | ✅ Deep        | Learning + customization    |
+| **C: TalkType daemon** | 1 hour    | ✅            | ❌             | ❌ (clipboard) | System-wide dictation       |
+| **D: Full hybrid**     | 1–2 weeks | ✅ (fallback) | ✅ (cloud)     | ✅ Deepest     | Production voice experience |
 
 **Suggested path:** Start with **Plan A** (pi-listen) to validate the workflow, then evolve toward **Plan B** or **Plan D** for deeper integration. Add **Plan C** alongside if system-wide voice is desired.
 

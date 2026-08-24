@@ -10,7 +10,6 @@ However, it lacks a built-in way to select text using the keyboard.
 
 This project implements keyboard-driven text selection as a kitten.
 
-
 # Minimum requirements
 
 Kitty ≥0.21.2.
@@ -18,21 +17,19 @@ Kitty ≥0.21.2.
 For Kitty ≥0.13.0, <0.21.0, see the tag `v0.20`,
 but be aware that version will not be updated.
 
-
 # Installation and initial configuration
 
-* Clone this repository into your Kitty configuration directory:
+- Clone this repository into your Kitty configuration directory:
 
       $ cd ~/.config/kitty
       $ git clone https://github.com/yurikhan/kitty_grab.git
 
-* In the Kitty configuration file (`kitty.conf`),
+- In the Kitty configuration file (`kitty.conf`),
   map a key to run the `grab.py` kitten:
 
       map Alt+Insert kitten kitty_grab/grab.py
 
-* Restart kitty or reload the config (`Ctrl`+`Shift`+`F5` by default, see [kitty.conf](https://sw.kovidgoyal.net/kitty/conf/#shortcut-kitty.Reload-kitty.conf)).
-
+- Restart kitty or reload the config (`Ctrl`+`Shift`+`F5` by default, see [kitty.conf](https://sw.kovidgoyal.net/kitty/conf/#shortcut-kitty.Reload-kitty.conf)).
 
 # Usage
 
@@ -46,7 +43,6 @@ Hold down `Shift` while moving to select a stream region,
 or `Alt` to select a rectangular (columnar) region.
 Press `Enter` to copy the selected region to the clipboard and exit,
 or `Esc` or `q` to exit without copying.
-
 
 ## Start/end of buffer
 
@@ -63,11 +59,9 @@ to be able to use these shortcuts with `kitty_grab`.
     map Ctrl+Shift+Home  kitten smart_scroll.py scroll_home Ctrl+Shift+Home
     map Ctrl+Shift+End   kitten smart_scroll.py scroll_end  Ctrl+Shift+End
 
-
 ## Word motion
 
 Hold down `Ctrl` while pressing `←`/`→` to move by words.
-
 
 **Note:** By default, Kitty binds `Ctrl`+`Shift`+`←`/`→`
 to activate the previous/next tab.
@@ -89,7 +83,6 @@ or rebind previous/next tab to different keys in `kitty.conf`
 
 (Remember to [reload config](https://sw.kovidgoyal.net/kitty/conf/#shortcut-kitty.Reload-kitty.conf/) if you modify `kitty.conf`.)
 
-
 # Configuration
 
 See the `grab.conf.example` file.
@@ -102,12 +95,10 @@ Remove the `#` at the start of lines you modify.
 You do not need to reload config when you edit `grab.conf`.
 It will take effect the next time you use the grabber.
 
-
 # Vim-like Modal Highlighting
 
 Vim-like modal selecting is available.
 Copy the provided `grab-vim.conf.example` file, and copy it to `~/.config/kitty/grab.conf`.
-
 
 # License
 

@@ -5,11 +5,13 @@ Bluefin's default `~/.bashrc` with inlined bling (from `projectbluefin/common`).
 ## What It Includes
 
 ### Fedora default `.bashrc`
+
 - Sources `/etc/bashrc` (system-wide definitions)
 - Adds `~/.local/bin` and `~/bin` to `PATH`
 - Sources all files in `~/.bashrc.d/` (your modular config from the `bashrc` stow)
 
 ### Inlined bling.sh (from `projectbluefin/common`)
+
 - **eza** aliases: `ls`, `ll`, `l.`, `l1` (gracefully skipped if not installed)
 - **ugrep** aliases: `grep`, `egrep`, `fgrep`, `xzgrep`, etc.
 - **bat** alias: `cat` → `bat --style=plain --pager=never`

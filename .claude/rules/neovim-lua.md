@@ -24,4 +24,3 @@ description: Neovim Lua conventions
 ## fzf-lua API Gotchas
 
 - `fzf-lua.changes()` → Neovim's **buffer edit history** (`:changes`), NOT git changes
-

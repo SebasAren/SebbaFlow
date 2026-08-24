@@ -16,6 +16,7 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 ### Completion
 
 [blink.cmp](https://github.com/Saghen/blink.cmp) with AI providers:
+
 - **Codestral** (Mistral) for code completion
 - **Minuet-AI** for extended context suggestions
 
@@ -23,13 +24,13 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 
 15 servers managed via `nvim-lspconfig` + Mason. Per-server configs in `lsp/*.lua`. Key servers:
 
-| Server | Language |
-|--------|----------|
-| basedpyright | Python |
-| lua_ls | Lua |
-| eslint | JavaScript / TypeScript |
-| svelte | Svelte |
-| vue_ls | Vue |
+| Server       | Language                |
+| ------------ | ----------------------- |
+| basedpyright | Python                  |
+| lua_ls       | Lua                     |
+| eslint       | JavaScript / TypeScript |
+| svelte       | Svelte                  |
+| vue_ls       | Vue                     |
 
 TypeScript/Vue is primarily handled by [typescript-tools.nvim](https://github.com/pmizio/typescript-tools.nvim) (configured in `lua/plugins/lsp.lua`), not a standalone `lsp/*.lua` server.
 

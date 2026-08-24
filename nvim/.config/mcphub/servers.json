@@ -1,14 +1,8 @@
 {
   "mcpServers": {
     "context7": {
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
-      "autoApprove": [
-        "resolve-library-id",
-        "get-library-docs"
-      ],
+      "args": ["-y", "@upstash/context7-mcp"],
+      "autoApprove": ["resolve-library-id", "get-library-docs"],
       "command": "npx",
       "disabled": false,
       "env": {
@@ -16,9 +10,7 @@
       }
     },
     "fetch": {
-      "args": [
-        "mcp-server-fetch"
-      ],
+      "args": ["mcp-server-fetch"],
       "command": "uvx",
       "disabled": true
     },
@@ -43,9 +35,7 @@
       "disabled_tools": []
     },
     "gitlab": {
-      "args": [
-        "mcp-server-gitlab"
-      ],
+      "args": ["mcp-server-gitlab"],
       "command": "uvx",
       "disabled": true,
       "env": {
@@ -66,21 +56,13 @@
       "disabled": true
     },
     "puppeteer": {
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
       "command": "npx",
       "disabled": true
     },
     "sequentialthinking": {
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ],
-      "autoApprove": [
-        "sequentialthinking"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "autoApprove": ["sequentialthinking"],
       "command": "npx",
       "disabled": false
     },
@@ -102,13 +84,8 @@
       "disabled": true
     },
     "tavily": {
-      "args": [
-        "-y",
-        "tavily-mcp"
-      ],
-      "autoApprove": [
-        "tavily-search"
-      ],
+      "args": ["-y", "tavily-mcp"],
+      "autoApprove": ["tavily-search"],
       "command": "npx",
       "disabled": true,
       "env": {
@@ -123,9 +100,7 @@
   "nativeMCPServers": {
     "conventional_commits": {
       "disabled": false,
-      "disabled_tools": [
-        "get_status"
-      ]
+      "disabled_tools": ["get_status"]
     },
     "mcphub": {
       "custom_instructions": {
@@ -139,9 +114,7 @@
     "neovim": {
       "autoApprove": [],
       "disabled": false,
-      "disabled_prompts": [
-        "parrot"
-      ],
+      "disabled_prompts": ["parrot"],
       "disabled_resources": [],
       "disabled_tools": [
         "delete_items",

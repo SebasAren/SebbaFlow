@@ -8,12 +8,6 @@ project: <% tp.system.prompt("Project") %>
 
 ## Description
 
-
-
 ## Steps to Address
 
-
-
 ## Acceptance Criteria
-
-

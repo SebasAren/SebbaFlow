@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Verify TOML formatting with Taplo"
+set -euo pipefail
+
+echo "=== Checking TOML formatting (Taplo) ==="
+mapfile -t files < <(git ls-files -co --exclude-standard '*.toml')
+[ ${#files[@]} -eq 0 ] && { echo "✓ Nothing to check"; exit 0; }
+taplo format --check "${files[@]}"

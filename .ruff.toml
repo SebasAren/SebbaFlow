@@ -1,4 +1,2 @@
 # Vendored / third-party code — do not lint or auto-format
-exclude = [
-    "kitty/.config/kitty/kitty_grab/",
-]
+exclude = ["kitty/.config/kitty/kitty_grab/"]

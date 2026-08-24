@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Verify Markdown, JSON, and YAML formatting with Prettier"
+set -euo pipefail
+
+echo "=== Checking Markdown/JSON/YAML formatting (Prettier) ==="
+mapfile -t files < <(git ls-files -co --exclude-standard '*.json' '*.md' '*.yaml' '*.yml')
+[ ${#files[@]} -eq 0 ] && { echo "✓ Nothing to check"; exit 0; }
+prettier --check "${files[@]}"

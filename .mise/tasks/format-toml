@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Auto-format TOML with Taplo"
+set -euo pipefail
+
+echo "=== Formatting TOML (Taplo) ==="
+mapfile -t files < <(git ls-files -co --exclude-standard '*.toml')
+[ ${#files[@]} -eq 0 ] && { echo "✓ Nothing to format"; exit 0; }
+taplo format "${files[@]}"

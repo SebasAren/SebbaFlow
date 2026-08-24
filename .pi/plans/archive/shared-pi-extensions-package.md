@@ -5,12 +5,14 @@
 The `explore`, `librarian`, and `wt-worktree` extensions contain identical utility functions and similar subprocess-spawning patterns. This refactoring extracts shared code into a `@pi-ext/shared` package within the existing Bun workspace.
 
 **Benefits:**
+
 - Single source of truth for common utilities
 - Easier maintenance (bug fixes in one place)
 - Consistent behavior across extensions
 - Reduced bundle size (shared code compiled once)
 
 **Constraints:**
+
 - Extensions must remain independently deployable
 - No breaking changes to public APIs
 - Existing functionality must be preserved
@@ -57,6 +59,7 @@ import { resolveRealCwd } from "../src/cwd";
 **🟢 GREEN — Make it pass**
 
 1. Create `shared/package.json`:
+
 ```json
 {
   "name": "@pi-ext/shared",
@@ -118,7 +121,9 @@ export function resolveRealCwd(cwd: string): string {
   try {
     const real = fs.realpathSync(cwd);
     if (fs.existsSync(real)) return real;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   if (process.env.PWD && fs.existsSync(process.env.PWD)) return process.env.PWD;
   return process.cwd();
 }
@@ -175,7 +180,8 @@ export function formatUsageLine(
   usedModel?: string,
 ): string {
   const parts: string[] = [];
-  if (usage.turns) parts.push(`${usage.turns} turn${usage.turns > 1 ? "s" : ""}`);
+  if (usage.turns)
+    parts.push(`${usage.turns} turn${usage.turns > 1 ? "s" : ""}`);
   if (usage.input) parts.push(`↑${formatTokens(usage.input)}`);
   if (usage.output) parts.push(`↓${formatTokens(usage.output)}`);
   if (usage.cost) parts.push(`$${usage.cost.toFixed(4)}`);
@@ -229,7 +235,9 @@ describe("getSectionSummary", () => {
 
 ```typescript
 // src/markdown.ts
-export function parseSections(output: string): { title: string; content: string }[] {
+export function parseSections(
+  output: string,
+): { title: string; content: string }[] {
   const sections: { title: string; content: string }[] = [];
   const parts = output.split(/^## /m);
   for (const part of parts) {
@@ -247,7 +255,11 @@ export function parseSections(output: string): { title: string; content: string 
 }
 
 export function getSectionSummary(content: string, maxLen = 100): string {
-  const firstLine = content.split("\n").find((l) => l.trim())?.trim() ?? "";
+  const firstLine =
+    content
+      .split("\n")
+      .find((l) => l.trim())
+      ?.trim() ?? "";
   if (firstLine.length <= maxLen) return firstLine;
   return firstLine.slice(0, maxLen - 1) + "…";
 }
@@ -287,7 +299,10 @@ describe("getPiInvocation", () => {
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-export function getPiInvocation(args: string[]): { command: string; args: string[] } {
+export function getPiInvocation(args: string[]): {
+  command: string;
+  args: string[];
+} {
   const currentScript = process.argv[1];
   if (currentScript && fs.existsSync(currentScript)) {
     return { command: process.execPath, args: [currentScript, ...args] };
@@ -321,7 +336,15 @@ describe("types", () => {
       exitCode: 0,
       output: "",
       stderr: "",
-      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+      usage: {
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        cost: 0,
+        contextTokens: 0,
+        turns: 0,
+      },
     };
     expect(result.exitCode).toBeDefined();
   });
@@ -422,6 +445,7 @@ describe("explore extension", () => {
 **🟢 GREEN — Make it pass**
 
 1. Update `explore/package.json` to depend on `shared`:
+
 ```json
 {
   "dependencies": {
@@ -431,6 +455,7 @@ describe("explore extension", () => {
 ```
 
 2. Replace local implementations with imports:
+
 ```typescript
 import {
   resolveRealCwd,
@@ -439,7 +464,7 @@ import {
   getSectionSummary,
   formatUsageLine,
   getPiInvocation,
-  type SubagentResult
+  type SubagentResult,
 } from "@pi-ext/shared";
 ```
 
@@ -509,19 +534,19 @@ Clean up any remaining duplication or inconsistencies.
 
 ## Summary
 
-| Step | Test | Implementation |
-|------|------|---------------|
-| 1 | Package structure tests | shared/package.json, workspace config |
-| 2 | cwd.test.ts | resolveRealCwd() in shared/src/cwd.ts |
-| 3 | format.test.ts | formatTokens(), formatUsageLine() |
-| 4 | markdown.test.ts | parseSections(), getSectionSummary() |
-| 5 | subprocess.test.ts | getPiInvocation() |
-| 6 | types.test.ts | TypeScript interfaces |
-| 7 | index.test.ts | Export all from index.ts |
-| 8 | explore/integration.test.ts | Refactor explore to use shared |
-| 9 | librarian/integration.test.ts | Refactor librarian to use shared |
-| 10 | wt-worktree/integration.test.ts | Refactor wt-worktree to use shared |
-| 11 | All tests pass | Final verification |
+| Step | Test                            | Implementation                        |
+| ---- | ------------------------------- | ------------------------------------- |
+| 1    | Package structure tests         | shared/package.json, workspace config |
+| 2    | cwd.test.ts                     | resolveRealCwd() in shared/src/cwd.ts |
+| 3    | format.test.ts                  | formatTokens(), formatUsageLine()     |
+| 4    | markdown.test.ts                | parseSections(), getSectionSummary()  |
+| 5    | subprocess.test.ts              | getPiInvocation()                     |
+| 6    | types.test.ts                   | TypeScript interfaces                 |
+| 7    | index.test.ts                   | Export all from index.ts              |
+| 8    | explore/integration.test.ts     | Refactor explore to use shared        |
+| 9    | librarian/integration.test.ts   | Refactor librarian to use shared      |
+| 10   | wt-worktree/integration.test.ts | Refactor wt-worktree to use shared    |
+| 11   | All tests pass                  | Final verification                    |
 
 ---
 
@@ -532,18 +557,18 @@ Clean up any remaining duplication or inconsistencies.
 **Status:** All steps complete ✅ — archived
 
 | Step | 🔴 RED | 🟢 GREEN | 🔵 REFACTOR |
-|------|--------|----------|-------------|
-| 1 | ✅ | ✅ | ✅ |
-| 2 | ✅ | ✅ | ✅ |
-| 3 | ✅ | ✅ | ✅ |
-| 4 | ✅ | ✅ | ✅ |
-| 5 | ✅ | ✅ | ✅ |
-| 6 | ✅ | ✅ | ✅ |
-| 7 | ✅ | ✅ | ✅ |
-| 8 | ✅ | ✅ | ✅ |
-| 9 | ✅ | ✅ | ✅ |
-| 10 | ✅ | ✅ | ✅ |
-| 11 | ✅ | ✅ | ✅ |
+| ---- | ------ | -------- | ----------- |
+| 1    | ✅     | ✅       | ✅          |
+| 2    | ✅     | ✅       | ✅          |
+| 3    | ✅     | ✅       | ✅          |
+| 4    | ✅     | ✅       | ✅          |
+| 5    | ✅     | ✅       | ✅          |
+| 6    | ✅     | ✅       | ✅          |
+| 7    | ✅     | ✅       | ✅          |
+| 8    | ✅     | ✅       | ✅          |
+| 9    | ✅     | ✅       | ✅          |
+| 10   | ✅     | ✅       | ✅          |
+| 11   | ✅     | ✅       | ✅          |
 
 ---
 

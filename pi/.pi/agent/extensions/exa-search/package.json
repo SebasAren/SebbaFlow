@@ -7,6 +7,8 @@
     "exa-js": "^2.0.0"
   },
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   }
 }

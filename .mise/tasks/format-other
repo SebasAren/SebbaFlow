@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Auto-format Markdown, JSON, and YAML with Prettier"
+set -euo pipefail
+
+echo "=== Formatting Markdown/JSON/YAML (Prettier) ==="
+mapfile -t files < <(git ls-files -co --exclude-standard '*.json' '*.md' '*.yaml' '*.yml')
+[ ${#files[@]} -eq 0 ] && { echo "✓ Nothing to format"; exit 0; }
+prettier --write "${files[@]}"

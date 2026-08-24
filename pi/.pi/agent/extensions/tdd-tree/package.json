@@ -7,6 +7,8 @@
     "@pi-ext/shared": "workspace:*"
   },
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   }
 }

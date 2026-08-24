@@ -5,7 +5,7 @@
 Replace the `denesbeck/tmux-worktree` TPM plugin with custom shell scripts that wrap the `wt` (worktrunk) CLI. The new scripts will use tmux popups + fzf to provide:
 
 1. **Create worktree** (`prefix + W`): Pick a branch, name the new branch, then choose to open with `pi` or `$SHELL`
-2. **Switch worktree** (`prefix + w`): Pick an existing worktree from fzf, then choose to open with `pi` or `$SHELL`  
+2. **Switch worktree** (`prefix + w`): Pick an existing worktree from fzf, then choose to open with `pi` or `$SHELL`
 3. **Remove worktree** (`prefix + X`): Pick a worktree to remove with dirty-state warnings
 
 Scripts live in `tmux/.config/tmux/scripts/` and are stowed to `~/.config/tmux/scripts/`.
@@ -27,6 +27,7 @@ Each script runs inside `tmux display-popup`. The tool picker (pi vs shell) uses
 ### Step 1: Create wt-common.sh — shared helpers and fzf theme
 
 **🔴 RED — Write a failing test**
+
 ```
 Source wt-common.sh and verify functions are defined:
 - _wt_fzf_opts returns non-empty fzf arguments
@@ -36,6 +37,7 @@ Test: `bash -c 'source wt-common.sh && type _wt_fzf_opts && type _wt_tool_picker
 ```
 
 **🟢 GREEN — Make it pass**
+
 ```
 Create tmux/.config/tmux/scripts/wt-common.sh with:
 - _wt_fzf_opts(): returns fzf styling flags (--height, --border, --color tokyo-night palette)
@@ -46,6 +48,7 @@ Create tmux/.config/tmux/scripts/wt-common.sh with:
 ```
 
 **🔵 REFACTOR — Clean up**
+
 ```
 Ensure consistent error handling (set -euo pipefail) and color variables.
 ```
@@ -53,12 +56,14 @@ Ensure consistent error handling (set -euo pipefail) and color variables.
 ### Step 2: Create wt-create.sh — create new worktree
 
 **🔴 RED — Write a failing test**
+
 ```
 Verify wt-create.sh is executable and has correct shebang.
 Test: `bash -n wt-create.sh` (syntax check) and `test -x wt-create.sh`
 ```
 
 **🟢 GREEN — Make it pass**
+
 ```
 Create tmux/.config/tmux/scripts/wt-create.sh:
 1. Source wt-common.sh
@@ -73,6 +78,7 @@ Create tmux/.config/tmux/scripts/wt-create.sh:
 ```
 
 **🔵 REFACTOR**
+
 ```
 Skip if clean.
 ```
@@ -80,12 +86,14 @@ Skip if clean.
 ### Step 3: Create wt-switch.sh — switch to existing worktree
 
 **🔴 RED — Write a failing test**
+
 ```
 Verify wt-switch.sh is executable and passes syntax check.
 Test: `bash -n wt-switch.sh` and `test -x wt-switch.sh`
 ```
 
 **🟢 GREEN — Make it pass**
+
 ```
 Create tmux/.config/tmux/scripts/wt-switch.sh:
 1. Source wt-common.sh
@@ -101,6 +109,7 @@ Create tmux/.config/tmux/scripts/wt-switch.sh:
 ```
 
 **🔵 REFACTOR**
+
 ```
 Extract window-opening logic into a shared function in wt-common.sh if duplicated with wt-create.sh.
 ```
@@ -108,12 +117,14 @@ Extract window-opening logic into a shared function in wt-common.sh if duplicate
 ### Step 4: Create wt-remove.sh — remove worktree
 
 **🔴 RED — Write a failing test**
+
 ```
 Verify wt-remove.sh is executable and passes syntax check.
 Test: `bash -n wt-remove.sh` and `test -x wt-remove.sh`
 ```
 
 **🟢 GREEN — Make it pass**
+
 ```
 Create tmux/.config/tmux/scripts/wt-remove.sh:
 1. Source wt-common.sh
@@ -127,6 +138,7 @@ Create tmux/.config/tmux/scripts/wt-remove.sh:
 ```
 
 **🔵 REFACTOR**
+
 ```
 Skip if clean.
 ```
@@ -134,6 +146,7 @@ Skip if clean.
 ### Step 5: Update tmux.conf — remove plugin, add keybindings
 
 **🔴 RED — Write a failing test**
+
 ```
 Verify tmux.conf no longer contains 'denesbeck/tmux-worktree' and does contain
 wt-create/wt-switch/wt-remove keybindings.
@@ -142,6 +155,7 @@ Test: `grep -c 'denesbeck/tmux-worktree' tmux.conf` returns 0
 ```
 
 **🟢 GREEN — Make it pass**
+
 ```
 Edit tmux/.config/tmux/tmux.conf:
 1. Remove: set -g @plugin 'denesbeck/tmux-worktree'
@@ -152,6 +166,7 @@ Edit tmux/.config/tmux/tmux.conf:
 ```
 
 **🔵 REFACTOR**
+
 ```
 Group keybindings with a comment header: "# --- Worktree (wt) ---"
 ```
@@ -159,6 +174,7 @@ Group keybindings with a comment header: "# --- Worktree (wt) ---"
 ### Step 6: Manual integration test — full workflow
 
 **🔴 RED — Write a failing test**
+
 ```
 Manual verification checklist (documented in plan):
 1. `stow tmux` — verify symlinks created for scripts/ and tmux.conf
@@ -170,6 +186,7 @@ Manual verification checklist (documented in plan):
 ```
 
 **🟢 GREEN — Make it pass**
+
 ```
 Fix any issues found during manual testing. Typical fixes:
 - Script paths (ensure stow symlink is correct)
@@ -179,20 +196,21 @@ Fix any issues found during manual testing. Typical fixes:
 ```
 
 **🔵 REFACTOR**
+
 ```
 Final cleanup: ensure consistent coding style, comments, error messages.
 ```
 
 ### Summary
 
-| Step | Test | Implementation |
-|------|------|---------------|
-| 1 | Verify wt-common.sh functions exist | Create shared helpers (fzf opts, tool picker, worktree list) |
-| 2 | Syntax check wt-create.sh | Create worktree with branch picker + tool choice |
-| 3 | Syntax check wt-switch.sh | Switch worktree with fzf picker + tool choice |
-| 4 | Syntax check wt-remove.sh | Remove worktree with dirty state warnings |
-| 5 | Verify tmux.conf removes old plugin, adds keybindings | Edit tmux.conf: remove plugin, add W/w/X bindings |
-| 6 | Manual end-to-end workflow test | Fix issues found during manual testing |
+| Step | Test                                                  | Implementation                                               |
+| ---- | ----------------------------------------------------- | ------------------------------------------------------------ |
+| 1    | Verify wt-common.sh functions exist                   | Create shared helpers (fzf opts, tool picker, worktree list) |
+| 2    | Syntax check wt-create.sh                             | Create worktree with branch picker + tool choice             |
+| 3    | Syntax check wt-switch.sh                             | Switch worktree with fzf picker + tool choice                |
+| 4    | Syntax check wt-remove.sh                             | Remove worktree with dirty state warnings                    |
+| 5    | Verify tmux.conf removes old plugin, adds keybindings | Edit tmux.conf: remove plugin, add W/w/X bindings            |
+| 6    | Manual end-to-end workflow test                       | Fix issues found during manual testing                       |
 
 ### Progress Log
 
@@ -201,15 +219,16 @@ Final cleanup: ensure consistent coding style, comments, error messages.
 **Status:** All steps complete ✅ — archived
 
 | Step | 🔴 RED | 🟢 GREEN | 🔵 REFACTOR |
-|------|--------|----------|-------------|
-| 1 | ✅ | ✅ | ⏭️ |
-| 2 | ✅ | ✅ | ⏭️ |
-| 3 | ✅ | ✅ | ⏭️ |
-| 4 | ✅ | ✅ | ⏭️ |
-| 5 | ✅ | ✅ | ✅ |
-| 6 | ✅ | ✅ | ✅ |
+| ---- | ------ | -------- | ----------- |
+| 1    | ✅     | ✅       | ⏭️          |
+| 2    | ✅     | ✅       | ⏭️          |
+| 3    | ✅     | ✅       | ⏭️          |
+| 4    | ✅     | ✅       | ⏭️          |
+| 5    | ✅     | ✅       | ✅          |
+| 6    | ✅     | ✅       | ✅          |
 
 ### Notes
+
 - tmux `display-popup -E` runs the command in the popup directly (no shell wrapper needed)
 - Scripts run inside popup, so they have full terminal control for fzf
 - `wt list --format=json` requires `jq` for parsing — need to check it's available

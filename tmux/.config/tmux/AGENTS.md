@@ -10,20 +10,20 @@ Prefix: `Ctrl+a` (not default `Ctrl+b`).
 
 Most bindings use `Alt` directly — no prefix needed.
 
-| Key | Action |
-|-----|--------|
-| `Alt+h/j/k/l` | Navigate panes |
-| `Alt+v` / `Alt+s` | Split horizontal / vertical |
-| `Alt+n` | New window |
-| `Alt+1..9` | Switch to window N |
-| `Alt+</>` | Reorder windows |
-| `Alt+{` / `Alt+}` | Swap panes |
-| `Alt+z` | Zoom pane |
-| `Alt+Space` | Cycle layouts |
-| `Alt+H/J/K` | Resize panes (5 cells) |
-| `Alt+Shift+H/J/K` | Resize panes |
-| `prefix+r` | Reload config |
-| `prefix+J` | Join pane from another window |
+| Key               | Action                        |
+| ----------------- | ----------------------------- |
+| `Alt+h/j/k/l`     | Navigate panes                |
+| `Alt+v` / `Alt+s` | Split horizontal / vertical   |
+| `Alt+n`           | New window                    |
+| `Alt+1..9`        | Switch to window N            |
+| `Alt+</>`         | Reorder windows               |
+| `Alt+{` / `Alt+}` | Swap panes                    |
+| `Alt+z`           | Zoom pane                     |
+| `Alt+Space`       | Cycle layouts                 |
+| `Alt+H/J/K`       | Resize panes (5 cells)        |
+| `Alt+Shift+H/J/K` | Resize panes                  |
+| `prefix+r`        | Reload config                 |
+| `prefix+J`        | Join pane from another window |
 
 Vi copy mode: `v` to select, `y` to yank to clipboard (`wl-copy`).
 

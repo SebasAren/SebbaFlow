@@ -39,12 +39,12 @@ mise trust                          # Trust project config
 
 ## Config Files
 
-| File | Purpose |
-|------|---------|
-| `~/.config/mise/config.toml` | Global defaults |
-| `mise.toml` (project root) | Project tools, tasks, env |
-| `mise.local.toml` | Machine overrides (gitignored) |
-| `mise.{ENV}.toml` | Per-environment (dev, staging, prod) |
+| File                         | Purpose                              |
+| ---------------------------- | ------------------------------------ |
+| `~/.config/mise/config.toml` | Global defaults                      |
+| `mise.toml` (project root)   | Project tools, tasks, env            |
+| `mise.local.toml`            | Machine overrides (gitignored)       |
+| `mise.{ENV}.toml`            | Per-environment (dev, staging, prod) |
 
 Precedence: system < global < project < local < environment-specific
 

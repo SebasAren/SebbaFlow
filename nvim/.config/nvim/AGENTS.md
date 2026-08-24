@@ -34,14 +34,14 @@ return {
 
 ## Key Plugins
 
-| Plugin | Purpose |
-|--------|---------|
-| blink.cmp | Completion (LSP + Minuet-AI/Codestral for inline completions) |
-| conform.nvim | Formatting (StyLua, prettierd, black, isort) |
-| nvim-lint | Linting (ruff, hadolint) — lua uses lua_ls (LSP) instead |
-| nvim-dap + nvim-dap-ui | Debugging (JS/TS, Python) |
-| neotest | Testing (`<leader>t` prefix) |
-| fzf-lua | Fuzzy finder |
+| Plugin                 | Purpose                                                       |
+| ---------------------- | ------------------------------------------------------------- |
+| blink.cmp              | Completion (LSP + Minuet-AI/Codestral for inline completions) |
+| conform.nvim           | Formatting (StyLua, prettierd, black, isort)                  |
+| nvim-lint              | Linting (ruff, hadolint) — lua uses lua_ls (LSP) instead      |
+| nvim-dap + nvim-dap-ui | Debugging (JS/TS, Python)                                     |
+| neotest                | Testing (`<leader>t` prefix)                                  |
+| fzf-lua                | Fuzzy finder                                                  |
 
 ## LSP
 
@@ -89,13 +89,13 @@ Plugins providing LSP: typescript-tools.nvim (`pmizio/typescript-tools.nvim` in 
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| `:Lazy sync` | Update all plugins |
-| `:ConformInfo` | Show formatter status |
-| `:LspInfo` | Show LSP server status |
-| `:Mason` | Manage LSP/formatter/linter servers |
-| `:lua =vim.lsp.get_clients()` | List active LSP clients |
+| Command                       | Purpose                             |
+| ----------------------------- | ----------------------------------- |
+| `:Lazy sync`                  | Update all plugins                  |
+| `:ConformInfo`                | Show formatter status               |
+| `:LspInfo`                    | Show LSP server status              |
+| `:Mason`                      | Manage LSP/formatter/linter servers |
+| `:lua =vim.lsp.get_clients()` | List active LSP clients             |
 
 ## Markdown Performance Gotchas
 

@@ -4,15 +4,15 @@ Stowed scripts for the personal wiki at `~/Documents/wiki/`, based on [Andrej Ka
 
 ## What's Here
 
-| Path | Description |
-|------|-------------|
-| `.local/bin/wiki-search` | Hybrid BM25 + vector search CLI with Cohere reranking |
-| `.local/lib/wiki-search/` | Search engine implementation (BM25, embeddings, cache) |
-| `.local/bin/issue` | Issue tracker CLI (create, list, move, block, close) |
-| `.local/lib/issue/` | Issue tracker implementation |
-| `.local/lib/wiki-core/` | Shared frontmatter, I/O, and constants for wiki tools |
-| `Documents/wiki/templates/issue.md` | Templater template for creating issues from Obsidian |
-| `Documents/wiki/issues-dashboard.md` | Dataview dashboard for issue tracking |
+| Path                                 | Description                                            |
+| ------------------------------------ | ------------------------------------------------------ |
+| `.local/bin/wiki-search`             | Hybrid BM25 + vector search CLI with Cohere reranking  |
+| `.local/lib/wiki-search/`            | Search engine implementation (BM25, embeddings, cache) |
+| `.local/bin/issue`                   | Issue tracker CLI (create, list, move, block, close)   |
+| `.local/lib/issue/`                  | Issue tracker implementation                           |
+| `.local/lib/wiki-core/`              | Shared frontmatter, I/O, and constants for wiki tools  |
+| `Documents/wiki/templates/issue.md`  | Templater template for creating issues from Obsidian   |
+| `Documents/wiki/issues-dashboard.md` | Dataview dashboard for issue tracking                  |
 
 ## Search Engine (`wiki-search`)
 
@@ -26,15 +26,15 @@ All modes use cached indexes rebuilt incrementally when the wiki changes. Rerank
 
 ### Library
 
-| File | Purpose |
-|------|---------|
-| `cli.ts` | Argument parsing, cache management, mode routing |
-| `search.ts` | `hybridSearch()`, ripgrep helpers, `rerank()` |
-| `bm25.ts` | BM25 ranking implementation |
-| `vector.ts` | Cosine similarity, embedding API client |
-| `cache.ts` | Incremental index builds, staleness detection, manifest |
-| `text.ts` | Markdown stripping, tokenization |
-| `constants.ts` | Model names, API URLs, tuning parameters |
+| File           | Purpose                                                 |
+| -------------- | ------------------------------------------------------- |
+| `cli.ts`       | Argument parsing, cache management, mode routing        |
+| `search.ts`    | `hybridSearch()`, ripgrep helpers, `rerank()`           |
+| `bm25.ts`      | BM25 ranking implementation                             |
+| `vector.ts`    | Cosine similarity, embedding API client                 |
+| `cache.ts`     | Incremental index builds, staleness detection, manifest |
+| `text.ts`      | Markdown stripping, tokenization                        |
+| `constants.ts` | Model names, API URLs, tuning parameters                |
 
 ## Issue Tracker
 

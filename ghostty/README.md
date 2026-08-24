@@ -22,12 +22,12 @@ stow ghostty
 
 ## Why Ghostty over WezTerm Flatpak
 
-| Issue | WezTerm Flatpak | Ghostty Native |
-|-------|-----------------|----------------|
-| Auto-start tmux | Broken (sandboxed shell env) | Works natively |
+| Issue                 | WezTerm Flatpak                | Ghostty Native            |
+| --------------------- | ------------------------------ | ------------------------- |
+| Auto-start tmux       | Broken (sandboxed shell env)   | Works natively            |
 | Inline images in tmux | Kitty protocol blocked by tmux | ✅ Pi-tested fix for tmux |
-| Keyboard protocol | Needs `enable_kitty_keyboard` | Native Kitty protocol |
-| Bluefin integration | Flatpak friction | rpm-ostree layer |
+| Keyboard protocol     | Needs `enable_kitty_keyboard`  | Native Kitty protocol     |
+| Bluefin integration   | Flatpak friction               | rpm-ostree layer          |
 
 ## Config Highlights
 

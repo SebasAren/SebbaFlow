@@ -41,18 +41,18 @@ brew-sync full         # regenerate + install
 
 ## Commands
 
-| Command | Action |
-|---------|--------|
-| `brew-sync` | Regenerate Brewfile (default subcommand) |
-| `brew-sync sync` | Same as above |
-| `brew-sync install` | `brew bundle` from Brewfile |
-| `brew-sync full` | Regenerate + install |
+| Command             | Action                                   |
+| ------------------- | ---------------------------------------- |
+| `brew-sync`         | Regenerate Brewfile (default subcommand) |
+| `brew-sync sync`    | Same as above                            |
+| `brew-sync install` | `brew bundle` from Brewfile              |
+| `brew-sync full`    | Regenerate + install                     |
 
 ## Bluefin specifics
 
 On Bluefin, system packages live in `/usr/share/ublue-os/homebrew/*.Brewfile`. `brew-sync` diffs `brew leaves` against these to include only your personal additions.
 
-On non-Bluefin machines, the system Brewfiles won't exist — `brew-sync` will include *all* explicitly installed packages (with a warning).
+On non-Bluefin machines, the system Brewfiles won't exist — `brew-sync` will include _all_ explicitly installed packages (with a warning).
 
 ## Aliases
 

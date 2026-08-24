@@ -5,6 +5,7 @@
 The 5 pi extensions (`context7`, `exa-search`, `explore`, `librarian`, `claude-rules`) plus standalone `questionnaire.ts` are currently independent npm packages with duplicated `node_modules/` (~900MB total). All share identical devDependencies. The goal is to consolidate into a Bun workspaces monorepo with a single hoisted `node_modules/`, unified `tsconfig.json`, and `bun.lockb`.
 
 **Constraints:**
+
 - Pi auto-discovers extensions at `~/.pi/agent/extensions/*/index.ts` and `~/.pi/agent/extensions/*.ts`
 - Pi loads extensions via jiti, which resolves `node_modules/` upward (parent dirs)
 - The `"pi": { "extensions": [...] }` field in package.json is used by pi's package system — for local workspace packages it's still needed for discovery
@@ -42,6 +43,7 @@ The 5 pi extensions (`context7`, `exa-search`, `explore`, `librarian`, `claude-r
 ```
 
 Key design decisions:
+
 - **Shared devDependencies hoisted to root**: `@mariozechner/pi-*`, `@sinclair/typebox`, `@types/node`
 - **Runtime deps stay in workspace packages**: `@upstash/context7-sdk`, `exa-js`, `picomatch`
 - **`tsconfig.base.json`** at root, each workspace extends it
@@ -53,6 +55,7 @@ Key design decisions:
 ### ~~Step 1: Create shared tsconfig.base.json~~ ✅
 
 **🔴 RED — Verify current state**
+
 ```
 Confirm that the 5 tsconfig.json files exist and are nearly identical.
 Run: grep -c '"target"' */tsconfig.json — should show 5 matches.
@@ -60,6 +63,7 @@ This establishes the baseline before change.
 ```
 
 **🟢 GREEN — Create the file**
+
 ```
 Create tsconfig.base.json at extensions/ root:
 {
@@ -78,6 +82,7 @@ Create tsconfig.base.json at extensions/ root:
 ```
 
 **🔵 REFACTOR — Skip**
+
 ```
 Clean by definition — single new file.
 ```
@@ -87,6 +92,7 @@ Clean by definition — single new file.
 ### ~~Step 2: Update workspace tsconfig.json files to extend base~~ ✅
 
 **🔴 RED — Verify current tsconfigs**
+
 ```
 For each extension, confirm tsconfig.json exists and has full config:
   cat context7/tsconfig.json — should show full compilerOptions
@@ -94,6 +100,7 @@ This confirms the files we're about to change.
 ```
 
 **🟢 GREEN — Replace each tsconfig.json**
+
 ```
 For each of the 5 extensions, replace tsconfig.json with:
 {
@@ -104,6 +111,7 @@ Note: librarian's slightly different config (ES2022 target, outDir) normalizes t
 ```
 
 **🔵 REFACTOR — Skip**
+
 ```
 No duplication remains — each file is 4 lines.
 ```
@@ -113,6 +121,7 @@ No duplication remains — each file is 4 lines.
 ### ~~Step 3: Update workspace package.json files~~ ✅
 
 **🔴 RED — Verify current package.json files**
+
 ```
 For each extension, confirm package.json exists and lists its dependencies.
 Run: cat context7/package.json — should show @upstash/context7-sdk.
@@ -120,6 +129,7 @@ This confirms the state before change.
 ```
 
 **🟢 GREEN — Update each workspace package.json**
+
 ```
 Remove shared devDependencies from each workspace package.json.
 Keep only extension-specific runtime deps.
@@ -175,6 +185,7 @@ Note: claude-rules loses @types/picomatch (types come from the package itself in
 ```
 
 **🔵 REFACTOR — Skip**
+
 ```
 Each file is minimal — only what's unique to that extension.
 ```
@@ -184,12 +195,14 @@ Each file is minimal — only what's unique to that extension.
 ### ~~Step 4: Create root package.json with workspaces~~ ✅
 
 **🔴 RED — Confirm no root package.json exists**
+
 ```
 Run: ls -la package.json — should fail or show no file.
 Confirms clean slate.
 ```
 
 **🟢 GREEN — Create root package.json**
+
 ```
 Create extensions/package.json:
 {
@@ -215,6 +228,7 @@ Create extensions/package.json:
 ```
 
 **🔵 REFACTOR — Skip**
+
 ```
 Single new file, no duplication.
 ```
@@ -224,12 +238,14 @@ Single new file, no duplication.
 ### ~~Step 5: Clean old artifacts and install with Bun~~ ✅
 
 **🔴 RED — Verify current node_modules**
+
 ```
 Run: du -sh */node_modules — should show 5 directories totaling ~900MB.
 Confirms what we're about to remove.
 ```
 
 **🟢 GREEN — Remove old artifacts and install**
+
 ```
 1. Remove all per-extension node_modules/ and lock files:
    rm -rf */node_modules */package-lock.json
@@ -243,6 +259,7 @@ Confirms what we're about to remove.
 ```
 
 **🔵 REFACTOR — Verify deduplication**
+
 ```
 Run: du -sh node_modules — should be ~200-250MB (down from 900MB).
 Run: du -sh . — should be ~250-300MB (down from 900MB).
@@ -253,6 +270,7 @@ Run: du -sh . — should be ~250-300MB (down from 900MB).
 ### ~~Step 6: Verify all extensions load correctly~~ ✅
 
 **🔴 RED — Smoke test each extension**
+
 ```
 For each extension, verify TypeScript resolves by checking imports:
   bun run --bun context7/index.ts   (should not crash on imports)
@@ -266,6 +284,7 @@ If import resolution fails, the step fails.
 ```
 
 **🟢 GREEN — Fix any resolution issues**
+
 ```
 If any extension fails to resolve imports:
 - Check that the dependency is in the root package.json (for shared deps)
@@ -274,6 +293,7 @@ If any extension fails to resolve imports:
 ```
 
 **🔵 REFACTOR — Clean up**
+
 ```
 Remove any stale files:
 - package-lock.json files (replaced by bun.lockb)
@@ -285,6 +305,7 @@ Remove any stale files:
 ### ~~Step 7: Add .gitignore for bun artifacts~~ ✅
 
 **🔴 RED — Check current .gitignore**
+
 ```
 Check if extensions/ has a .gitignore or if the repo root covers node_modules.
 Run: cat ../../.gitignore (or wherever the repo gitignore is).
@@ -292,6 +313,7 @@ If node_modules is already gitignored at repo level, this step may be unnecessar
 ```
 
 **🟢 GREEN — Ensure bun.lockb and node_modules are ignored**
+
 ```
 If needed, add to extensions/.gitignore:
   node_modules/
@@ -302,7 +324,9 @@ Only node_modules needs to be ignored.
 ```
 
 **🔵 REFACTOR — Skip**
+
 ```
+
 ```
 
 ---
@@ -310,6 +334,7 @@ Only node_modules needs to be ignored.
 ### ~~Step 8: Integration test — reload pi and verify tools~~ ✅
 
 **🔴 RED — Verify pi picks up all extensions**
+
 ```
 Start pi with verbose logging or check extension loading:
 - Run `/reload` in a pi session
@@ -323,6 +348,7 @@ Start pi with verbose logging or check extension loading:
 ```
 
 **🟢 GREEN — Fix any loading issues**
+
 ```
 If an extension fails to load:
 - Check jiti resolution path (it should walk up to root node_modules/)
@@ -331,6 +357,7 @@ If an extension fails to load:
 ```
 
 **🔵 REFACTOR — Final cleanup**
+
 ```
 - Remove any empty directories
 - Verify no stale package-lock.json remains
@@ -341,16 +368,16 @@ If an extension fails to load:
 
 ## Summary
 
-| Step | Test/Verify | Implementation |
-|------|-------------|----------------|
-| 1 | Count current tsconfig files | Create `tsconfig.base.json` |
-| 2 | Verify current full tsconfigs | Replace 5 tsconfigs with `extends` references |
-| 3 | Verify current package.json deps | Strip shared deps from 5 workspace package.json |
-| 4 | Confirm no root package.json | Create root `package.json` with workspaces |
-| 5 | Measure current node_modules (900MB) | `rm -rf */node_modules`, `bun install`, verify ~250MB |
-| 6 | `bun run` each extension for import resolution | Fix any resolution issues |
-| 7 | Check .gitignore coverage | Add `node_modules/` to gitignore if needed |
-| 8 | `/reload` in pi, verify 6 extensions load | Fix any loading issues |
+| Step | Test/Verify                                    | Implementation                                        |
+| ---- | ---------------------------------------------- | ----------------------------------------------------- |
+| 1    | Count current tsconfig files                   | Create `tsconfig.base.json`                           |
+| 2    | Verify current full tsconfigs                  | Replace 5 tsconfigs with `extends` references         |
+| 3    | Verify current package.json deps               | Strip shared deps from 5 workspace package.json       |
+| 4    | Confirm no root package.json                   | Create root `package.json` with workspaces            |
+| 5    | Measure current node_modules (900MB)           | `rm -rf */node_modules`, `bun install`, verify ~250MB |
+| 6    | `bun run` each extension for import resolution | Fix any resolution issues                             |
+| 7    | Check .gitignore coverage                      | Add `node_modules/` to gitignore if needed            |
+| 8    | `/reload` in pi, verify 6 extensions load      | Fix any loading issues                                |
 
 ## Notes
 

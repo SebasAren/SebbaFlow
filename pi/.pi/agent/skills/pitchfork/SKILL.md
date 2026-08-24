@@ -27,6 +27,7 @@ Daemons are defined in `pitchfork.toml` at project root.
 **Empty output = clean.** No lines means last run passed.
 
 Otherwise read raw logs directly:
+
 - **Test runners**: `FAIL`/`PASS` summary at bottom
 - **Linters**: error count, issues by file
 - **Type checkers**: `error TS...` lines

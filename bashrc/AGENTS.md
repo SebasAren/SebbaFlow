@@ -25,6 +25,7 @@ Lazy resolution via Proton Pass CLI. API keys are **not** loaded on shell startu
 - `nvim` and `pi` are wrapped to call `_ensure_secrets` before launching
 
 Template format (`~/.secrets.tpl`):
+
 ```bash
 export EXA_API_KEY='{{ pass://API/Exa/API Key }}'
 export CONTEXT7_API_KEY='{{ pass://API/Context7/API Key }}'

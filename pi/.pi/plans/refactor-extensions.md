@@ -12,17 +12,17 @@ The `pi/.pi/agent/extensions/` workspace has 8 extensions with ~4,400 lines of c
 
 ### Current State
 
-| Extension | Lines | Uses `shared` | Max line in file |
-|-----------|-------|---------------|------------------|
-| wt-worktree | 630 | partial | 630 |
-| exa-search | 606 | no | 606 |
-| librarian | 384 | yes | 384 |
-| context7 | 384 | no | 384 |
-| fuzzy-edit | 370 | no | 370 |
-| claude-rules | 343 | no | 343 |
-| explore | 281 | yes | 281 |
-| worktree-scope | 205 | no | 205 |
-| shared/src/ | 695 | — | 368 |
+| Extension      | Lines | Uses `shared` | Max line in file |
+| -------------- | ----- | ------------- | ---------------- |
+| wt-worktree    | 630   | partial       | 630              |
+| exa-search     | 606   | no            | 606              |
+| librarian      | 384   | yes           | 384              |
+| context7       | 384   | no            | 384              |
+| fuzzy-edit     | 370   | no            | 370              |
+| claude-rules   | 343   | no            | 343              |
+| explore        | 281   | yes           | 281              |
+| worktree-scope | 205   | no            | 205              |
+| shared/src/    | 695   | —             | 368              |
 
 ---
 
@@ -38,13 +38,18 @@ Extract the section-based renderer duplicated between `explore` and `librarian`.
 - Collapsed view: icon + section summaries (or sentence bullets as fallback) + usage + expand hint
 
 **New exports:**
+
 ```ts
 /** Renders a subagent tool result with section-based expanded/collapsed views.
  *  Shared by explore, librarian, and any future subagent tools. */
-export function renderSubagentResult(options: RenderSubagentResultOptions): Component;
+export function renderSubagentResult(
+  options: RenderSubagentResultOptions,
+): Component;
 
 /** Renders a subagent tool call with model tag and query preview. */
-export function renderSubagentCall(options: RenderSubagentCallOptions): Component;
+export function renderSubagentCall(
+  options: RenderSubagentCallOptions,
+): Component;
 
 /** The context.lastComponent reuse pattern used in almost every renderCall. */
 export function reuseOrCreateText(context: { lastComponent?: Component }): Text;
@@ -69,9 +74,14 @@ export function requireApiKey(name: string, envVar: string): string;
 ### 1.3 Update `shared/src/index.ts`
 
 Add new exports:
+
 ```ts
 export { checkApiKey, requireApiKey } from "./api-key";
-export { renderSubagentResult, renderSubagentCall, reuseOrCreateText } from "./rendering";
+export {
+  renderSubagentResult,
+  renderSubagentCall,
+  reuseOrCreateText,
+} from "./rendering";
 ```
 
 ### 1.4 Add `@mariozechner/pi-coding-agent` and `@mariozechner/pi-tui` to shared dependencies
@@ -85,6 +95,7 @@ The rendering module needs TUI components and `getMarkdownTheme`. Add these as `
 ### Current Problem
 
 `wt-worktree/index.ts` (630 lines) has a hand-rolled `runSubagent` (~120 lines) that duplicates `shared/src/subagent.ts` logic:
+
 - Process spawning with `getPiInvocation`
 - JSONL line parsing for `message_end` events
 - Usage accumulation (input, output, cacheRead, cacheWrite, cost, turns)
@@ -105,6 +116,7 @@ The rendering module needs TUI components and `getMarkdownTheme`. Add these as `
    - Pass `debugLabel: "wt-worktree"`
 
 **What stays in wt-worktree:**
+
 - `generateBranchName()`
 - `formatDuration()`
 - `execCommand()` (used for wt CLI calls, not pi subprocess)
@@ -135,65 +147,65 @@ extension-name/
 
 ### 3.1 `wt-worktree/` (target: ~430 lines across files, down from 630)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, execute orchestration, entry point | 180 |
-| `wt-cli.ts` | `execCommand()`, `createWorktree()`, `mergeWorktree()`, `removeWorktree()`, `generateBranchName()`, `formatDuration()` | 120 |
-| `render.ts` | `renderCall()`, `renderResult()` (collapsed + expanded) | 130 |
+| File        | Contents                                                                                                               | Est. Lines |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `index.ts`  | Extension registration, execute orchestration, entry point                                                             | 180        |
+| `wt-cli.ts` | `execCommand()`, `createWorktree()`, `mergeWorktree()`, `removeWorktree()`, `generateBranchName()`, `formatDuration()` | 120        |
+| `render.ts` | `renderCall()`, `renderResult()` (collapsed + expanded)                                                                | 130        |
 
 Note: The local `runSubagent` is already removed in Phase 2.
 
 ### 3.2 `exa-search/` (target: ~600 lines across files, same total but navigable)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, both tool definitions, command registration | 80 |
-| `web-search.ts` | SearchParams schema, execute logic, search-specific helpers | 180 |
-| `web-fetch.ts` | FetchParams schema, execute logic, fetch-specific helpers | 180 |
-| `render.ts` | renderCall + renderResult for both tools, shared types | 160 |
+| File            | Contents                                                            | Est. Lines |
+| --------------- | ------------------------------------------------------------------- | ---------- |
+| `index.ts`      | Extension registration, both tool definitions, command registration | 80         |
+| `web-search.ts` | SearchParams schema, execute logic, search-specific helpers         | 180        |
+| `web-fetch.ts`  | FetchParams schema, execute logic, fetch-specific helpers           | 180        |
+| `render.ts`     | renderCall + renderResult for both tools, shared types              | 160        |
 
 ### 3.3 `context7/` (target: ~380 lines across files)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, client init, command registration | 60 |
-| `search.ts` | SearchParams schema, execute logic | 120 |
-| `docs.ts` | DocsParams schema, execute logic | 120 |
-| `render.ts` | renderCall + renderResult for both tools, shared types | 80 |
+| File        | Contents                                                  | Est. Lines |
+| ----------- | --------------------------------------------------------- | ---------- |
+| `index.ts`  | Extension registration, client init, command registration | 60         |
+| `search.ts` | SearchParams schema, execute logic                        | 120        |
+| `docs.ts`   | DocsParams schema, execute logic                          | 120        |
+| `render.ts` | renderCall + renderResult for both tools, shared types    | 80         |
 
 ### 3.4 `fuzzy-edit/` (target: ~360 lines across files)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, execute with fallback chain | 80 |
-| `fuzzy-match.ts` | `tabFuzzyReplace()`, `lineFuzzyMatch()`, normalize functions | 120 |
-| `diff.ts` | `generateDiff()` with context line logic | 100 |
-| `schema.ts` | `editSchema`, `prepareArguments()` | 50 |
+| File             | Contents                                                     | Est. Lines |
+| ---------------- | ------------------------------------------------------------ | ---------- |
+| `index.ts`       | Extension registration, execute with fallback chain          | 80         |
+| `fuzzy-match.ts` | `tabFuzzyReplace()`, `lineFuzzyMatch()`, normalize functions | 120        |
+| `diff.ts`        | `generateDiff()` with context line logic                     | 100        |
+| `schema.ts`      | `editSchema`, `prepareArguments()`                           | 50         |
 
 ### 3.5 `claude-rules/` (target: ~330 lines across files)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, event handlers (session_start, before_agent_start, tool_result, etc.) | 80 |
-| `parser.ts` | `parseFrontmatter()`, `parseInlineArray()` | 80 |
-| `rules.ts` | `ClaudeRule` type, `loadRules()`, `findMarkdownFiles()`, `createMatcher()` | 100 |
-| `types.ts` | `ClaudeRule` interface | 10 |
+| File        | Contents                                                                                      | Est. Lines |
+| ----------- | --------------------------------------------------------------------------------------------- | ---------- |
+| `index.ts`  | Extension registration, event handlers (session_start, before_agent_start, tool_result, etc.) | 80         |
+| `parser.ts` | `parseFrontmatter()`, `parseInlineArray()`                                                    | 80         |
+| `rules.ts`  | `ClaudeRule` type, `loadRules()`, `findMarkdownFiles()`, `createMatcher()`                    | 100        |
+| `types.ts`  | `ClaudeRule` interface                                                                        | 10         |
 
 ### 3.6 `explore/` (target: ~260 lines across files)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, execute logic, command registration | 100 |
-| `render.ts` | renderCall + renderResult (using shared `renderSubagentResult`) | 50 |
-| `constants.ts` | `EXPLORE_SYSTEM_PROMPT`, `EXPLORE_BASE_FLAGS` | 60 |
+| File           | Contents                                                        | Est. Lines |
+| -------------- | --------------------------------------------------------------- | ---------- |
+| `index.ts`     | Extension registration, execute logic, command registration     | 100        |
+| `render.ts`    | renderCall + renderResult (using shared `renderSubagentResult`) | 50         |
+| `constants.ts` | `EXPLORE_SYSTEM_PROMPT`, `EXPLORE_BASE_FLAGS`                   | 60         |
 
 ### 3.7 `librarian/` (target: ~350 lines across files)
 
-| File | Contents | Est. Lines |
-|------|----------|------------|
-| `index.ts` | Extension registration, execute logic, command registration | 100 |
-| `render.ts` | renderCall + renderResult (using shared `renderSubagentResult`) | 50 |
-| `constants.ts` | `LIBRARIAN_SYSTEM_PROMPT`, `LIBRARIAN_BASE_FLAGS`, `CHILD_ENV_VAR` | 80 |
+| File           | Contents                                                           | Est. Lines |
+| -------------- | ------------------------------------------------------------------ | ---------- |
+| `index.ts`     | Extension registration, execute logic, command registration        | 100        |
+| `render.ts`    | renderCall + renderResult (using shared `renderSubagentResult`)    | 50         |
+| `constants.ts` | `LIBRARIAN_SYSTEM_PROMPT`, `LIBRARIAN_BASE_FLAGS`, `CHILD_ENV_VAR` | 80         |
 
 ### 3.8 `worktree-scope/` — No changes
 
@@ -210,6 +222,7 @@ Extensions with new directory structure need `"pi".extensions` pointing to `./in
 ### 4.2 Update `shared/package.json` dependencies
 
 Add `peerDependencies` for TUI packages needed by the new rendering module:
+
 ```json
 {
   "peerDependencies": {
@@ -222,6 +235,7 @@ Add `peerDependencies` for TUI packages needed by the new rendering module:
 ### 4.3 Add missing `shared` dependency to extensions
 
 Extensions that should depend on `shared` after refactoring:
+
 - `exa-search` — if it uses the API key helper
 - `context7` — if it uses the API key helper
 
@@ -264,12 +278,12 @@ chore: update dependencies and entry points
 
 ## Expected Outcome
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Total lines (extensions) | ~4,400 | ~4,200 (net -200 from duplication removal) |
-| Largest single file | 630 lines | ~180 lines |
-| Files >300 lines | 5 | 0 |
-| Extensions using `@pi-ext/shared` | 3 of 8 | 5 of 8 |
-| Duplicated subagent runner | yes (wt-worktree) | no |
-| Duplicated renderer code | yes (explore ≈ librarian) | no |
-| Max lines per module file | 630 | ~180 |
+| Metric                            | Before                    | After                                      |
+| --------------------------------- | ------------------------- | ------------------------------------------ |
+| Total lines (extensions)          | ~4,400                    | ~4,200 (net -200 from duplication removal) |
+| Largest single file               | 630 lines                 | ~180 lines                                 |
+| Files >300 lines                  | 5                         | 0                                          |
+| Extensions using `@pi-ext/shared` | 3 of 8                    | 5 of 8                                     |
+| Duplicated subagent runner        | yes (wt-worktree)         | no                                         |
+| Duplicated renderer code          | yes (explore ≈ librarian) | no                                         |
+| Max lines per module file         | 630                       | ~180                                       |
