@@ -244,14 +244,16 @@ mise run lint-shell     # Lint shell scripts with shellcheck
 
 ### Testing
 
-The TypeScript surface (Pi agent extensions and standalone CLIs) is covered by **676 tests across 48 files**, all running under [`bun test`](https://bun.sh/docs/cli/test) and executed on every push by GitHub Actions (see [`.github/workflows/test.yml`](.github/workflows/test.yml)).
+The TypeScript surface (Pi agent extensions and standalone CLIs) is covered by 50+ [`bun test`](https://bun.sh/docs/cli/test) files, executed on every push by GitHub Actions (see [`.github/workflows/test.yml`](.github/workflows/test.yml)).
 
-| Location                                                        | Tests | Style                                                                                              |
-| --------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
-| `pi/.pi/agent/extensions/**/*.test.ts`                          | 528   | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
-| `pi/.local/bin/tdd-plan.test.ts` + `pi/.local/bin/lib/`         | 46    | End-to-end CLI tests via `execSync` against the `tdd-plan` binary                                  |
-| `obsidian/.local/lib/wiki-search/wiki-search.test.ts`           | 41    | Unit tests with real filesystem fixtures for the `wiki-search` CLI                                 |
-| `obsidian/.local/lib/wiki-core/` + `obsidian/.local/lib/issue/` | 60    | Unit tests for wiki frontmatter I/O and issue tracker CLI                                          |
+| Location                                                        | Style                                                                                              |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `pi/.pi/agent/extensions/**/*.test.ts`                          | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
+| `pi/.local/bin/tdd-plan.test.ts` + `pi/.local/bin/lib/`         | End-to-end CLI tests via `execSync` against the `tdd-plan` binary                                  |
+| `obsidian/.local/lib/wiki-search/wiki-search.test.ts`           | Unit tests with real filesystem fixtures for the `wiki-search` CLI                                 |
+| `obsidian/.local/lib/wiki-core/` + `obsidian/.local/lib/issue/` | Unit tests for wiki frontmatter I/O and issue tracker CLI                                          |
+
+`tests/` holds a local-only plenary Lua suite (run via `tests/run.sh`, requires nvim) — not part of `mise run test` or CI.
 
 **Run locally:**
 

@@ -20,7 +20,7 @@ pi/.pi/agent/extensions/
     └── integration.test.ts  # Load + register cycle
 ```
 
-## Tests (528 tests across 41 files)
+## Tests
 
 - **Unit tests**: `*.test.ts` next to the source file (e.g., `librarian/wiring.test.ts`).
 - **Integration tests**: one `integration.test.ts` per extension — verifies the extension loads, registers its tools/commands, and handles missing API keys gracefully.

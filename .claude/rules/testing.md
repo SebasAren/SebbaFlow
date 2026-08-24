@@ -25,3 +25,5 @@ All test directories must be listed in `.mise/tasks/test`. When adding a new tes
 | `obsidian/.local/lib/issue/`       | Issue tracker CLI and commands (with `--coverage`) |
 
 Integration tests (`**/integration.test.ts`) are excluded from CI via `--path-ignore-patterns` — run them manually.
+
+`tests/` at the repo root holds a local-only plenary Lua suite (run via `tests/run.sh`, requires nvim) — not wired into `mise run test`.
