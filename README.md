@@ -7,7 +7,7 @@
 
 Linux workstation config, managed with [GNU Stow](https://www.gnu.org/software/stow/) for symlink-based installation.
 
-Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase exploration and documentation lookup to cheaper models via subagents, and write notes to an Obsidian wiki between sessions.
+Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase exploration and documentation lookup to cheaper models via subagents, and search past session transcripts between sessions.
 
 ## What's Inside
 
@@ -107,16 +107,17 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) coding
 
 ### Extension Overview
 
-| Extension         | Purpose                                                                                         |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| **explore**       | Subagent-powered codebase reconnaissance with pre-search, file indexing, and semantic reranking |
-| **librarian**     | Documentation research subagent (Exa web search + Context7 library docs + session history)      |
-| **tdd-tree**      | TDD kickoff point labeling in the session tree                                                  |
-| **context7**      | Up-to-date library documentation lookup (internal-only subagent dep)                            |
-| **exa-search**    | Web search and page fetch via Exa API (internal-only subagent dep)                              |
-| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching                                            |
-| **extract-share** | Extract and share assistant messages as PNG or markdown                                         |
-| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                                   |
+| Extension          | Purpose                                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| **explore**        | Subagent-powered codebase reconnaissance with pre-search, file indexing, and semantic reranking |
+| **librarian**      | Documentation research subagent (Exa web search + Context7 library docs + session history)      |
+| **tdd-tree**       | TDD kickoff point labeling in the session tree                                                  |
+| **context7**       | Up-to-date library documentation lookup (internal-only subagent dep)                            |
+| **exa-search**     | Web search and page fetch via Exa API (internal-only subagent dep)                              |
+| **claude-rules**   | `.claude/rules/` parser with picomatch glob matching                                            |
+| **extract-share**  | Extract and share assistant messages as PNG or markdown                                         |
+| **usage-tracker**  | Token usage statistics (`/usage`) feeding the usage dashboard                                   |
+| **session-memory** | Search/read past session transcripts (internal-only librarian dep)                              |
 
 ### Explore Subagent Architecture
 
