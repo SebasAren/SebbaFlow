@@ -7,6 +7,7 @@ M.filetypes = {
   "diff",
   "html",
   "javascript",
+  "javascriptreact",
   "jsdoc",
   "json",
   "jsonc",
@@ -20,8 +21,8 @@ M.filetypes = {
   "query",
   "regex",
   "toml",
-  "tsx",
   "typescript",
+  "typescriptreact",
   "vim",
   "vimdoc",
   "vue",
@@ -37,6 +38,9 @@ M.filetypes = {
 M.markdown_line_threshold = 3000
 
 function M.setup()
+  -- JSX: the javascript parser cannot parse JSX tags; use the tsx parser for .jsx files
+  vim.treesitter.language.register("tsx", "javascriptreact")
+
   vim.api.nvim_create_augroup("TreesitterAutoAttach", { clear = true })
 
   vim.api.nvim_create_autocmd("FileType", {

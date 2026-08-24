@@ -18,7 +18,12 @@ return {
       local treesitter = require("nvim-treesitter")
       local ts_config = require("config.treesitter-autocmd")
       ts_config.setup()
-      treesitter.install(ts_config.filetypes)
+      -- Resolve filetypes to parser languages (e.g. jsonc -> json) and dedupe
+      local langs = {}
+      for _, ft in ipairs(ts_config.filetypes) do
+        langs[vim.treesitter.language.get_lang(ft) or ft] = true
+      end
+      treesitter.install(vim.tbl_keys(langs))
     end,
   },
   {
