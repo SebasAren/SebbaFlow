@@ -11,7 +11,6 @@ Modular shell config. Entry point: `.bashenv` (global vars), then all files in `
   alias               # Short aliases
   mise                # Activates mise runtime manager
   secrets             # Lazy Proton Pass integration
-  tmux                # Auto-attach/create tmux sessions
   fnox                # fnox reencryption helper
 .secrets.tpl          # Template for secret injection
 ```

@@ -208,15 +208,13 @@ GPU-accelerated terminal that replaces both Ghostty and tmux. Provides native ta
 
 Modular config in `bashrc/.bashrc.d/`. Each file handles one concern:
 
-| File      | Purpose                                                 |
-| --------- | ------------------------------------------------------- |
-| `config`  | Editor, fzf bindings                                    |
-| `alias`   | Short aliases                                           |
-| `mise`    | Activate mise runtime manager                           |
-| `secrets` | Lazy Proton Pass integration                            |
-| `tmux`    | Auto-attach/create tmux sessions (skipped inside Kitty) |
-
-| `fnox` | fnox reencryption helper |
+| File      | Purpose                       |
+| --------- | ----------------------------- |
+| `config`  | Editor, fzf bindings          |
+| `alias`   | Short aliases                 |
+| `mise`    | Activate mise runtime manager |
+| `secrets` | Lazy Proton Pass integration  |
+| `fnox`    | fnox reencryption helper      |
 
 ### Homebrew
 
