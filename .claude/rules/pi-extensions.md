@@ -64,7 +64,7 @@ globs:
 
 ## Pi Skill Design
 
-- **Split skills by concern** — monolithic skills waste context because the full SKILL.md loads on every invocation. Split into focused skills (e.g., `obsidian-wiki-query`, `obsidian-wiki-ingest`, `obsidian-wiki-maintain`) so each loads only what it needs.
+- **Split skills by concern** — monolithic skills waste context because the full SKILL.md loads on every invocation. Split into focused skills so each loads only what it needs.
 - **Skills vs extensions** — Skills are procedural guides (how to ingest, how to lint). For always-available operations like querying/searching, prefer a CLI tool (`~/.local/bin/wiki-search`) over a skill invocation.
 - **CLI tools in skills must be framed as bash commands** — Agents interpret bare tool names (e.g., `use wiki-search "..."`) as native tools they don't have access to and skip them. Always wrap CLI invocations in bash code blocks or explicitly say "via the `bash` tool".
 
@@ -83,6 +83,7 @@ globs:
 **`exa-search`** and **`context7`** are internal-only extensions — their tools (`web_search`/`web_fetch`/`context7_search`/`context7_docs`) are registered only when loaded by the **librarian** subagent session, not by the main agent. This keeps raw search tool results out of the main agent's context window.
 
 **How it works:**
+
 1. Each extension checks `process.env.PI_LIBRARIAN_LOAD` at the top of its default export.
 2. If the env var is not set (main agent load), the extension returns early without registering anything.
 3. The librarian's session factory sets `PI_LIBRARIAN_LOAD` to a refcounted integer before calling `loader.reload()`, then unsets it in a `finally` block.

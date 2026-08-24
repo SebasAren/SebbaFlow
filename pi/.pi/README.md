@@ -8,10 +8,10 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) AI cod
 
 These spawn a separate (cheaper/faster) model to handle reconnaissance, research, or knowledge capture — keeping the parent agent focused on the actual task.
 
-| Extension     | Purpose                                                                                    | Config                            |
-| ------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
-| **explore**   | Codebase reconnaissance with pre-search, file indexing, and semantic reranking             | `CHEAP_MODEL` env var             |
-| **librarian** | Research via Exa web search + Context7 library docs + past session history                  | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
+| Extension     | Purpose                                                                        | Config                            |
+| ------------- | ------------------------------------------------------------------------------ | --------------------------------- |
+| **explore**   | Codebase reconnaissance with pre-search, file indexing, and semantic reranking | `CHEAP_MODEL` env var             |
+| **librarian** | Research via Exa web search + Context7 library docs + past session history     | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
 
 ### Research & Documentation
 
@@ -32,7 +32,7 @@ These spawn a separate (cheaper/faster) model to handle reconnaissance, research
 | ----------------- | --------------------------------------------------------------------------------- |
 | **tdd-tree**      | TDD kickoff point labeling in the session tree for structured plan execution      |
 | **extract-share** | Extract assistant messages as PNG or markdown for sharing                         |
-| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                      |
+| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                     |
 | **claude-rules**  | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading |
 
 ### Shared Library
@@ -147,7 +147,7 @@ User query  (e.g. "how do I use TanStack Query's optimistic updates?")
 | Decision                              | Rationale                                                                                                                                                                                                                                     |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Subagent synthesizes, not parent      | Raw search results are verbose and context-heavy. The subagent consumes them and returns only the relevant synthesized answer.                                                                                                                |
-| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its required extensions explicitly.                                                                                                                 |
+| `noExtensions: true` + explicit paths | Extensions like `herdr-agent-state` could leak idle-detection hooks into the subagent session. Librarian loads only its required extensions explicitly.                                                                                       |
 | Internal-only extensions              | `exa-search`, `context7`, and `session-memory` register their tools only when loaded by the librarian subagent, using `PI_LIBRARIAN_LOAD` env var gating. See [Internal-Only Extensions docs](extensions/AGENTS.md#internal-only-extensions). |
 | Budget tailored to source mix         | 60 max tool calls / 240s timeout — conservatively sized for chaining searches across multiple sources.                                                                                                                                        |
 
@@ -174,7 +174,7 @@ librarian(query="Next.js 15 upgrade guide", focus="changelog")
 | Scenario                                                       | Tool          | Why                                                            |
 | -------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
 | Find files, trace dependencies, understand local architecture  | **explore**   | Has file index, syntax-aware reranking, reads local source.    |
-| Look up an API, library docs, or best practices                | **librarian** | Has web search and library docs.                                |
+| Look up an API, library docs, or best practices                | **librarian** | Has web search and library docs.                               |
 | Check if an existing implementation exists in the repo         | **explore**   | Searches actual source files and symbols.                      |
 | Research how to use a package or framework                     | **librarian** | Searches docs, examples, and tutorials online.                 |
 | Scout a large codebase before editing                          | **explore**   | Scout-then-deepen pattern with `thoroughness="quick"`.         |

@@ -15,16 +15,13 @@ globs:
 
 All test directories must be listed in `.mise/tasks/test`. When adding a new test directory, add a `bun test` block there. Current directories:
 
-| Directory                                  | Scope                                              |
-| ------------------------------------------ | -------------------------------------------------- |
-| `pi/.pi/agent/extensions/`                 | Pi extension unit tests (with `--coverage`)        |
-| `pi/.local/bin/tdd-plan.test.ts`           | TDD plan CLI                                       |
-| `pi/.local/bin/store-memory.test.ts`       | Store-memory library                               |
-| `pi/.local/bin/store-memory-skill.test.ts` | Store-memory SKILL.md validation                   |
-| `obsidian/.local/lib/wiki-search/`         | Wiki search (with `--coverage`)                    |
-| `obsidian/.local/lib/wiki-core/`           | Wiki frontmatter I/O (with `--coverage`)           |
-| `obsidian/.local/lib/issue/`               | Issue tracker CLI and commands (with `--coverage`) |
+| Directory                          | Scope                                              |
+| ---------------------------------- | -------------------------------------------------- |
+| `pi/.pi/agent/extensions/`         | Pi extension unit tests (with `--coverage`)        |
+| `pi/.local/bin/tdd-plan.test.ts`   | TDD plan CLI                                       |
+| `pi/.local/bin/lib/`               | TDD plan library (verify gate)                     |
+| `obsidian/.local/lib/wiki-search/` | Wiki search (with `--coverage`)                    |
+| `obsidian/.local/lib/wiki-core/`   | Wiki frontmatter I/O (with `--coverage`)           |
+| `obsidian/.local/lib/issue/`       | Issue tracker CLI and commands (with `--coverage`) |
 
 Integration tests (`**/integration.test.ts`) are excluded from CI via `--path-ignore-patterns` — run them manually.
-
-

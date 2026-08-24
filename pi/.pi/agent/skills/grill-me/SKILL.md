@@ -15,11 +15,11 @@ Interview the user about their plan until both parties share a clear mental mode
 
 Ask one question: _"Can you describe the end state — what does 'done' look like?"_
 
-| Classification | Response | Action |
-|----------------|----------|--------|
-| **Trivial** | Clear, simple goal | Skip grill-me, just do it |
-| **Moderate** | Some ambiguity | 5–10 targeted questions |
-| **Complex** | Multiple decisions, unknowns | Full interview (20+ questions) |
+| Classification | Response                     | Action                         |
+| -------------- | ---------------------------- | ------------------------------ |
+| **Trivial**    | Clear, simple goal           | Skip grill-me, just do it      |
+| **Moderate**   | Some ambiguity               | 5–10 targeted questions        |
+| **Complex**    | Multiple decisions, unknowns | Full interview (20+ questions) |
 
 ### Phase 2: Walk the design tree
 
@@ -36,6 +36,7 @@ One question at a time. Let the user answer before following up.
 ### Phase 3: Play adversary
 
 Push back on each answer:
+
 - "Why that approach and not [alternative]?"
 - "What would break if we did it the simpler way?"
 - "Have you considered [edge case]?"
@@ -49,19 +50,23 @@ Push back on each answer:
 ## Alignment: [Feature Name]
 
 ### What we're building
+
 [1–2 sentences]
 
 ### Key decisions resolved
+
 - [Decision]: [Resolution] — [rationale]
 
 ### Open questions
+
 - [ ] [Question]
 
 ### Recommended next step
+
 [Routing]
 ```
 
-| Routing | When |
-|---------|------|
-| **TDD plan** | Well-scoped, clear pass/fail conditions | `→ /skill:tdd-plan <description>` |
-| **Just do it** | Alignment was the only blocker | Proceed directly |
+| Routing        | When                                    |
+| -------------- | --------------------------------------- |
+| **TDD plan**   | Well-scoped, clear pass/fail conditions | `→ /skill:tdd-plan <description>` |
+| **Just do it** | Alignment was the only blocker          | Proceed directly                  |

@@ -24,7 +24,3 @@ bun test --parallel "$REPO_ROOT/obsidian/.local/lib/wiki-core" "${COV_FLAGS[@]}"
 
 echo "=== Bun Tests (issue tracker) ==="
 bun test --parallel "$REPO_ROOT/obsidian/.local/lib/issue" "${COV_FLAGS[@]}"
-
-echo "=== Bun Tests (store-memory) ==="
-bun test --parallel "$REPO_ROOT/pi/.local/bin/store-memory.test.ts"
-bun test --parallel "$REPO_ROOT/pi/.local/bin/store-memory-skill.test.ts"
