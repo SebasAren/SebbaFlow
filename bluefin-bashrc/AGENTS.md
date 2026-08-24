@@ -39,7 +39,7 @@ stow -D bluefin-bashrc # uninstall — removes the symlink
 brew install eza bat starship zoxide direnv bash-preexec ugrep atuin tealdeer fd
 ```
 
-(`ripgrep`, `mise` are already in the homebrew/Brewfile)
+(`ripgrep`, `mise` ship with Bluefin's system Brewfile at `/usr/share/ublue-os/homebrew/`)
 
 ## Note
 
