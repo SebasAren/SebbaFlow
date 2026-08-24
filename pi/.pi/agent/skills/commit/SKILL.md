@@ -42,6 +42,7 @@ For path-scoped rules, add `globs: ["pattern/**/*.ext"]`.
 - Rules vs skills: passive gotchas → rules, action-oriented procedures → skills
 - File-specific notes → directory `AGENTS.md`, not global rules
 - **Prune as you go** — scan for stale entries when editing, delete in same commit
+- **No hard-coded counts or inventories** — test totals, extension lists, key lists rot on every addition. Same for README/AGENTS/CONVENTIONS prose updated during the session: point at the authoritative source (`.secrets.tpl`, task lists, catalogs) or approximate ("50+") instead.
 
 **What does NOT belong:** derivable implementation details, ephemeral fix recipes, anything already in AGENTS.md/README.md/CONVENTIONS.md, historical narrative.
 
