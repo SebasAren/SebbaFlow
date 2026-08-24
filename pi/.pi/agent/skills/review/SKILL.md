@@ -1,6 +1,6 @@
 ---
 name: review
-description: Read-only code review of git changes.
+description: Read-only code review of git changes. Inside herdr, delegates to a fresh helper agent for unbiased review.
 ---
 
 # Review (Read-Only)
@@ -9,7 +9,41 @@ Analyze git changes and produce categorized findings. No tree manipulation, no s
 
 **Do NOT activate** for trivial changes (< 5 files, < 50 lines) — just review inline.
 
-## Workflow
+## Dispatch
+
+- **Inside herdr** (`HERDR_ENV=1`): delegate to a fresh helper agent — an agent that didn't write the code reviews it without session bias. See below.
+- **Otherwise** (or if herdr commands fail): review inline using the workflow below.
+- **Recursion guard**: if you are the helper and this task was delegated to you, review inline — never spawn another helper.
+
+## Delegation (herdr)
+
+1. Spawn a reviewer in a split pane (same cwd → same git state and repo trust; no worktree needed):
+
+```bash
+OUT=$(mktemp --suffix=.md)
+NEW=$(herdr pane split --current --direction right --no-focus | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
+herdr pane wait-output "$NEW" --match "❯" --source recent-unwrapped --timeout 30000  # shell ready
+herdr agent start reviewer --kind pi --pane "$NEW"
+```
+
+2. Submit the review task and wait:
+
+```bash
+herdr agent prompt "$NEW" "Delegated read-only review. Run /skill:review <target> — review inline, you are the helper, do not delegate. Write the full review to $OUT." --wait --timeout 600000
+```
+
+- `<target>` = the user's arg (empty for working-tree changes), resolved by the helper in the shared cwd.
+- Default wait states (`idle|done|blocked`) return promptly — don't add `--until idle` (fast-turn stall).
+- `agent_prompt_stalled` on the first prompt → retry once (pi cold start).
+- Returned `blocked` → the helper is asking a question: `herdr agent read "$NEW"`, answer via another `agent prompt --wait`, then wait again.
+
+3. Collect and present: `read $OUT` and present the review as your answer. If the file is missing, fall back to `herdr agent read "$NEW" --source recent --lines 300`.
+
+4. Clean up: `herdr pane close "$NEW"`.
+
+If any herdr step fails hard, review inline instead of debugging herdr.
+
+## Workflow (inline)
 
 ### Step 1: Resolve target
 
