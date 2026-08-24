@@ -11,20 +11,22 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 
 ## What's Inside
 
-| Directory         | Tool          | Purpose                                                                                                                               |
-| ----------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `kitty/`          | **Kitty**     | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md)  |
-| `herdr/`          | **Herdr**     | Terminal workspace manager for AI coding agents (shell is running inside it). Config only — runtime state stays in `~/.config/herdr/` |
-| `pi/`             | **Pi Agent**  | Coding assistant with 9 custom extensions (explore subagent, librarian research subagent, and more)                                   |
-| `nvim/`           | Neovim        | Lazy.nvim, 15 LSP servers, blink.cmp AI completion (Codestral + Minuet-AI) → [details](nvim/README.md)                                |
-| `tmux/`           | Tmux          | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
-| `ghostty/`        | Ghostty       | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
-| `bashrc/`         | Bash          | Modular shell config: aliases, secrets, fzf, mise                                                                                     |
-| `wt/`             | **Worktrunk** | Git worktree CLI — parallel work + agent delegation → [details](wt/AGENTS.md)                                                         |
-| `homebrew/`       | Homebrew      | `brew-sync` CLI + Brewfile for personal packages                                                                                      |
-| `obsidian/`       | Obsidian      | Wiki search, issue tracker, and wiki maintenance tools                                                                                |
-| `bluefin-bashrc/` | Bash          | Bluefin base `.bashrc` with inlined bling                                                                                             |
-| `mise/`           | mise          | Runtime version manager (Python, Lua, Node, Bun)                                                                                      |
+| Directory          | Tool          | Purpose                                                                                                                               |
+| ------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `kitty/`           | **Kitty**     | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md)  |
+| `herdr/`           | **Herdr**     | Terminal workspace manager for AI coding agents (shell is running inside it). Config only — runtime state stays in `~/.config/herdr/` |
+| `pi/`              | **Pi Agent**  | Coding assistant with 9 custom extensions (explore subagent, librarian research subagent, and more)                                   |
+| `nvim/`            | Neovim        | Lazy.nvim, 15 LSP servers, blink.cmp AI completion (Codestral + Minuet-AI) → [details](nvim/README.md)                                |
+| `tmux/`            | Tmux          | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
+| `ghostty/`         | Ghostty       | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
+| `bashrc/`          | Bash          | Modular shell config: aliases, secrets, fzf, mise                                                                                     |
+| `wt/`              | **Worktrunk** | Git worktree CLI — parallel work + agent delegation → [details](wt/AGENTS.md)                                                         |
+| `homebrew/`        | Homebrew      | `brew-sync` CLI + Brewfile for personal packages                                                                                      |
+| `obsidian/`        | Obsidian      | Wiki search, issue tracker, and wiki maintenance tools                                                                                |
+| `bluefin-bashrc/`  | Bash          | Bluefin base `.bashrc` with inlined bling                                                                                             |
+| `usage-dashboard/` | Dashboard     | Pi token-usage stats (`pitchfork start usage-dash` → localhost:4813)                                                                  |
+| `docs/`            | Astro         | CV site rendering this repo's knowledge files (GitHub Pages)                                                                          |
+| `mise/`            | mise          | Global mise config (herdr, pi, pitchfork pins); repo runtimes pinned in `mise.toml`                                                   |
 
 ## Prerequisites
 
@@ -41,7 +43,7 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 mise install
 ```
 
-This installs Python 3.12, Node, Bun, and tooling (ruff, StyLua, shellcheck, prettier) as defined in `mise.toml`. Lua and luacheck come from Homebrew (bottled, no compiler needed).
+This installs Python, Node, Bun, and tooling (ruff, StyLua, shellcheck, prettier) as defined in `mise.toml`. The Lua interpreter and luacheck come from Homebrew (bottled, no compiler needed).
 
 ### 2. Stow packages into `~/.config/`
 
@@ -302,6 +304,10 @@ Run `mise run pre-commit` before committing — it executes format + lint + type
 │   ├── AGENTS.md               # Package docs (hooks, stow layout)
 │   └── .config/worktrunk/      # wt config (state stays outside repo)
 ├── homebrew/                    # brew-sync CLI + Brewfile
+├── usage-dashboard/             # Pi usage stats dashboard (pitchfork usage-dash)
+├── docs/                        # CV site (Astro, GitHub Pages)
+├── tests/                       # Local plenary Lua suite (tests/run.sh)
+├── mise/.config/mise/           # Global mise config (herdr, pi, pitchfork pins)
 ├── mise.toml                    # Runtime versions
 ├── .mise/tasks/                 # mise tasks (pre-commit, format, lint, test, etc.)
 ├── AGENTS.md                    # Agent-specific guide

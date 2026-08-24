@@ -67,8 +67,12 @@ See `.claude/rules/global.md` for stow conventions (auto-injected on every sessi
 ```
 .
 ├── [tool]/.config/[tool]/     # XDG-compliant config location
+├── .claude/rules/             # Path-scoped agent rules (auto-injected)
 ├── .mise/tasks/               # mise task definitions (pre-commit, format, lint, etc.)
 ├── bashrc/.bashrc.d/          # Modular shell scripts
+├── tests/                     # Local plenary Lua suite
+├── docs/                      # CV site (Astro)
+├── usage-dashboard/           # Pi usage stats dashboard
 ├── mise.toml                  # Tool versions
 ├── AGENTS.md                  # Agent-facing guide
 ├── CONVENTIONS.md             # This file
