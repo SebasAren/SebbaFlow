@@ -20,24 +20,13 @@ Orchestrate up to 3 parallel pi workers, each in its own wt worktree adopted as 
 | **2 red verifications → park**; **1 bounce** of a blocked question → surface to human  | Token ceiling                                           |
 | Auto-land green merges — human reviews the final result                                | Per agreement: verification is the gate                 |
 
-## Worker rules (include in every worker prompt)
+## Worker prompt
+
+The constitution lives in the `/skill:worker` skill — never paste rules inline. Every worker prompt = this preamble + task text:
 
 ```
-You are a worker in a wt worktree. Rules:
-- Never write outside this worktree. Never touch live/deployed state
-  (substitute the invoking repo's live-state commands — e.g. in the dotfiles
-  repo: NEVER run `stow`).
-- Never run `git config` (shared .git/config leaks identity) — use `git -c` or env vars.
-- Commit atomically with conventional commits. Do NOT merge or rebase onto main —
-  the supervisor merges after verifying.
-- Before reporting done, review your work: if non-trivial (≥5 files or ≥50 lines),
-  run `/skill:review` — fix every 🔴 must-fix finding; decline 🟡 suggestions with
-  a one-line reason (🟢 nits optional). Trivial changes: fix obvious issues
-  yourself, no review needed. If the helper spawn fails, self-review inline and
-  disclose it in your report. Review is advisory polish — it does not replace
-  the verification gate.
-- When finished, report: branch name, commits, files touched, declined review
-  suggestions (if any).
+You are a worker in a wt worktree. Load the /skill:worker skill and follow it.
+Never run: <repo-specific live-state commands — e.g. dotfiles: stow>.
 ```
 
 ## Input modes
@@ -66,7 +55,7 @@ PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["re
 
 herdr pane wait-output "$PANE" --match "❯" --source recent-unwrapped --timeout 60000  # shell ready (shell-init race)
 herdr agent start "$SLUG" --kind pi --pane "$PANE" -- --approve
-herdr agent prompt "$PANE" "<task text + worker rules>" --wait --timeout 600000
+herdr agent prompt "$PANE" "<preamble + task text>" --wait --timeout 600000
 ```
 
 Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktree; first prompt may fail `agent_prompt_stalled` (cold start) → retry once; default wait states — don't add `--until idle`; `wt` hooks run synchronously (`mise run setup` can take minutes).
@@ -75,7 +64,7 @@ Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktr
 
 - `herdr agent list` to poll; spawn the next runnable task as soon as a worker finishes.
 - **Blocked** = the worker is asking a question: `agent read`, answer via `agent prompt --wait`. Bounce once; second block → surface to human.
-- Worker finished → its task enters the **merge queue**.
+- Worker finished → its task enters the **merge queue**; note the findings field of its report for step 5.
 
 ### 3. Merge — serially, one at a time
 
@@ -88,7 +77,7 @@ wt -C "$WT_PATH" merge    # pre-merge hook runs mise run check — the only gate
   Then close the orphaned herdr workspace: `herdr workspace close "$WS"` (parked tasks keep theirs for inspection). Sanity-check the main checkout:
   `git rev-parse --is-bare-repository` must print `false` — if not, see the bare-repo fix in `wt/AGENTS.md`.
 - **Red** → failed attempt: prompt the worker to fix (that's attempt 1), re-merge. Still red after **2 attempts** → park: keep worktree + branch, report, move on.
-- **Conflict** → the **supervisor** resolves it in the worker's worktree (worker rules forbid rebase): rebase onto main there via `wt -C "$WT_PATH"` / `git -C`, fix, commit, re-merge (re-verification runs automatically). Escalations: semantic conflict (symbol renamed/moved under the worker's code) → bounce to the worker, it has context; unresolvable → park for human.
+- **Conflict** → the **supervisor** resolves it in the worker's worktree (the worker skill forbids rebase): rebase onto main there via `wt -C "$WT_PATH"` / `git -C`, fix, commit, re-merge (re-verification runs automatically). Escalations: semantic conflict (symbol renamed/moved under the worker's code) → bounce to the worker, it has context; unresolvable → park for human.
 - After each merge, report one status line: task, result, branch.
 
 ### 4. Report
@@ -99,6 +88,17 @@ wt -C "$WT_PATH" merge    # pre-merge hook runs mise run check — the only gate
 ```
 
 States: `working | blocked | queued-merge | parked | merged`. Parked items: path to worktree, how to inspect (`herdr workspace list` → attach), what failed.
+
+### 5. Reflect — persist learnings
+
+The run is incomplete until learnings are persisted or explicitly skipped. Collect:
+
+- **Worker final reports** — the findings field
+- **Your own observations** — merge conflicts, red gates, stalls, tooling races
+
+Invoke `/skill:persist-knowledge` (it gates; the user picks). Then land gated rules on main as their own atomic commit — after the last merge, or directly if nothing landed. **Runs even when everything parked**: red gates and stalls are the densest learnings.
+
+Process learnings about supervisor/herdr/wt itself (spawn races, hook timing) go in the final report to the user only — skills are human-authored, never agent-edited.
 
 ## Failure modes
 

@@ -157,7 +157,7 @@ Rule files load into context on every matching session — every bullet must ear
 - **Is this a design decision whose absence would invite churn?** (e.g. "system prompt is declarative — no ALL CAPS register") → keep.
 - **Is this just a snapshot of current implementation?** (scoring weights, regex captures, which fields a function reads) → cut. The code is the source of truth.
 
-This is the same bar the commit skill applies when _adding_ rules — apply it in reverse to existing bullets.
+This is the same bar the **persist-knowledge** skill applies when _adding_ rules — apply it in reverse to existing bullets.
 
 ## Execution Guidelines
 

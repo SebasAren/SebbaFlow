@@ -11,14 +11,14 @@ Same discipline as supervisor, but workers' work lands on the forge via PR/MR in
 
 ## Deltas from supervisor
 
-| Aspect       | supervisor (wt)         | supervisor-pr                                 |
-| ------------ | ----------------------- | --------------------------------------------- |
-| Landing      | local `wt merge` squash | push + PR/MR + auto-merge on the forge        |
-| Gate         | pre-merge hook          | local check pre-push, then CI                 |
-| Issues       | closed after merge      | `Closes #N` in PR body; forge closes on merge |
-| Merge timing | immediate, serial       | whenever the forge allows (CI + review)       |
-| Workers      | commit + report         | same — plus: never touch the forge            |
-| Exit         | all merged              | all PRs terminal; worktrees closed            |
+| Aspect       | supervisor (wt)          | supervisor-pr                                 |
+| ------------ | ------------------------ | --------------------------------------------- |
+| Landing      | local `wt merge` squash  | push + PR/MR + auto-merge on the forge        |
+| Gate         | pre-merge hook           | local check pre-push, then CI                 |
+| Issues       | closed after merge       | `Closes #N` in PR body; forge closes on merge |
+| Merge timing | immediate, serial        | whenever the forge allows (CI + review)       |
+| Workers      | `/skill:worker` + report | same — plus: never touch the forge            |
+| Exit         | all merged               | all PRs terminal; worktrees closed; reflected |
 
 ## Hard limits (additional)
 
@@ -71,6 +71,8 @@ herdr workspace close "$WS" # per workspace; parked tasks are already on the for
 ```
 
 Report and **exit — nothing keeps polling**. The forge lands armed PRs; humans review the rest.
+
+Then reflect per supervisor §5: worker-report findings + your own landing observations (CI verdicts, protection stalls) → `/skill:persist-knowledge` → land gated rules on main directly (push).
 
 ```markdown
 | Task | PR/MR | State | Result |

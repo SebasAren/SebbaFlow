@@ -154,7 +154,7 @@ PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["re
 # a fresh worktree has no saved pi trust decision, and its startup trust dialog blocks prompting
 herdr pane wait-output "$PANE" --match "❯" --source recent-unwrapped --timeout 30000  # shell ready (see shell-init gotcha)
 herdr agent start helper --kind pi --pane "$PANE" -- --approve
-herdr agent prompt "$PANE" "task description..." --wait --timeout 600000
+herdr agent prompt "$PANE" "You are a worker in a wt worktree. Load the /skill:worker skill and follow it. Never run: <repo live-state cmds>. <task description>" --wait --timeout 600000
 herdr agent read "$PANE" --source recent --lines 100
 
 # 4. After human review, merge from anywhere and clean up (wt -C targets the worktree)
@@ -171,7 +171,7 @@ Gotchas:
 - `--wait` blocks the parent; for fire-and-forget, drop `--wait` and poll with `agent wait`, or notify via `herdr notification show "$WS idle"`.
 - `blocked` helpers are asking a question — `agent read`, then answer via another `agent prompt`.
 - Switch hooks run synchronously (`mise run setup` can take minutes on a fresh worktree).
-- Linked worktrees share the main repo's `.git/config`. Tell helpers to never run `git config` (their test identity leaks into your commits — use `git -c` or env vars) and to prefer plain clones under /tmp for isolated experiments.
+- Linked worktrees share the main repo's `.git/config` — delegate through the `/skill:worker` skill (its rulebook: `git config` ban, no merge/rebase, review gate, findings-in-report). For isolated experiments, prefer plain clones under /tmp.
 
 ## Notes
 
