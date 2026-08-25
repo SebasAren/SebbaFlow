@@ -95,8 +95,6 @@ REFACTOR:
 2. **Confirm** — show summary, ask if ready
 3. **Determine test command** — check `package.json`, `pyproject.toml`, Makefile, or ask
 4. **Explore** — `explore` tool with query from plan context/architecture
-5. **Set kickoff** — `tdd-set-kickoff({ slug: "<slug>" })`. Call exactly once per plan.
-6. **Fresh starts** — user can say "fresh branch from kickoff" to get clean context per step
 
 ### Red-Green-Refactor Cycle
 
@@ -183,8 +181,7 @@ Archive if done: `tdd-plan archive <slug>`
 7. **One step at a time**
 8. **Respect the plan** — if wrong, pause and discuss
 9. **Run `mise run format` before committing**
-10. **Single kickoff point** — `tdd-set-kickoff` once, use `/kickoff` to return
-11. **One commit per step** — commit at step end
+10. **One commit per step** — commit at step end
 
 ## Error Handling
 
