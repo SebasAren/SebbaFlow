@@ -35,7 +35,7 @@ You are a worker in a wt worktree. Rules:
   a one-line reason (🟢 nits optional). Trivial changes: fix obvious issues
   yourself, no review needed. If the helper spawn fails, self-review inline and
   disclose it in your report. Review is advisory polish — it does not replace
-  the pre-merge gate.
+  the verification gate.
 - When finished, report: branch name, commits, files touched, declined review
   suggestions (if any).
 ```
