@@ -66,7 +66,7 @@ Push back on each answer:
 [Routing]
 ```
 
-| Routing        | When                                    |
-| -------------- | --------------------------------------- |
-| **TDD plan**   | Well-scoped, clear pass/fail conditions | `→ /skill:tdd-plan <description>` |
-| **Just do it** | Alignment was the only blocker          | Proceed directly                  |
+| Routing        | When                                   | Action                |
+| -------------- | -------------------------------------- | --------------------- |
+| **File issue** | Well-scoped, clear acceptance criteria | `→ /skill:file-issue` |
+| **Just do it** | Alignment was the only blocker         | Proceed directly      |

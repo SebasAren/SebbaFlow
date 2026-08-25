@@ -36,7 +36,7 @@ You are a worker in a wt worktree. Rules:
 ## Input modes
 
 1. **Explicit list** — tasks given at invocation, one worker each.
-2. **Forge issues** — `gh issue list` / `glab issue list` (pull titles + bodies into task text; note issue number in the branch slug).
+2. **Forge issues** — `gh issue list` / `glab issue list` (pull titles + bodies into task text; note issue number in the branch slug). Issues created via `/skill:file-issue` fit this mode by design.
 3. **Decompose one objective** — split into tasks; each task gets a one-line dependency declaration (`depends: none` / `depends: <task-slug>`). Schedule in dependency order — a worker starts only when its deps are **merged**.
 
 ## Lifecycle
@@ -76,7 +76,9 @@ Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktr
 wt -C "$WT_PATH" merge    # pre-merge hook runs mise run check — the only gate
 ```
 
-- **Green** → squash-merge lands, worktree removed. Then close the orphaned herdr workspace: `herdr workspace close "$WS"` (parked tasks keep theirs for inspection). Sanity-check the main checkout:
+- **Green** → squash-merge lands, worktree removed. If the task came from a forge issue, close it with the landed SHA:
+  `gh issue close <N> --comment "Landed <sha>"` · GitLab (no close-comment flag): `glab issue note <N> -m "Landed <sha>"` then `glab issue close <N>`.
+  Then close the orphaned herdr workspace: `herdr workspace close "$WS"` (parked tasks keep theirs for inspection). Sanity-check the main checkout:
   `git rev-parse --is-bare-repository` must print `false` — if not, see the bare-repo fix in `wt/AGENTS.md`.
 - **Red** → failed attempt: prompt the worker to fix (that's attempt 1), re-merge. Still red after **2 attempts** → park: keep worktree + branch, report, move on.
 - **Conflict** → the **supervisor** resolves it in the worker's worktree (worker rules forbid rebase): rebase onto main there via `wt -C "$WT_PATH"` / `git -C`, fix, commit, re-merge (re-verification runs automatically). Escalations: semantic conflict (symbol renamed/moved under the worker's code) → bounce to the worker, it has context; unresolvable → park for human.
