@@ -30,7 +30,14 @@ You are a worker in a wt worktree. Rules:
 - Never run `git config` (shared .git/config leaks identity) — use `git -c` or env vars.
 - Commit atomically with conventional commits. Do NOT merge or rebase onto main —
   the supervisor merges after verifying.
-- When finished, report: branch name, commits, files touched.
+- Before reporting done, review your work: if non-trivial (≥5 files or ≥50 lines),
+  run `/skill:review` — fix every 🔴 must-fix finding; decline 🟡 suggestions with
+  a one-line reason (🟢 nits optional). Trivial changes: fix obvious issues
+  yourself, no review needed. If the helper spawn fails, self-review inline and
+  disclose it in your report. Review is advisory polish — it does not replace
+  the pre-merge gate.
+- When finished, report: branch name, commits, files touched, declined review
+  suggestions (if any).
 ```
 
 ## Input modes

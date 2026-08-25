@@ -14,6 +14,7 @@ Analyze git changes and produce categorized findings. No tree manipulation, no s
 - **Inside herdr** (`HERDR_ENV=1`, no helper marker): delegate to a fresh helper agent — an agent that didn't write the code reviews it without session bias. See below.
 - **Otherwise** (or if herdr commands fail): review inline using the workflow below.
 - **Recursion guard (structural)**: if `PI_REVIEW_HELPER=1` is set, you are the delegated helper — review inline, never spawn another helper.
+- **Worker context** (wt worktree, per the supervisor skills): run this before reporting done — fix every 🔴, decline 🟡 with a one-line reason in your report. If the helper spawn fails, self-review inline **and disclose it** in the report — never silently.
 
 ## Delegation (herdr)
 
@@ -41,7 +42,7 @@ herdr agent prompt "$NEW" "Delegated read-only review. Run /skill:review <target
 
 4. Clean up: `herdr pane close "$NEW"`.
 
-If any herdr step fails hard, review inline instead of debugging herdr.
+If any herdr step fails hard, review inline instead of debugging herdr. A worker doing so must disclose the self-review in its done-report.
 
 ## Workflow (inline)
 
