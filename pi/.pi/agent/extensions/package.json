@@ -30,5 +30,18 @@
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "^0.84.0"
+  },
+  "pi": {
+    "extensions": [
+      "./claude-rules/index.ts",
+      "./context7/index.ts",
+      "./exa-search/index.ts",
+      "./explore/index.ts",
+      "./extract-share/index.ts",
+      "./herdr-agent-state.ts",
+      "./librarian/index.ts",
+      "./session-memory/index.ts",
+      "./usage-tracker/index.ts"
+    ]
   }
 }

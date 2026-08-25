@@ -8,7 +8,7 @@ See [`.claude/rules/pi-extensions.md`](../../../../.claude/rules/pi-extensions.m
 
 ```
 pi/.pi/agent/extensions/
-├── package.json          # Bun workspaces root
+├── package.json          # Bun workspaces root + `pi.extensions` manifest (discovery allowlist)
 ├── tsconfig.base.json    # Shared tsconfig
 ├── eslint.config.mjs
 ├── shared/               # @pi-ext/shared — common utilities and test mocks
@@ -67,5 +67,5 @@ CI runs the same three steps on every push ([`.github/workflows/test.yml`](../..
 1. Create `<name>/` with `index.ts`, `package.json`, `tsconfig.json` (extend `../tsconfig.base.json`).
 2. Write `integration.test.ts` first — mock external deps via `@pi-ext/shared/test-mocks`, verify `registerTool`/`registerCommand` is called.
 3. Implement `index.ts`.
-4. Add `"<name>"` to the `workspaces` array in [`package.json`](package.json).
+4. Add `"<name>"` to the `workspaces` array **and** `"./<name>/index.ts"` to the `pi.extensions` array in [`package.json`](package.json). The manifest is an allowlist — pi loads only listed entry points, so a new extension dir without a manifest entry is silently not discovered. (Omitting an entry is how extensions get soft-disabled — e.g. `tdd-tree`.)
 5. Run `bun install && bun test --parallel` and the typecheck loop above.
