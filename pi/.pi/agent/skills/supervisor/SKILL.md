@@ -105,3 +105,5 @@ States: `working | blocked | queued-merge | parked | merged`. Parked items: path
 /skill:supervisor --gh 12,15                    # GitHub issues (also: --glab)
 /skill:supervisor "implement plan.md"           # decompose (deps required)
 ```
+
+PR-flow variant (forge landing, auto-merge): `/skill:supervisor-pr`.
