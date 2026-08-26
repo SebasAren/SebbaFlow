@@ -13,7 +13,7 @@ You are a worker in a wt worktree, spawned by a supervisor or a delegating sessi
 ## Hard limits
 
 - Never write outside this worktree. Never touch live/deployed state — repo-specific live-state commands are named in your task prompt (e.g. in the dotfiles repo: NEVER run `stow`).
-- Never run `git config` (shared .git/config leaks identity) — use `git -c` or env vars.
+- Never touch git identity. `git config` is off-limits (linked worktrees share `.git/config` — a write leaks into every other checkout), and so are `git -c user.*`, `GIT_AUTHOR_*`/`GIT_COMMITTER_*`, and fabricated placeholder identities. Plain `git commit` inherits the owner's global identity — that is the correct attribution. Tests needing a scratch identity get a plain clone under /tmp.
 - Commit atomically with conventional commits. Do NOT merge or rebase onto main — the supervisor merges after verifying.
 - Do NOT invoke `/skill:commit` or `/skill:persist-knowledge` — you never persist rules. Rule-worthy findings go in your final report; the supervisor gates persistence.
 
