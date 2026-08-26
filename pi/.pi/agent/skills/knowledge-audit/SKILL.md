@@ -65,16 +65,17 @@ Then categorize:
 
 Categorize all findings:
 
-| Category           | Severity      | Action                                                               |
-| ------------------ | ------------- | -------------------------------------------------------------------- |
-| **CONTRADICTION**  | 🔴 Critical   | Rule/doc says X, code does Y. Must fix.                              |
-| **DEAD REFERENCE** | 🔴 Critical   | References a file/API/config that no longer exists                   |
-| **OBSOLETE**       | 🟡 Warning    | Feature was removed, pattern is no longer used, convention changed   |
-| **DUPLICATE**      | 🟡 Warning    | Two files say essentially the same thing — merge or remove           |
-| **STALE EXAMPLE**  | 🟡 Warning    | Code example uses deprecated APIs or old patterns                    |
-| **VAGUE**          | 🟢 Suggestion | Too abstract to be useful — needs concrete examples or should be cut |
-| **BLOAT**          | 🟢 Suggestion | Large file where most content is unused — trim or split              |
-| **HEALTHY**        | ✅ No action  | Current, accurate, and useful                                        |
+| Category           | Severity      | Action                                                                          |
+| ------------------ | ------------- | ------------------------------------------------------------------------------- |
+| **CONTRADICTION**  | 🔴 Critical   | Rule/doc says X, code does Y. Must fix.                                         |
+| **DEAD REFERENCE** | 🔴 Critical   | References a file/API/config that no longer exists                              |
+| **OBSOLETE**       | 🟡 Warning    | Feature was removed, pattern is no longer used, convention changed              |
+| **DUPLICATE**      | 🟡 Warning    | Two files say essentially the same thing — merge or remove                      |
+| **MISSCOPED**      | 🟡 Warning    | Rule without `globs:` that only matters for specific paths — add matching scope |
+| **STALE EXAMPLE**  | 🟡 Warning    | Code example uses deprecated APIs or old patterns                               |
+| **VAGUE**          | 🟢 Suggestion | Too abstract to be useful — needs concrete examples or should be cut            |
+| **BLOAT**          | 🟢 Suggestion | Large file where most content is unused — trim or split                         |
+| **HEALTHY**        | ✅ No action  | Current, accurate, and useful                                                   |
 
 If findings are extensive, prioritize the 🔴 Critical items first when presenting.
 
@@ -156,6 +157,7 @@ Rule files load into context on every matching session — every bullet must ear
 - **Is this an external constraint not visible in code?** (env vars, CI quirks, version gates, vendor API limits, undocumented SDK shapes) → keep.
 - **Is this a design decision whose absence would invite churn?** (e.g. "system prompt is declarative — no ALL CAPS register") → keep.
 - **Is this just a snapshot of current implementation?** (scoring weights, regex captures, which fields a function reads) → cut. The code is the source of truth.
+- **Is the rule scoped as tightly as its content allows?** Rules without `globs:` load into _every_ session's system prompt. For each unscoped rule ask: which files must an agent be touching for this to matter? If the answer is anything short of "regardless of file", derive `globs:` from those files (`"tmux/**"` for a tool directory, `"*.lua"` basename or `"nvim/**/*.lua"` root-relative by path style) instead of deleting the content.
 
 This is the same bar the **persist-knowledge** skill applies when _adding_ rules — apply it in reverse to existing bullets.
 
