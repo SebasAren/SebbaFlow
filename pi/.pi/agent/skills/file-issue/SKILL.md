@@ -68,9 +68,18 @@ issue; touching the same tables." Omit the section entirely if independent.]
 
 Steps are **worker guidance**, not enforcement — the verification gate is supervisor's pre-merge hook (`mise run check`). Write steps concrete enough that a fresh worker in a fresh worktree can act on them without re-litigating decisions.
 
-### 4. Render and confirm
+### 4. Draft to files, confirm compactly
 
-Show the user the full body (or all bodies in decompose mode, with their titles). Revise until approved. **Do not push before approval.**
+Write each body to a file: `/tmp/issue-1.md`, `/tmp/issue-2.md`, … (decompose mode) or `/tmp/issue.md` (single).
+
+Then show the user a **compact summary only** — one line per issue:
+
+```
+| File | Title | Builds | Deps |
+| ---- | ----- | ------ | ---- |
+```
+
+Do **not** paste full bodies into chat. They re-render content the user already approved in the alignment summary, and a decomposed plan costs thousands of output tokens per render. Give the file paths; paste a full body only if the user asks to see one, and keep revisions in the file. **Do not push before explicit approval of the summary.**
 
 ### 5. Ensure the label exists
 
@@ -84,11 +93,11 @@ glab label create --name agent-planned --color "#5319E7" --description "Planned 
 ### 6. Create the issue(s)
 
 ```bash
-gh issue create --title "<title>" --body-file /tmp/issue.md --label agent-planned
-glab issue create -t "<title>" -d "$(cat /tmp/issue.md)" -l agent-planned
+gh issue create --title "<title>" --body-file /tmp/issue-1.md --label agent-planned
+glab issue create -t "<title>" -d "$(cat /tmp/issue-1.md)" -l agent-planned
 ```
 
-In decompose mode: create all issues in dependency order, then report the full list.
+In decompose mode: create all issues in dependency order (files `/tmp/issue-1.md` … `/tmp/issue-N.md`), then report the full list.
 
 ### 7. Report
 
@@ -102,7 +111,8 @@ Include the ready-to-paste supervisor invocation, e.g. `/skill:supervisor --gh 1
 ## Rules
 
 1. Nothing pushed without explicit user approval.
-2. No local staging — the forge is the single source of truth.
-3. Dependencies are prose for the supervisor to read, never machine syntax.
-4. One concept per issue in decompose mode; each issue must be independently verifiable.
-5. Open questions ship as implementation notes, never as blockers.
+2. No local staging — the forge is the single source of truth. (Draft body files in /tmp are scratch, not a plan artifact.)
+3. Never render full issue bodies in chat — files plus a one-line-per-issue summary; full body only on request.
+4. Dependencies are prose for the supervisor to read, never machine syntax.
+5. One concept per issue in decompose mode; each issue must be independently verifiable.
+6. Open questions ship as implementation notes, never as blockers.
