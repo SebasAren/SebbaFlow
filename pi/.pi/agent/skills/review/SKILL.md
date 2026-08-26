@@ -24,7 +24,8 @@ Analyze git changes and produce categorized findings. No tree manipulation, no s
 OUT=$(mktemp --suffix=.md)
 NEW=$(herdr pane split --current --direction right --no-focus --env PI_REVIEW_HELPER=1 | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
 herdr pane wait-output "$NEW" --match "❯" --source recent-unwrapped --timeout 30000  # shell ready
-herdr agent start reviewer --kind pi --pane "$NEW" -- --model zai/glm-5.3   # reviewer model pinned in-repo
+NAME="reviewer-$(basename "$(git rev-parse --show-toplevel)")"  # agent names are server-global — parallel sibling-worktree workers collide on a fixed name
+herdr agent start "$NAME" --kind pi --pane "$NEW" -- --model zai/glm-5.3   # reviewer model pinned in-repo
 ```
 
 2. Submit the review task and wait:
