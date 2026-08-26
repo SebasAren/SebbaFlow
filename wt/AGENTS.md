@@ -43,8 +43,8 @@ Project hook config: `.config/wt.toml` in the repo root. All hook commands must 
 | pre-commit  | `mise run pre-commit`                           |
 | pre-merge   | `mise run check`                                |
 
-## Gotcha: `wt merge` can leave the main repo "bare"
+## Postmortem: one-time `core.bare` corruption (mechanism removed upstream)
 
-Observed (wt 0.74.0): `wt merge` targeting `main` from a linked worktree sets `core.bare = true` on the main `.git/config` (needed to move the checked-out target ref) — if the flip-back is lost (background worktree removal racing), the main checkout stays "bare": `git status` fails with `must be run in a work tree`, the merge lands only the ref (index/worktree keep pre-merge content).
+One-time incident: a `wt merge` left the main checkout with `core.bare = true`. Old mechanism was flip-bare → local push → flip back; wt ≥ 0.72 instead moves refs via compare-and-swap `update-ref` (no config write). Verified on 0.74.0 by killing merges mid-flight and racing concurrent merges: zero flips; a staging-weird pre-commit hook aborts mid-pipeline but leaves the main repo untouched.
 
-Fix: `git config core.bare false`, then `git restore --source=HEAD --staged --worktree -- <files changed by the merge>`. Check after any `wt merge`: `git rev-parse --is-bare-repository` must print `false`.
+Cheap insurance after any merge: `git rev-parse --is-bare-repository` must print `false`. If not: `git config core.bare false`, then `git restore --source=HEAD --staged --worktree -- <files changed by the merge>`.

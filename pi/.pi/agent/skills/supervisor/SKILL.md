@@ -11,14 +11,14 @@ Orchestrate up to 3 parallel pi workers, each in its own wt worktree adopted as 
 
 ## Hard limits
 
-| Rule                                                                                   | Why                                                     |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Max **3** concurrent workers, **one repo** per run (invoking cwd)                      | Shared `.git`; merges serialize                         |
-| Workers **never merge** — supervisor owns all merges, one at a time                    | Concurrent merges are the `core.bare` corruption window |
-| **Never trust worker self-report** — only `wt merge`'s `pre-merge` verification counts | Structural gate, not agent honesty                      |
-| **Never force a merge past a red gate**                                                | A red gate is a failed attempt, not an obstacle         |
-| **2 red verifications → park**; **1 bounce** of a blocked question → surface to human  | Token ceiling                                           |
-| Auto-land green merges — human reviews the final result                                | Per agreement: verification is the gate                 |
+| Rule                                                                                   | Why                                                                                   |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Max **3** concurrent workers, **one repo** per run (invoking cwd)                      | Shared `.git`; merges serialize                                                       |
+| Workers **never merge** — supervisor owns all merges, one at a time                    | Concurrent merges race on CAS ref-moves + serial keeps each verification attributable |
+| **Never trust worker self-report** — only `wt merge`'s `pre-merge` verification counts | Structural gate, not agent honesty                                                    |
+| **Never force a merge past a red gate**                                                | A red gate is a failed attempt, not an obstacle                                       |
+| **2 red verifications → park**; **1 bounce** of a blocked question → surface to human  | Token ceiling                                                                         |
+| Auto-land green merges — human reviews the final result                                | Per agreement: verification is the gate                                               |
 
 ## Worker prompt
 
@@ -74,8 +74,7 @@ wt -C "$WT_PATH" merge    # pre-merge hook runs mise run check — the only gate
 
 - **Green** → squash-merge lands, worktree removed. If the task came from a forge issue, close it with the landed SHA:
   `gh issue close <N> --comment "Landed <sha>"` · GitLab (no close-comment flag): `glab issue note <N> -m "Landed <sha>"` then `glab issue close <N>`.
-  Then close the orphaned herdr workspace: `herdr workspace close "$WS"` (parked tasks keep theirs for inspection). Sanity-check the main checkout:
-  `git rev-parse --is-bare-repository` must print `false` — if not, see the bare-repo fix in `wt/AGENTS.md`.
+  Then close the orphaned herdr workspace: `herdr workspace close "$WS"` (parked tasks keep theirs for inspection).
 - **Red** → failed attempt: prompt the worker to fix (that's attempt 1), re-merge. Still red after **2 attempts** → park: keep worktree + branch, report, move on.
 - **Conflict** → the **supervisor** resolves it in the worker's worktree (the worker skill forbids rebase): rebase onto main there via `wt -C "$WT_PATH"` / `git -C`, fix, commit, re-merge (re-verification runs automatically). Escalations: semantic conflict (symbol renamed/moved under the worker's code) → bounce to the worker, it has context; unresolvable → park for human.
 - After each merge, report one status line: task, result, branch.
