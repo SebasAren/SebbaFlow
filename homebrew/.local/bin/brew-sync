@@ -10,6 +10,7 @@
 # are excluded so only your personal additions are tracked.
 
 set -euo pipefail
+export LC_ALL=C  # deterministic collation: comm(1) rejects sort(1) output under en_US.UTF-8
 
 BREWFILE="${HOME}/Brewfile"
 SYSTEM_DIR="/usr/share/ublue-os/homebrew"
