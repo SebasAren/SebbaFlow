@@ -37,18 +37,21 @@ save all / pick / skip.
 
 ## Step 4: Write rules
 
-Read `.claude/rules/` first. Append to existing file or create new `<slug>.md`:
+Read `.claude/rules/` first. Append to existing file or create new `<slug>.md`.
+
+**Scope before writing.** For each finding ask: _which files must an agent be touching for this rule to matter?_ Derive `globs:` from those files — nearly every finding is tool-, language-, or directory-specific. Rules without `globs:` load into the system prompt of every future session; global is the exception, not the default.
 
 ```markdown
 ---
 description: Short description
+globs: ["tool-dir/**/*.ext"]
 ---
 
 - Finding 1
 - Finding 2
 ```
 
-For path-scoped rules, add `globs: ["pattern/**/*.ext"]`.
+Omit `globs:` only if the rule matters regardless of which file is being worked on (e.g. stow/commit workflow). If it applies to a whole tool directory rather than one file type, scope by directory (`"tmux/**"`). One glob pattern per path style: no slash matches basename anywhere (`"*.lua"`); with slash it matches from repo root (`"nvim/**/*.lua"`). Reuse the glob style of sibling rules in `.claude/rules/`.
 
 **Rules for rules:**
 
