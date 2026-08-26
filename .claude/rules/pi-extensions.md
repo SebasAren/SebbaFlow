@@ -15,6 +15,7 @@ globs:
 
 - **stdin piping = batch mode**: `pi < file` processes the file as a non-interactive batch prompt. Use `pi "@$file"` to include file content while staying interactive.
 - **`--print` for non-interactive**: Use `pi -p "prompt"` or `--mode json` for scripted use.
+- **`@` file references need their own argument**: `pi -p "@/path/file" "prompt"` — inlining the prompt into the same string makes pi treat the whole thing as a path (`File not found`).
 - **No `--max-turns` flag**: Monitor the JSON event stream (`tool_execution_start` events) and kill externally when limits are exceeded.
 
 ## Bun / TypeScript Gotchas
