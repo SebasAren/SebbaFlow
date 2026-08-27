@@ -30,6 +30,7 @@ bluefin-bashrc/            # Bluefin base bashrc → bluefin-bashrc/AGENTS.md
 docs/                      # CV site (Astro, GitHub Pages)
 tests/                     # Local plenary Lua tests (tests/run.sh)
 mise/.config/mise/         # Global mise config (herdr, pi, pitchfork pins)
+sandbox/                   # OpenShell agent sandboxes (non-stow) → sandbox/README.md
 usage-dashboard/           # Pi usage stats dashboard (pitchfork usage-dash)
 mise.toml                  # Runtime versions
 .mise/tasks/              # Mise tasks (lint, format, check, etc.)

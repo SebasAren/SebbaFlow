@@ -14,5 +14,19 @@ prettier = "latest"
 taplo = "latest"
 "aqua:mvdan/sh" = "latest"
 
+# OpenShell (issue #72 spike) — two binaries, one repo; aliases give each its own
+# install dir (matching alone would collide on the same path).
+[tool_alias]
+openshell = "github:NVIDIA/OpenShell"
+openshell-gateway = "github:NVIDIA/OpenShell"
+
+[tools.openshell]
+version = "0.0.115"
+matching = "openshell-x86_64-unknown-linux-musl"
+
+[tools.openshell-gateway]
+version = "0.0.115"
+matching = "openshell-gateway-x86_64-unknown-linux-gnu"
+
 [settings]
 experimental = true

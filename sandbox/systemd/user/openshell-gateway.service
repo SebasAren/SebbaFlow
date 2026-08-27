@@ -1,0 +1,39 @@
+# OpenShell Gateway — systemd user unit (mise-installed binaries).
+#
+# Adapted from the RPM's /usr/lib/systemd/user/openshell-gateway.service
+# (v0.0.115) for a passwordless, user-local install on Bluefin:
+#   - ExecStart points at the mise shim (version-portable, resolves via
+#     ~/.config/mise/config.toml aliases "openshell-gateway").
+#   - The "seed default TOML from /usr/share" ExecStartPre is dropped —
+#     ~/.config/openshell/gateway.toml is seeded manually.
+# Everything else (PKI bootstrap, podman.socket ordering, hardening) matches
+# the RPM unit.
+
+[Unit]
+Description=OpenShell Gateway (user)
+Documentation=https://github.com/NVIDIA/OpenShell
+After=podman.socket
+Wants=podman.socket
+
+[Service]
+Type=exec
+
+# Auto-generate PKI on first start if not present.
+# %h = home; %E = $XDG_CONFIG_HOME (~/.config) in user units.
+Environment=OPENSHELL_LOCAL_TLS_DIR=%h/.local/state/openshell/tls
+ExecStartPre=%h/.local/share/mise/shims/openshell-gateway generate-certs --output-dir ${OPENSHELL_LOCAL_TLS_DIR} --server-san host.openshell.internal
+
+EnvironmentFile=-%E/openshell/gateway.env
+ExecStart=%h/.local/share/mise/shims/openshell-gateway
+StateDirectory=openshell
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+PrivateTmp=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=default.target
