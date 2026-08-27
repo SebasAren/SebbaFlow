@@ -1,6 +1,6 @@
 # sandbox/
 
-Agent-sandbox toolchain: the OCI image baked from this repo (issue #73) and the OpenShell gateway spike that consumes it (#72). Non-stow directory (like `docs/`, `tests/`) — nothing here is symlinked.
+Agent-sandbox toolchain: the OCI image baked from this repo (issue #73), the OpenShell gateway spike that consumes it (#72), and `wtx` — the per-worktree sandbox CLI (#74). Non-stow directory except `sandbox/.local/bin/wtx` (stowed onto `~/.local/bin` by `stow sandbox`).
 
 **Toolchain image (issue #73): built and smoke-tested.** See [Toolchain image](#toolchain-image-issue-73) below.
 
@@ -10,17 +10,18 @@ Agent-sandbox toolchain: the OCI image baked from this repo (issue #73) and the 
 
 ```
 sandbox/
-├── Containerfile      # toolchain image (issue #73)
+├── .local/bin/wtx     # per-worktree sandbox CLI (issue #74; `stow sandbox` → ~/.local/bin)
+├── Containerfile      # toolchain image (issues #73/#74)
 ├── build.sh           # build + tag sandbox:<sha>
 ├── smoke-test.sh      # runs inside the image (build gate + ad hoc)
 ├── mise.global.toml   # checked-in copy of the host's global mise pins
 └── README.md          # this file
-openshell/            # stowed: gateway systemd unit + gateway.toml
+openshell/            # stowed: gateway systemd unit + gateway.toml (incl. driver block)
 ```
 
-The `openshell/` package (one level up) is stowed with `stow openshell` (unit + config land in `~/.config/systemd/user/` and `~/.config/openshell/` as symlinks).
+The `openshell/` package (one level up) is stowed with `stow openshell` (unit + config land in `~/.config/systemd/user/` and `~/.config/openshell/` as symlinks). `stow sandbox` links only `.local/bin/wtx` — the `.stowrc` ignores the package's non-stowable files.
 
-Future: `wtx` CLI (#74), per-sandbox services (#75), `policy.toml` (#76).
+Landed: `wtx` CLI (#74). Future: per-sandbox services (#75), `policy.toml` (#76).
 
 ## Toolchain image (issue #73)
 
@@ -70,7 +71,102 @@ Latest verified build: all version checks pass, extension suite **529 tests / 41
 
 ### Rebuild trigger
 
-Manual (`sandbox/build.sh`) for now. Upgrade path: a CI job on merge to main that builds and pushes `sandbox:<sha>` to a registry, so worktrees can pin by digest instead of a host-local tag.
+Manual (`sandbox/build.sh`) for now. **Rebuild after landing Containerfile changes** — the wtx spike (#74) added `iproute2` (the OpenShell sandbox runtime probes the `ip` helper and refuses to provision without it). Upgrade path: a CI job on merge to main that builds and pushes `sandbox:<sha>` to a registry, so worktrees can pin by digest instead of a host-local tag.
+
+## wtx — per-worktree sandboxes (issue #74)
+
+`sandbox/.local/bin/wtx` gives every wt worktree its own OpenShell sandbox from the `sandbox:<sha>` image, so agent execution (pi, builds) runs isolated from the host while herdr panes, wt hooks and git stay host-side.
+
+```bash
+wtx up       # ensure the sandbox exists (idempotent; wt post-start hook)
+wtx enter    # interactive shell inside the sandbox (prompt: wtx❯)
+wtx down     # delete the sandbox (idempotent; wt pre-merge hook, after check)
+wtx status   # recorded image vs live sandbox, drift + stale-info report
+wtx doctor   # reap managed sandboxes whose worktree no longer records them
+```
+
+### Model
+
+- **One sandbox per worktree**, named `<repo>-<branch>` (sanitized). OpenShell caps names at **19 chars** — longer pairs are truncated; if that candidate is taken by a _different_ worktree's sandbox, a stable `sha256` suffix is appended (≤19 chars). `.sandbox-info` (gitignored, worktree-local) records the authoritative name, image tag + image ID, and is what `wtx doctor` treats as proof a worktree still wants its sandbox.
+- **Image resolution**: `sandbox:<HEAD-short-sha>`; if no image exists for HEAD (worktree branched ahead of the last build), the nearest tagged ancestor wins (≤100 commits back). `WTX_IMAGE=<tag>` overrides.
+- **Scoped bind mounts** (same absolute path on host and in the sandbox, via `--driver-config-json`): the worktree (RW), the main repo's `.git` gitdir (RW — linked worktrees point at it, so git must have it), and the herdr unix socket (RW). **Never `$HOME`.** Requires `enable_bind_mounts` + `userns = "keep-id"` in `[openshell.drivers.podman]` (landed in `openshell/gateway.toml`; keep-id is what makes in-sandbox writes land owned by the host user, not a subuid).
+- **Landlock filesystem policy** passed at create (the default policy is unusable for this image: `/home` is neither executable nor writable under it, so mise shims and pi session dirs get `EACCES`): default `read_only` baseline, plus read-write for the container-local image home (`/home/linuxbrew` — pi sessions, agent state), the worktree, gitdir and socket. Policy is locked at creation — `policy set` on a live sandbox does not re-apply Landlock until stop/start.
+- **Sandbox `$HOME` is `/sandbox`** (runtime-injected), which breaks mise's global-config lookup. `wtx enter` sets `HOME=/home/linuxbrew`, `PS1=wtx❯ ` (deterministic gate marker for herdr) and passes `TERM` + the herdr env (`HERDR_ENV`, `HERDR_SOCKET_PATH`, `HERDR_PANE_ID` when set) into the exec. The herdr socket path is identical inside and outside, so pi's state hook reports through the mount without translation.
+- The main process is `--detach --keep -- sleep infinity` (one-shot trailing commands fail — see known quirks); all real work goes through `sandbox exec`.
+
+### Lifecycle walkthroughs
+
+**Human wt flow:**
+
+```bash
+wt switch --create feat-x    # worktree + hooks; post-start runs `wtx up`
+wtx enter                    # shell inside the sandbox (prompt: wtx❯)
+# ... work, commit inside the sandbox (git works: gitdir is mounted) ...
+wtx down                     # or just `wt merge` — pre-merge tears it down after `mise run check`
+```
+
+**Supervisor / herdr delegation** (canonical recipe):
+
+```bash
+# 1. Worktree + sandbox (post-start hook), adopt as a herdr workspace
+JSON=$(wt switch --create feat-x --no-cd --format json | tail -1)
+WT_PATH=$(echo "$JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["path"])')
+RES=$(herdr worktree open --path "$WT_PATH" --no-focus)
+WS=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["workspace"]["workspace_id"])')
+PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])')
+
+# 2. Gate the HOST shell, then enter the sandbox and gate its marker
+herdr pane wait-output "$PANE" --match "❯" --source recent-unwrapped --timeout 30000
+herdr pane run "$PANE" "wtx enter"
+herdr pane wait-output "$PANE" --match "wtx❯" --source recent-unwrapped --timeout 60000
+
+# 3. Start pi INSIDE the sandbox. NOT `herdr agent start` — the pane's
+#    foreground process is the `wtx enter` exec client, not a shell, so
+#    agent start fails with agent_pane_busy. Type pi directly; herdr
+#    tracks state via pi's hook reports through the mounted socket.
+herdr pane run "$PANE" "pi --approve"        # --approve: trust dialog pre-cleared
+herdr agent wait "$PANE" --until idle --timeout 60000
+herdr agent prompt "$PANE" "You are a worker in a wt worktree. …task…" --wait --timeout 600000
+herdr agent read "$PANE" --source recent --lines 100
+
+# 4. Merge from anywhere; pre-merge runs check then `wtx down`
+wt -C "$WT_PATH" merge
+herdr workspace close "$WS"
+```
+
+**Recovery paths:** a pane whose sandbox was restarted shows the host `❯` again — re-run `pane run "$PANE" "wtx enter"`. A red-merge worktree (failed `mise run check`) keeps its sandbox by design (teardown runs after the check); `wtx up` recreates a deleted one. `wtx doctor` reaps anything whose worktree is gone.
+
+**Prereqs (once):** see [Deploy checklist](#deploy-checklist) — gateway driver block + restart, image with `iproute2`, and `wt config approvals add --yes` for the exact hook strings `wtx up || true` and `wtx down || true`.
+
+### Deploy checklist
+
+```bash
+sandbox/build.sh                                # 1. rebuild image (needs iproute2 since #74)
+stow openshell && stow sandbox                  # 2. driver block + wtx onto ~/.local/bin
+systemctl --user restart openshell-gateway      # 3. apply enable_bind_mounts + keep-id
+wt config approvals add --yes                   # 4. approve `wtx up || true`, `wtx down || true`
+wtx up && wtx status                            # 5. verify in a worktree; check mounts:
+openshell sandbox get <name> -o json | python3 -m json.tool   # labels + policy visible
+```
+
+Until step 3 is done, `wtx up` fails fast with the bind-mounts hint (validated live — the error surfaces the exact `[openshell.drivers.podman]` fix); hooks swallow the failure by design.
+
+### Spike findings (live-gateway verification, #74)
+
+| Finding                                                                                                                                                      | Consequence                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Sandbox runtime needs the `ip` helper; image lacked it (exit-1 in provisioning)                                                                              | `iproute2` added to the Containerfile; **rebuild required**                 |
+| Sandbox names cap at 19 chars                                                                                                                                | Truncate + hash-suffix naming; `.sandbox-info` records the real name        |
+| Label values reject `/` and `:`                                                                                                                              | Labels carry sanitized repo/branch/image-tag only                           |
+| Default Landlock policy: `/home` not executable, not writable                                                                                                | Custom policy at create (`/home/linuxbrew` RW + mount targets)              |
+| Runtime injects `$HOME=/sandbox` (breaks mise global pins)                                                                                                   | `wtx enter` sets `HOME=/home/linuxbrew`                                     |
+| `policy set` on a live sandbox doesn't re-apply Landlock                                                                                                     | Policy passed at create; stop/start re-applies                              |
+| Rootless RW mounts land owned by a subuid without keep-id                                                                                                    | `userns = "keep-id"` in the gateway driver block (deploy pending)           |
+| herdr `agent start` refuses panes whose foreground isn't a shell                                                                                             | Recipe types `pi --approve` via `pane run`; no `agent start` (input to #76) |
+| herdr agent tracking **requires** the socket hook: no `agent start` arming through the exec relay and no hook reports without the socket → `agent_not_found` | The socket mount is a requirement, not an escape hatch; #76 consumes this   |
+| `pi --approve` through the relay behaves identically (no trust dialog; TUI ready)                                                                            | Trust flow confirmed; pi ships unauthenticated (credentials = #5)           |
+
+Related: `pi/.pi/agent/extensions/herdr-agent-state.ts` reports state via `HERDR_SOCKET_PATH` + `HERDR_PANE_ID` — both propagated by `wtx enter`, pointing at the same-path mounted socket.
 
 ## Install (reproducible)
 

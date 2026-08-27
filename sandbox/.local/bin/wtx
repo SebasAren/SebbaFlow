@@ -1,0 +1,458 @@
+#!/usr/bin/env bash
+# wtx — per-worktree OpenShell sandbox lifecycle (issue #74).
+#
+# One sandbox per wt worktree, named <repo>-<branch-slug>, from the
+# sandbox:<sha> toolchain image (sandbox/build.sh). Scoped bind mounts only:
+# the worktree, its main gitdir, and the herdr unix socket — never $HOME.
+# pi runs inside the sandbox; herdr panes stay host-side ptys running
+# `wtx enter` (full lifecycle: sandbox/README.md).
+#
+# Usage:
+#   wtx up       ensure this worktree's sandbox exists (idempotent)
+#   wtx enter    run an interactive shell inside the sandbox (prompt: wtx❯)
+#   wtx down     delete this worktree's sandbox (idempotent)
+#   wtx status   report sandbox/image state for this worktree
+#   wtx doctor   reap sandboxes whose worktree is gone; clear stale info files
+#
+# Environment:
+#   WTX_IMAGE            image tag override (default: sandbox:<HEAD-sha>,
+#                        falling back to the nearest tagged ancestor)
+#   WTX_WORKTREES_ROOT   worktrees root for `doctor` (default:
+#                        ~/.local/share/worktrees)
+#
+# Requires: git, openshell, podman (image lookup only), python3 (doctor).
+set -euo pipefail
+
+IMAGE_REPO="localhost/sandbox"
+IMAGE_USER_HOME="/home/linuxbrew"
+HERDR_SOCK="${HERDR_SOCKET_PATH:-$HOME/.config/herdr/herdr.sock}"
+WORKTREES_ROOT="${WTX_WORKTREES_ROOT:-$HOME/.local/share/worktrees}"
+INFO_FILE=".sandbox-info"
+
+# Worktree context, set by resolve_context.
+WT_ROOT="" WT_SLUG="" REPO_NAME="" GITDIR="" SBX_NAME="" SBX_CANDIDATE=""
+
+# openshell caps sandbox names at 19 characters.
+NAME_MAX=19
+
+die() {
+	printf 'wtx: %s\n' "$*" >&2
+	exit 1
+}
+
+info() {
+	printf 'wtx: %s\n' "$*"
+}
+
+need() {
+	command -v "$1" >/dev/null 2>&1 || die "'$1' not found on PATH"
+}
+
+sanitize() {
+	# Name/label-safe slug: [a-z0-9-] only (openshell label values reject /:).
+	tr '[:upper:]' '[:lower:]' <<<"$1" | sed -e 's/[^a-z0-9]\+/-/g' -e 's/^-\+//' -e 's/-\+$//'
+}
+
+sandbox_get() {
+	openshell sandbox get "$1" -o json 2>/dev/null
+}
+
+sandbox_exists() {
+	sandbox_get "$1" >/dev/null
+}
+
+resolve_context() {
+	# Sets WT_ROOT, WT_SLUG, REPO_NAME, GITDIR, SBX_NAME from the cwd.
+	# Returns 1 when cwd is not a linked worktree (main checkout / no repo).
+	need git
+	local toplevel git_dir common_dir
+	toplevel="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+	git_dir="$(git rev-parse --path-format=absolute --git-dir)"
+	common_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
+	if [[ "$git_dir" == "$common_dir" ]]; then
+		return 1 # main checkout, not a linked worktree
+	fi
+	WT_ROOT="$toplevel"
+	GITDIR="$common_dir"
+	WT_SLUG="$(sanitize "$(basename "$WT_ROOT")")"
+	REPO_NAME="$(sanitize "$(basename "$(dirname "$GITDIR")")")"
+	if [[ -z "$WT_SLUG" || -z "$REPO_NAME" ]]; then
+		die "cannot derive a sandbox name from $WT_ROOT"
+	fi
+	# Deterministic candidate, truncated to the name cap. When the cap
+	# forces a truncation and the candidate is taken by a DIFFERENT
+	# worktree's sandbox, cmd_up falls back to a hash-suffixed name and
+	# records it in .sandbox-info — which is then authoritative.
+	SBX_CANDIDATE="${REPO_NAME}-${WT_SLUG}"
+	SBX_CANDIDATE="${SBX_CANDIDATE:0:$NAME_MAX}"
+	SBX_CANDIDATE="${SBX_CANDIDATE%-}"
+	SBX_NAME="$SBX_CANDIDATE"
+}
+
+recorded_name() {
+	# The sandbox name recorded by a previous `wtx up`, if any. A corrupt
+	# info file (no name line) must fall through to the candidate path, not
+	# yield an empty name.
+	local f="$WT_ROOT/$INFO_FILE" name
+	[[ -f "$f" ]] || return 1
+	name="$(grep -m1 '^name=' "$f" | cut -d= -f2- | tr -d '"')"
+	[[ -n "$name" ]] || return 1
+	printf '%s\n' "$name"
+}
+
+use_recorded_name() {
+	local recorded
+	recorded="$(recorded_name)" || return 1
+	SBX_NAME="$recorded"
+}
+
+image_tag_for_head() {
+	# Tag for the worktree's current state: HEAD's short SHA when an image
+	# exists for it, else the nearest ancestor that has one (worktrees branch
+	# ahead of main between image rebuilds). WTX_IMAGE overrides.
+	need podman
+	local head sha
+	if [[ -n "${WTX_IMAGE:-}" ]]; then
+		podman image exists "${IMAGE_REPO}:${WTX_IMAGE}" ||
+			die "image ${IMAGE_REPO}:${WTX_IMAGE} (WTX_IMAGE) does not exist"
+		printf '%s\n' "$WTX_IMAGE"
+		return
+	fi
+	head="$(git -C "$WT_ROOT" rev-parse --short HEAD)"
+	if podman image exists "${IMAGE_REPO}:${head}"; then
+		printf '%s\n' "$head"
+		return
+	fi
+	while IFS= read -r sha; do
+		sha="${sha:0:7}"
+		if podman image exists "${IMAGE_REPO}:${sha}"; then
+			printf '%s\n' "$sha"
+			return
+		fi
+	done < <(git -C "$WT_ROOT" rev-list --max-count=100 HEAD)
+	die "no ${IMAGE_REPO}:<sha> image for ${head} or its ancestors — run sandbox/build.sh (or point WTX_IMAGE at an existing tag)"
+}
+
+json_escape_check() {
+	# Mount paths go into a JSON string; refuse the escape-worthy ones.
+	local p
+	for p in "$@"; do
+		if [[ "$p" == *[\"\\]* || "$p" == *"'"* ]]; then
+			die "unsupported character in path: $p"
+		fi
+	done
+}
+
+mounts_json() {
+	# Same-path bind mounts: identical absolute path on host and in the
+	# sandbox, so --workdir and HERDR_SOCKET_PATH need no translation.
+	printf '{"podman":{"mounts":['
+	printf '{"type":"bind","source":"%s","target":"%s","read_only":false}' "$WT_ROOT" "$WT_ROOT"
+	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false}' "$GITDIR" "$GITDIR"
+	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false}' "$HERDR_SOCK" "$HERDR_SOCK"
+	printf ']}}'
+}
+
+write_policy() {
+	# Landlock filesystem policy, mirroring the openshell default read_only
+	# baseline plus what this toolchain needs: the container-local image home
+	# must be writable (pi sessions, agent state) and the mount targets must
+	# be listed or deny-by-default Landlock blocks them.
+	cat >"$1" <<EOF
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /app
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - ${IMAGE_USER_HOME}
+    - ${WT_ROOT}
+    - ${GITDIR}
+    - ${HERDR_SOCK}
+landlock:
+  compatibility: best_effort
+EOF
+}
+
+label_of() {
+	sandbox_get "$1" | grep -o "\"$2\": \"[^\"]*\"" | head -1 | cut -d'"' -f4
+}
+
+label_image() {
+	label_of "$1" "wtx.image"
+}
+
+drift_check() {
+	# Warn when the running sandbox was created from a different image than
+	# the worktree currently resolves to. Returns 0 when in sync.
+	local current
+	current="$(label_image "$SBX_NAME" || true)"
+	if [[ -n "$current" && "$current" != "$1" ]]; then
+		info "note: sandbox runs sandbox:$current; this worktree now resolves to sandbox:$1 ('wtx down' && 'wtx up' to switch)"
+		return 1
+	fi
+	return 0
+}
+
+resolve_name_collision() {
+	# Long repo+branch pairs truncate to the name cap; if that candidate is
+	# already a different worktree's sandbox, derive a stable hash-suffixed
+	# name instead (≤19 chars, deterministic per repo+branch).
+	if ! sandbox_exists "$SBX_NAME"; then
+		return 0
+	fi
+	local lrepo lbranch
+	lrepo="$(label_of "$SBX_NAME" "wtx.repo")"
+	lbranch="$(label_of "$SBX_NAME" "wtx.branch")"
+	if [[ "$lrepo" == "$REPO_NAME" && "$lbranch" == "$WT_SLUG" ]]; then
+		return 0 # a previous wtx up for this very worktree
+	fi
+	local hashed
+	hashed="${SBX_NAME:0:10}-$(printf %s "${REPO_NAME}-${WT_SLUG}" | sha256sum | cut -c1-8)"
+	info "sandbox name '$SBX_NAME' is taken by another worktree — using '$hashed'"
+	SBX_NAME="${hashed%-}"
+}
+
+write_info_file() {
+	# The authoritative sandbox<->worktree record (gitignored): `doctor`
+	# reaps managed sandboxes that no live info file claims.
+	local tag="$1" image_id
+	image_id="$(podman image inspect "${IMAGE_REPO}:${tag}" --format '{{.Id}}' 2>/dev/null || echo unknown)"
+	cat >"$WT_ROOT/$INFO_FILE" <<EOF
+name="$SBX_NAME"
+image="${IMAGE_REPO}:${tag}"
+image_id="$image_id"
+worktree="$WT_ROOT"
+created="$(date +%s)"
+EOF
+}
+
+cmd_up() {
+	if ! resolve_context; then
+		info "not a linked worktree — no sandbox needed"
+		return 0
+	fi
+	local tag
+	tag="$(image_tag_for_head)"
+	use_recorded_name || resolve_name_collision
+	if sandbox_exists "$SBX_NAME"; then
+		if drift_check "$tag"; then
+			info "sandbox '$SBX_NAME' already up (image sandbox:$tag)"
+		fi
+		return 0
+	fi
+	need podman
+	if [[ ! -e "$HERDR_SOCK" ]]; then
+		info "warning: herdr socket not found at $HERDR_SOCK (mounting it anyway)"
+	fi
+	local policy create_out rc
+	policy="$(mktemp "${TMPDIR:-/tmp}/wtx-policy.XXXXXX")"
+	create_out="$(mktemp "${TMPDIR:-/tmp}/wtx-create.XXXXXX")"
+	write_policy "$policy"
+	json_escape_check "$WT_ROOT" "$GITDIR" "$HERDR_SOCK"
+	set +e
+	openshell sandbox create \
+		--name "$SBX_NAME" \
+		--from "${IMAGE_REPO}:${tag}" \
+		--label "wtx.managed=true" \
+		--label "wtx.repo=$REPO_NAME" \
+		--label "wtx.branch=$WT_SLUG" \
+		--label "wtx.image=$tag" \
+		--driver-config-json "$(mounts_json)" \
+		--policy "$policy" \
+		--detach --keep -- sleep infinity >"$create_out" 2>&1
+	rc=$?
+	set -e
+	if [[ $rc -eq 0 ]]; then
+		rm -f "$policy" "$create_out"
+		write_info_file "$tag"
+		info "sandbox '$SBX_NAME' up (image sandbox:$tag) — enter with: wtx enter"
+		return 0
+	fi
+	if grep -q "enable_bind_mounts" "$create_out"; then
+		sed 's/^/    /' "$create_out" >&2
+		rm -f "$policy" "$create_out"
+		die "gateway rejects bind mounts — set enable_bind_mounts = true in [openshell.drivers.podman] (openshell/gateway.toml), restart openshell-gateway, retry (see sandbox/README.md)"
+	fi
+	sed 's/^/    /' "$create_out" >&2
+	rm -f "$policy" "$create_out"
+	die "sandbox create failed (exit $rc)"
+}
+
+cmd_enter() {
+	resolve_context || die "not inside a linked wt worktree"
+	use_recorded_name || true
+	sandbox_exists "$SBX_NAME" || die "no sandbox for this worktree — run 'wtx up' first"
+	if ! openshell sandbox exec -n "$SBX_NAME" -- test -d "$WT_ROOT" 2>/dev/null; then
+		die "worktree not visible in sandbox — bind mounts not deployed (see sandbox/README.md) or sandbox stopped ('openshell sandbox start $SBX_NAME')"
+	fi
+	local -a env_args=(
+		--env "HOME=${IMAGE_USER_HOME}"
+		--env "PS1=wtx❯ "
+		--env "TERM=${TERM:-xterm-256color}"
+		--env "HERDR_SOCKET_PATH=${HERDR_SOCK}"
+	)
+	if [[ "${HERDR_ENV:-}" == "1" ]]; then
+		env_args+=(--env "HERDR_ENV=1")
+	fi
+	if [[ -n "${HERDR_PANE_ID:-}" ]]; then
+		env_args+=(--env "HERDR_PANE_ID=$HERDR_PANE_ID")
+	fi
+	# PS1 gives the herdr recipe a deterministic gate marker; --norc skips
+	# /etc/bash.bashrc (its PS1 would win). HOME must point at the image home
+	# or mise cannot resolve the baked global pins ($HOME is /sandbox here).
+	# Interactive but deliberately not a login shell: the image ships no
+	# profile files, and PATH (mise shims) comes from the runtime env.
+	exec openshell sandbox exec --tty -n "$SBX_NAME" --workdir "$WT_ROOT" \
+		"${env_args[@]}" -- bash --norc -i
+}
+
+cmd_down() {
+	if ! resolve_context; then
+		info "not a linked worktree — nothing to tear down"
+		return 0
+	fi
+	use_recorded_name || true
+	if sandbox_exists "$SBX_NAME"; then
+		openshell sandbox delete "$SBX_NAME"
+		info "sandbox '$SBX_NAME' deleted"
+	else
+		info "no sandbox for this worktree"
+	fi
+	rm -f "$WT_ROOT/$INFO_FILE"
+}
+
+cmd_status() {
+	resolve_context || die "not inside a linked wt worktree"
+	local tag
+	if ! tag="$(image_tag_for_head 2>/dev/null)"; then
+		tag="(no image for HEAD or ancestors — run sandbox/build.sh)"
+	fi
+	if [[ -f "$WT_ROOT/$INFO_FILE" ]]; then
+		echo "info file: $(grep -E '^(name|image)=' "$WT_ROOT/$INFO_FILE" | tr '\n' ' ')"
+	else
+		echo "info file: none"
+	fi
+	if sandbox_exists "$SBX_NAME"; then
+		openshell sandbox get "$SBX_NAME"
+		drift_check "$tag" || true
+	elif [[ -f "$WT_ROOT/$INFO_FILE" ]]; then
+		info "sandbox '$SBX_NAME' not found — stale $INFO_FILE ('wtx down' clears it, 'wtx up' recreates)"
+	else
+		info "sandbox '$SBX_NAME' not found ('wtx up' creates it)"
+	fi
+}
+
+cmd_doctor() {
+	need openshell
+	need python3
+	local list_json
+	list_json="$(openshell sandbox list --selector wtx.managed=true -o json 2>/dev/null)" ||
+		die "cannot list sandboxes — is the gateway up? (openshell status)"
+	local -a managed=() live_names=() live_files=()
+	mapfile -t managed < <(python3 -c 'import json,sys
+for s in json.load(sys.stdin):
+    print(s["name"])' <<<"$list_json")
+	while IFS= read -r f; do
+		[[ -n "$f" ]] || continue
+		live_files+=("$f")
+		live_names+=("$(grep -m1 '^name=' "$f" | cut -d= -f2- | tr -d '"')")
+	done < <(find "$WORKTREES_ROOT" -mindepth 2 -maxdepth 5 -name "$INFO_FILE" -type f 2>/dev/null || true)
+	# Depth window: wt's layout is worktrees/<repo>/<branch>/ (depth 3), but
+	# missing an info file is the dangerous direction for reaping, so scan a
+	# wider window rather than hard-coupling to that shape.
+
+	local name reaped=0
+	for name in "${managed[@]}"; do
+		if printf '%s\n' "${live_names[@]}" | grep -qx "$name"; then
+			continue
+		fi
+		# No live worktree claims this sandbox — wt removed it (merge) or it
+		# was deleted by hand. Teardown hook missed it; reap it here.
+		if openshell sandbox delete "$name" >/dev/null 2>&1; then
+			info "reaped orphan sandbox '$name' (no worktree records it)"
+			reaped=$((reaped + 1))
+		else
+			info "warning: could not delete orphan sandbox '$name'"
+		fi
+	done
+
+	local f stale=0
+	for f in "${live_files[@]}"; do
+		name="$(grep -m1 '^name=' "$f" | cut -d= -f2- | tr -d '"')"
+		if ! sandbox_exists "$name"; then
+			rm -f "$f"
+			info "removed stale $f (sandbox '$name' is gone)"
+			stale=$((stale + 1))
+		fi
+	done
+
+	if [[ ${#managed[@]} -eq 0 ]]; then
+		info "no wtx-managed sandboxes found"
+	else
+		info "checked ${#managed[@]} managed sandbox(es): ${reaped} reaped, ${stale} stale info file(s) removed"
+	fi
+}
+
+usage() {
+	cat <<'EOF'
+usage: wtx <command>
+
+commands:
+  up       ensure this worktree's sandbox exists (idempotent)
+  enter    run an interactive shell inside the sandbox (prompt: wtx❯)
+  down     delete this worktree's sandbox (idempotent)
+  status   report sandbox/image state for this worktree
+  doctor   reap sandboxes whose worktree is gone; clear stale .sandbox-info
+
+env:
+  WTX_IMAGE            image tag override (default: sandbox:<sha>, ancestor walk)
+  WTX_WORKTREES_ROOT   worktrees root for doctor (default ~/.local/share/worktrees)
+EOF
+}
+
+main() {
+	if [[ -z "${1:-}" ]]; then
+		usage >&2
+		exit 2
+	fi
+	case "$1" in
+	up)
+		shift
+		cmd_up "$@"
+		;;
+	enter)
+		shift
+		cmd_enter "$@"
+		;;
+	down)
+		shift
+		cmd_down "$@"
+		;;
+	status)
+		shift
+		cmd_status "$@"
+		;;
+	doctor)
+		shift
+		cmd_doctor "$@"
+		;;
+	-h | --help | help)
+		usage
+		;;
+	*)
+		usage >&2
+		die "unknown command: $1"
+		;;
+	esac
+}
+
+main "$@"

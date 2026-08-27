@@ -7,4 +7,12 @@
 --ignore=CONVENTIONS.md
 --ignore=mise.toml
 --ignore=docs
+# sandbox/ package: only .local/bin/wtx is stowable; the rest must not leak
+# into $HOME as top-level links when `stow sandbox` runs. Anchored (^…$) so
+# the regexes only match package-root files, never other packages' nested
+# files (unanchored `build.sh` also matches tmux/pi node_modules trees).
+--ignore=^Containerfile$
+--ignore=^build\.sh$
+--ignore=^smoke-test\.sh$
+--ignore=^mise\.global\.toml$
 --ignore=dataview-queries.md

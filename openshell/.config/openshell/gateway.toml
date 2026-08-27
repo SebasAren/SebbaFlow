@@ -26,3 +26,17 @@ version = 1
 # in order: Kubernetes, Podman, Docker. Pinning prevents unexpected driver
 # selection if Docker is also installed on the host.
 compute_drivers = ["podman"]
+
+# Per-worktree sandbox bind mounts + uid mapping (issue #74, used by `wtx`).
+# - enable_bind_mounts: `wtx up` passes the worktree, its main gitdir and the
+#   herdr socket as same-path bind mounts via --driver-config-json; without
+#   this gate create fails with "podman bind mounts require
+#   enable_bind_mounts = true in [openshell.drivers.podman]".
+# - userns = "keep-id": maps the invoking user 1:1 into the container so
+#   agent writes into the RW-mounted worktree land owned by the host user
+#   instead of a subuid (upstream NVIDIA/OpenShell#1760; the sandbox image's
+#   user is uid 1000, same as the host user). Requires gateway restart:
+#   `systemctl --user restart openshell-gateway`.
+[openshell.drivers.podman]
+enable_bind_mounts = true
+userns = "keep-id"

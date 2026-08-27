@@ -10,3 +10,4 @@ Stow package for the OpenShell gateway (unit + TOML config). Binaries are **not*
 
 - The unit's `ExecStart` targets the **mise shim** (`~/.local/share/mise/shims/openshell-gateway`), not a versioned install path — it survives version bumps. Bumping the pinned version in mise config is all an upgrade needs (then `systemctl --user restart openshell-gateway`).
 - `gateway.toml` is the stock v0.0.115 RPM template. Upstream default listener: `127.0.0.1:17670`, `compute_drivers = ["podman"]`. The DB URL never goes in TOML (env-only, `sqlite:$XDG_STATE_HOME/openshell/gateway/openshell.db`).
+- The `[openshell.drivers.podman]` block (`enable_bind_mounts`, `userns = "keep-id"`) is **not stock** — added for `wtx` per-worktree sandboxes (issue #74). Both keys are read by the v0.0.115 binary; until this file is stowed + the gateway restarted, `wtx up` fails with the bind-mounts hint (see `sandbox/README.md`).

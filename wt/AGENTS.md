@@ -38,10 +38,12 @@ Project hook config: `.config/wt.toml` in the repo root. All hook commands must 
 | Lifecycle   | Command                                         |
 | ----------- | ----------------------------------------------- |
 | pre-start   | `mise trust`, `mise run setup`                  |
-| post-start  | `wt step copy-ignored`                          |
+| post-start  | `wt step copy-ignored`, `wtx up \|\| true`      |
 | post-switch | tmux rename-window (inline, no-op outside tmux) |
 | pre-commit  | `mise run pre-commit`                           |
-| pre-merge   | `mise run check`                                |
+| pre-merge   | `mise run check`, `wtx down \|\| true`          |
+
+`wtx` (sandbox lifecycle, issue #74) hooks are best-effort (`\|\| true`) — a sandbox failure must never block switching or merging. Both exact hook strings need pre-approval like every hook command. Lifecycle docs: `sandbox/README.md`.
 
 ## Postmortem: one-time `core.bare` corruption (mechanism removed upstream)
 

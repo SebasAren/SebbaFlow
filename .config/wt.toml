@@ -4,8 +4,14 @@ trust = "mise trust"
 [[pre-start]]
 setup = "mise run setup"
 
-[post-start]
+[[post-start]]
 copy = "wt step copy-ignored"
+
+# Sandbox for the worktree (issue #74). Best-effort: a missing/failing
+# sandbox must never block entering the worktree — `wtx enter` surfaces the
+# problem when it is actually needed. Idempotent; no-ops outside worktrees.
+[[post-start]]
+sandbox = "wtx up || true"
 
 [post-switch]
 tmux = "[ -n \"$TMUX\" ] && tmux rename-window {{ branch | sanitize }}"
@@ -15,3 +21,9 @@ pre-commit = "mise run pre-commit"
 
 [[pre-merge]]
 check = "mise run check"
+
+# Teardown after verification (issue #74): a red check aborts the merge
+# before this runs, so failing worktrees keep their sandbox alive for
+# iteration. `wtx doctor` reaps anything this misses.
+[[pre-merge]]
+sandbox-teardown = "wtx down || true"

@@ -21,6 +21,8 @@ opencode/.config/systemd/user/opencode-serve.env
 pi/.pi/agent/sessions/
 # tdd-plan test scratch directory
 pi/.local/bin/.test-plans/
+# wtx per-worktree sandbox record (issue #74)
+.sandbox-info
 pi/.pi/agent/settings.json
 pi/.pi/agent/auth.json
 pi/.pi/agent/trust.json
