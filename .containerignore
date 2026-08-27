@@ -1,0 +1,29 @@
+# Build-context safety net for manual `podman build .` runs.
+#
+# The supported path is sandbox/build.sh, which uses `git archive HEAD` as
+# context — tracked files only, so nothing untracked can leak. This file
+# only guards the secrets/runtime-state hazards if someone builds with a
+# directory context instead.
+.git
+**/node_modules
+**/__pycache__
+.ruff_cache
+.sisyphus
+.env
+**/.env
+.claude/settings.local.json
+**/.claude/settings.local.json
+.pi/settings.json
+nvim/.config/nvim/.claude
+pi/.pi/agent/sessions
+pi/.pi/agent/auth.json
+pi/.pi/agent/settings.json
+pi/.pi/agent/trust.json
+pi/.pi/agent/models-store.json
+pi/.local/bin/.test-plans
+tmux/.config/tmux/plugins
+docs/dist
+docs/.astro
+nvim/.config/nvim/plugin/packer_compiled.lua
+nvim/.config/nvim/lua/custom-settings.lua
+nvim/.config/nvim/lua/plugins/llms

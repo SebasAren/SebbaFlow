@@ -1,0 +1,49 @@
+# Global mise tool pins baked into the sandbox image (issue #73).
+#
+# Checked-in transcription of the host's ~/.config/mise/config.toml (which is
+# itself the stowed mise/.config/mise/config.toml). The image must own a copy
+# and never read the host's. Keep in sync manually — drift is checked by
+# nothing yet; moving these pins into the repo proper is the follow-up
+# (see sandbox/README.md).
+#
+# At build time this file lands at ~/.config/mise/config.toml inside the
+# image; mise merges it with the repo mise.toml (project pins win on
+# conflict) when `mise install` runs.
+#
+# github-backend tools carry EXACT pins (not "latest"): resolving "latest"
+# needs the GitHub releases API, whose unauthenticated hourly budget a
+# shared builder IP exhausts. Pinned versions download release assets
+# directly — no API call. Bump them alongside mise/.config/mise/config.toml.
+
+[tools]
+age = "latest"
+bun = "latest"
+claude = "latest"
+fnox = "latest"
+"github:ogulcancelik/herdr" = "0.8.2"
+pi = "0.84.3"
+pitchfork = "2.23.0"
+tree-sitter = "0.26.13"
+uv = "latest"
+prettier = "latest"
+"aqua:JohnnyMorganz/StyLua" = "latest"
+"aqua:astral-sh/ruff" = "latest"
+taplo = "latest"
+"aqua:mvdan/sh" = "latest"
+
+# OpenShell (issue #72 spike) — two binaries, one repo; aliases give each its own
+# install dir (matching alone would collide on the same path).
+[tool_alias]
+openshell = "github:NVIDIA/OpenShell"
+openshell-gateway = "github:NVIDIA/OpenShell"
+
+[tools.openshell]
+version = "0.0.115"
+matching = "openshell-x86_64-unknown-linux-musl"
+
+[tools.openshell-gateway]
+version = "0.0.115"
+matching = "openshell-gateway-x86_64-unknown-linux-gnu"
+
+[settings]
+experimental = true

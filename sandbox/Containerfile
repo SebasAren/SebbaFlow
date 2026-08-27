@@ -1,0 +1,79 @@
+# Agent toolchain image — snapshot of this repo's toolchain at a given git SHA.
+#
+# Built by sandbox/build.sh, which feeds `git archive HEAD` as the build
+# context: tracked files only, so gitignored secrets and runtime state
+# (pi auth/settings/sessions, ~/.secrets.tpl output, node_modules, .git)
+# can never enter the image. pi ships unauthenticated by design — the
+# credential story belongs to issue #5.
+#
+# Consumed by OpenShell sandboxes (issue #3) or plain `podman run`.
+FROM ghcr.io/homebrew/brew:6.0.20
+
+# Pin brew to the base image's frozen version during the build: keeps the
+# formula set reproducible and skips a slow auto-update on every layer.
+ENV HOMEBREW_NO_AUTO_UPDATE=1 \
+    HOMEBREW_NO_INSTALL_CLEANUP=1
+
+# ripgrep is a shell-out dependency of the pi extension tests (CI installs it
+# the same way). git and the C toolchain are already in the base image.
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ripgrep \
+ && rm -rf /var/lib/apt/lists/*
+
+USER linuxbrew
+WORKDIR /home/linuxbrew
+
+# Toolchain snapshot — tracked files only (context is a git archive tar).
+COPY --chown=linuxbrew:linuxbrew . /home/linuxbrew/dotfiles
+
+# Global mise pins: the image owns this copy, it never reads the host's.
+# Because of it, the `mise` stow package is deliberately NOT stowed below
+# (it would collide with this file at ~/.config/mise/config.toml).
+COPY --chown=linuxbrew:linuxbrew sandbox/mise.global.toml \
+     /home/linuxbrew/.config/mise/config.toml
+
+# Homebrew CLIs. Flatpak entries are host-only (no flatpak daemon in a
+# container) and are stripped before bundling.
+RUN grep -Ev '^[[:space:]]*flatpak[[:space:]]' dotfiles/homebrew/Brewfile > /tmp/Brewfile \
+ && brew bundle --file=/tmp/Brewfile \
+ && rm /tmp/Brewfile \
+ && brew cleanup
+
+# Stow the packages into $HOME. Ignore flags mirror the repo .stowrc (which
+# is cwd-relative and thus not read here). The base image ships a real
+# ~/.bashrc that the bluefin-bashrc package replaces. Explicit package list
+# (not `stow */`) — docs/, tests/, sandbox/ and usage-dashboard/ are
+# non-stow directories, and the `mise` package is replaced by the COPY'd
+# global pins above.
+RUN cd dotfiles \
+ && rm -f /home/linuxbrew/.bashrc \
+ && stow --target=/home/linuxbrew \
+      --ignore=.stowrc --ignore=AGENTS.md --ignore=README.md --ignore=CONVENTIONS.md \
+      --ignore=mise.toml --ignore=docs --ignore=dataview-queries.md \
+      bashrc bluefin-bashrc ghostty herdr homebrew kitty nvim obsidian \
+      openshell pi tmux wt
+
+# mise + tools: the COPY'd global pins merge with the repo mise.toml
+# (project-level pins win on conflict); everything installs via precompiled
+# builds — no compiler needed for the mise side. The installer itself is
+# pinned (host parity) — same discipline as the base image tag. GitHub
+# attestation re-verification is skipped for this step only: the shared
+# builder IP exhausts the unauthenticated GitHub API budget (rate limit);
+# artifacts still come from the pinned repos over HTTPS, and the host
+# verifies the same pins on every install.
+ENV PATH="/home/linuxbrew/.local/share/mise/shims:/home/linuxbrew/.local/bin:${PATH}"
+RUN curl -fsSL https://mise.run | MISE_VERSION=v2026.8.14 sh \
+ && mise trust /home/linuxbrew/dotfiles/mise.toml \
+ && mise trust /home/linuxbrew/.config/mise/config.toml \
+ && MISE_GITHUB_ATTESTATIONS=false mise install
+
+# Bake extension dependencies so the image works offline.
+RUN cd dotfiles/pi/.pi/agent/extensions && bun install --frozen-lockfile
+
+# Smoke test — fails the build if the toolchain is broken (see smoke-test.sh).
+RUN bash dotfiles/sandbox/smoke-test.sh
+
+USER linuxbrew
+WORKDIR /home/linuxbrew/dotfiles
+CMD ["bash"]

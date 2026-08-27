@@ -1,19 +1,76 @@
 # sandbox/
 
-OpenShell-based agent sandboxes for SebbaFlow. Non-stow directory (like `docs/`, `tests/`) — host-level install is documented here, not symlinked.
+Agent-sandbox toolchain: the OCI image baked from this repo (issue #73) and the OpenShell gateway spike that consumes it (#72). Non-stow directory (like `docs/`, `tests/`) — nothing here is symlinked.
+
+**Toolchain image (issue #73): built and smoke-tested.** See [Toolchain image](#toolchain-image-issue-73) below.
 
 **Spike outcome (issue #72): gate passed.** OpenShell v0.0.115 works on Bluefin with rootless Podman. Verified end-to-end: gateway (systemd user service, mTLS), `sandbox create/exec/connect` round-trip, and gateway-routed inference with our builder model (`zai/glm-5.3-flash`).
 
 ## Layout
 
 ```
-sandbox/           # this README + future Containerfile/wtx/policy (#73–#76)
-openshell/         # stowed: gateway systemd unit + gateway.toml
+sandbox/
+├── Containerfile      # toolchain image (issue #73)
+├── build.sh           # build + tag sandbox:<sha>
+├── smoke-test.sh      # runs inside the image (build gate + ad hoc)
+├── mise.global.toml   # checked-in copy of the host's global mise pins
+└── README.md          # this file
+openshell/            # stowed: gateway systemd unit + gateway.toml
 ```
 
-Install the stow package with `stow openshell` (unit + config land in `~/.config/systemd/user/` and `~/.config/openshell/` as symlinks).
+The `openshell/` package (one level up) is stowed with `stow openshell` (unit + config land in `~/.config/systemd/user/` and `~/.config/openshell/` as symlinks).
 
-Future: `Containerfile` + `build.sh` (#73), `wtx` CLI (#74), per-sandbox services (#75), `policy.toml` (#76).
+Future: `wtx` CLI (#74), per-sandbox services (#75), `policy.toml` (#76).
+
+## Toolchain image (issue #73)
+
+An OCI image that snapshots the repo's full agent toolchain: stow packages into `$HOME`, the `homebrew/Brewfile` CLIs, and every mise pin (repo `mise.toml` + the global pins). Tagged by the git SHA it was built from, so an image is always traceable to the exact repo state that produced it. Consumers: OpenShell sandboxes (#3) or plain `podman run` — this issue survives a gateway failure.
+
+### Build
+
+```bash
+sandbox/build.sh
+```
+
+Builds with podman from a `git archive HEAD` context and tags `sandbox:<short-sha>` + `sandbox:latest`, then prints build time, size, and image ID. The `org.opencontainers.image.revision` label carries the full SHA. First build pulls the ~1.4 GB base and takes roughly 15–25 min (brew bundle + mise installs); warm rebuilds are faster.
+
+**Tag convention:** `sandbox:<short-sha>` identifies the repo state an image was built from — use it, never `latest`, when a worktree records which image it ran under (reproducibility). It is not content-immutable: rebuilding the same SHA re-tags it (`latest` tool pins resolve at build time). Record the image ID printed by `build.sh` when you need bit-exact identity; the long-term fix is the registry + digest pinning upgrade path below.
+
+### Secrets are excluded by design
+
+The build context is a `git archive` tar — tracked files only. Everything sensitive is gitignored and therefore structurally absent from the image: `pi/.pi/agent/auth.json`, `settings.json`, `sessions/`, and the `~/.secrets.tpl` + Proton Pass material (never in the repo in the first place). The image ships **pi unauthenticated** — the credential story belongs to issue #5. A repo-root `.containerignore` is a second safety net for manual `podman build .` runs.
+
+### Deliberate deviations from the host setup
+
+| Deviation                                                               | Why                                                                                                                                                                                       |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mise` stow package skipped; `sandbox/mise.global.toml` COPY'd instead  | The image must own its global pins (never read the host's), and stowing the package would collide with the COPY'd file at `~/.config/mise/config.toml`.                                   |
+| Flatpak entries stripped from the Brewfile                              | No flatpak daemon in a container.                                                                                                                                                         |
+| `ripgrep` installed via apt, not added to the Brewfile                  | Shell-out dependency of the extension tests (CI installs it the same way); the Brewfile stays the host's source of truth.                                                                 |
+| Explicit stow package list instead of `stow */`                         | `docs/`, `tests/`, `sandbox/`, `usage-dashboard/` are non-stow directories; the repo `.stowrc` is retargeted to the image `$HOME` (it hardcodes the host path).                           |
+| Base pinned to `ghcr.io/homebrew/brew:6.0.20`                           | Official Homebrew-on-Linux image (Ubuntu 24.04, glibc 2.39) — brew preinstalled, formula set frozen with the base. Bump the tag (manually or via renovate) to refresh.                    |
+| mise installer pinned (`MISE_VERSION=v2026.8.14`)                       | One less floating input — two builds of the same SHA diverge only when a pinned input bumps. Current stable — pinned-github resolution skips the releases API.                            |
+| GitHub attestation re-verification skipped at build-time `mise install` | The shared builder IP exhausts the unauthenticated GitHub API budget. Artifacts still come from pinned repos over HTTPS; the host re-verifies the same pins. CI-with-token can re-enable. |
+
+### Drift warning: `mise.global.toml`
+
+`sandbox/mise.global.toml` started as a manual transcription of the host global pins (`mise/.config/mise/config.toml`), but github-backend tools (herdr, pitchfork, tree-sitter) now carry exact pins so the image build never needs the GitHub API — the host may run newer `latest` versions. Nothing keeps the two files in sync yet. The lower-risk copy was chosen on purpose — moving the pins into the repo proper changes host behavior; that migration is a follow-up decision.
+
+### Smoke test
+
+`sandbox/smoke-test.sh` runs as the image's final build layer (a failing check fails the build) and can be run ad hoc:
+
+```bash
+podman run --rm sandbox:<sha> bash /home/linuxbrew/dotfiles/sandbox/smoke-test.sh
+```
+
+It verifies `pi`, `mise`, `luacheck`, `selene`, `shellcheck`, `stylua`, `ruff`, `shfmt` all report versions, then runs the pi extension unit tests (`bun test`, integration tests excluded — same as CI).
+
+Latest verified build: all version checks pass, extension suite **529 tests / 41 files, 0 failures**; `pi` resolves via the mise shim, `luacheck`/`selene` via Homebrew, `rg` via apt. Secrets-absence checked: no `auth.json`/`settings.json`/`sessions/` in the image, no key-shaped strings in the stowed trees.
+
+### Rebuild trigger
+
+Manual (`sandbox/build.sh`) for now. Upgrade path: a CI job on merge to main that builds and pushes `sandbox:<sha>` to a registry, so worktrees can pin by digest instead of a host-local tag.
 
 ## Install (reproducible)
 
