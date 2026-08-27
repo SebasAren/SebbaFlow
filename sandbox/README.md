@@ -7,10 +7,11 @@ OpenShell-based agent sandboxes for SebbaFlow. Non-stow directory (like `docs/`,
 ## Layout
 
 ```
-sandbox/
-├── README.md                                 # this file
-└── systemd/user/openshell-gateway.service    # adapted RPM unit (mise paths)
+sandbox/           # this README + future Containerfile/wtx/policy (#73–#76)
+openshell/         # stowed: gateway systemd unit + gateway.toml
 ```
+
+Install the stow package with `stow openshell` (unit + config land in `~/.config/systemd/user/` and `~/.config/openshell/` as symlinks).
 
 Future: `Containerfile` + `build.sh` (#73), `wtx` CLI (#74), per-sandbox services (#75), `policy.toml` (#76).
 
@@ -24,25 +25,15 @@ Binaries are managed by mise via the `github:` backend — see the `[tool_alias]
    mise install
    ```
 
-2. **Gateway unit** — copy the adapted unit (ExecStart points at the mise shim; RPM's `/usr/share` template-seed dropped):
+2. **Gateway unit + config** — from the `openshell/` stow package:
 
    ```bash
-   install -Dm644 sandbox/systemd/user/openshell-gateway.service \
-     ~/.config/systemd/user/openshell-gateway.service
+   stow openshell
    ```
 
-3. **Gateway config** — seed the default TOML once, from the release RPM's template:
+   `gateway.toml` is the stock v0.0.115 RPM template (`gateway.toml.default`); the unit is the RPM's with `ExecStart` pointed at the mise shim. Defaults that matter: `compute_drivers = ["podman"]`, listener `127.0.0.1:17670`, mTLS auto-generated into `~/.local/state/openshell/tls` on first start.
 
-   ```bash
-   curl -sSLf -o /tmp/gw.rpm \
-     https://github.com/NVIDIA/OpenShell/releases/download/v0.0.115/openshell-gateway-0.0.115-1.fc44.x86_64.rpm
-   rpm2cpio /tmp/gw.rpm | cpio -idmu --quiet ./usr/share/openshell-gateway/gateway.toml.default
-   install -Dm644 usr/share/openshell-gateway/gateway.toml.default ~/.config/openshell/gateway.toml
-   ```
-
-   Defaults that matter: `compute_drivers = ["podman"]`, listener `127.0.0.1:17670`, mTLS auto-generated into `~/.local/state/openshell/tls` on first start.
-
-4. **Start + register**:
+3. **Start + register**:
 
    ```bash
    systemctl --user enable --now podman.socket openshell-gateway
@@ -60,7 +51,7 @@ Documented like `wt/AGENTS.md` postmortems — concrete, command-level.
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | No `rpm-ostree install` layering                                    | Requires sudo + reboot, and diverges the custom `sebbafin` OCI base. The mise route gives version pinning + rollback for free. Upgrade path: bake the RPMs into the base image instead.                   |
 | Binaries from release tarballs via mise, not `/usr/bin`             | Same binaries the RPMs ship (musl CLI, gnu gateway); mise shims resolve them. The systemd unit targets `~/.local/share/mise/shims/openshell-gateway` (version-portable).                                  |
-| `gateway.toml` seeded manually (step 3 above)                       | The RPM unit's `ExecStartPre` seeds from `/usr/share/openshell-gateway/gateway.toml.default`, which doesn't exist here. Content is identical.                                                             |
+| `gateway.toml` + unit stowed via the `openshell/` package           | The RPM unit's `ExecStartPre` seeds the TOML from `/usr/share/openshell-gateway/gateway.toml.default`, which doesn't exist here — the repo carries a copy of that template instead.                       |
 | Containerized gateway (`ghcr.io/nvidia/openshell/gateway`) not used | The RPM-path topology (systemd user service + podman driver) works on Bluefin as-is; container path adds the known SELinux/`8080:8080`/`XDG_STATE_HOME` mirroring pain for no gain. Not tested — no need. |
 
 ## Inference routing (provider story)
