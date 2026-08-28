@@ -7,12 +7,19 @@
 # pi runs inside the sandbox; herdr panes stay host-side ptys running
 # `wtx enter` (full lifecycle: sandbox/README.md).
 #
+# Hardening (#76): sandbox policy (Landlock + default-deny egress
+# allowlist) is rendered from sandbox/policy.yaml and applied AT CREATE,
+# CPU/memory caps are enforced via --cpu/--memory, `enter` injects
+# gateway-routed inference env (real keys stay in the gateway), and
+# `audit` proves no host secrets reached the agent env.
+#
 # Usage:
 #   wtx up       ensure this worktree's sandbox exists + postgres runs (idempotent)
 #   wtx enter    run an interactive shell inside the sandbox (prompt: wtx❯)
 #   wtx check    run `mise run check` inside the sandbox image (pre-merge gate)
 #   wtx down     delete this worktree's sandbox (idempotent)
 #   wtx status   report sandbox/image/postgres state for this worktree
+#   wtx audit    run the credential audit inside the sandbox
 #   wtx doctor   reap sandboxes whose worktree is gone; clear stale info files
 #
 # Per-sandbox services (issue #75): `up` and `enter` also start postgres
@@ -27,6 +34,15 @@
 #                        falling back to the nearest tagged ancestor)
 #   WTX_WORKTREES_ROOT   worktrees root for `doctor` (default:
 #                        ~/.local/share/worktrees)
+#   WTX_POLICY           policy template override (default: the
+#                        sandbox/policy.yaml in this script's checkout)
+#   WTX_CPU / WTX_MEMORY CPU / memory caps passed to `sandbox create`
+#                        (defaults: 4 / 8Gi; empty disables the cap)
+#   WTX_NO_INFERENCE     set to 1 to skip injecting gateway-routed
+#                        inference env in `enter`
+#   WTX_PASS_ENV         comma-separated env var names to pass through to
+#                        `enter` (per-sandbox credential fallback — keys
+#                        land in agent env; documented residual risk)
 #
 # Requires: git, openshell, podman (image lookup only), python3 (doctor).
 set -euo pipefail
@@ -45,9 +61,19 @@ HERDR_SOCK="${HERDR_SOCKET_PATH:-$HOME/.config/herdr/herdr.sock}"
 # runs create_dir_all on every read_write path — a socket file there aborts
 # the sandbox with "File exists (os error 17)", found live in #75). The dir
 # rule covers the socket and survives herdr recreating it.
-HERDR_SOCK_DIR="$(dirname "$HERDR_SOCK")"
 WORKTREES_ROOT="${WTX_WORKTREES_ROOT:-$HOME/.local/share/worktrees}"
 INFO_FILE=".sandbox-info"
+DEFAULT_CPU="4"
+DEFAULT_MEMORY="8Gi"
+# The herdr socket is mounted at this FIXED container path (see mounts_json):
+# its host path is under /var/home/<user>, which crashes provisioning when a
+# policy is present (v0.0.115, EEXIST), and /tmp/herdr keeps the Landlock
+# story trivial (/tmp is whitelisted wholesale).
+HERDR_SOCK_IN="/tmp/herdr/herdr.sock"
+# Placeholder for gateway-routed inference: the network proxy strips it and
+# injects the real provider key host-side. Any non-empty value works; this
+# one is distinctive so the credential audit can allowlist it exactly.
+INFERENCE_PLACEHOLDER="wtx-gateway-placeholder"
 
 # Worktree context, set by resolve_context.
 WT_ROOT="" WT_SLUG="" REPO_NAME="" GITDIR="" SBX_NAME="" SBX_CANDIDATE=""
@@ -61,7 +87,9 @@ die() {
 }
 
 info() {
-	printf 'wtx: %s\n' "$*"
+	# stderr: callers sometimes consume our stdout (mapfile < <(...));
+	# diagnostics must never multiplex into data streams.
+	printf 'wtx: %s\n' "$*" >&2
 }
 
 need() {
@@ -154,18 +182,25 @@ image_tag_for_head() {
 }
 
 json_escape_check() {
-	# Mount paths go into a JSON string; refuse the escape-worthy ones.
+	# Mount paths go into a JSON string and policy paths through sed
+	# substitution; refuse the escape-worthy ones.
 	local p
+	local bad_re="[\"'&@|\\]"
 	for p in "$@"; do
-		if [[ "$p" == *[\"\\]* || "$p" == *"'"* ]]; then
+		if [[ "$p" =~ $bad_re ]]; then
 			die "unsupported character in path: $p"
 		fi
 	done
 }
 
 mounts_json() {
-	# Same-path bind mounts: identical absolute path on host and in the
-	# sandbox, so --workdir and HERDR_SOCKET_PATH need no translation.
+	# Worktree and gitdir mount same-path (identical absolute path on host
+	# and in the sandbox, so --workdir needs no translation); the herdr
+	# socket is RETARGETED to /tmp/herdr/herdr.sock: mounting it at its
+	# host path (under /var/home/<user>) crashes sandbox provisioning when
+	# a policy is present (EEXIST, v0.0.115), and /tmp is already
+	# Landlock-whitelisted wholesale. `agent_env_args` points
+	# HERDR_SOCKET_PATH at the same container path.
 	# selinux_label=shared (podman `z`): Bluefin runs SELinux enforcing and
 	# these host paths carry no container label — without the relabel every
 	# in-sandbox write into them dies with EACCES (verified live, #75).
@@ -175,37 +210,91 @@ mounts_json() {
 	printf '{"podman":{"mounts":['
 	printf '{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$WT_ROOT" "$WT_ROOT"
 	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$GITDIR" "$GITDIR"
-	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$HERDR_SOCK" "$HERDR_SOCK"
+	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$HERDR_SOCK" "$HERDR_SOCK_IN"
 	printf ']}}'
 }
 
-write_policy() {
-	# Landlock filesystem policy, mirroring the openshell default read_only
-	# baseline plus what this toolchain needs: the container-local image home
-	# must be writable (pi sessions, agent state) and the mount targets must
-	# be listed or deny-by-default Landlock blocks them.
-	cat >"$1" <<EOF
-version: 1
-filesystem_policy:
-  include_workdir: true
-  read_only:
-    - /usr
-    - /lib
-    - /proc
-    - /dev/urandom
-    - /app
-    - /etc
-    - /var/log
-  read_write:
-    - /tmp
-    - /dev/null
-    - ${IMAGE_USER_HOME}
-    - ${WT_ROOT}
-    - ${GITDIR}
-    - ${HERDR_SOCK_DIR}
-landlock:
-  compatibility: best_effort
-EOF
+policy_template_path() {
+	# The policy template ships next to this script in the repo
+	# (sandbox/policy.yaml; this file lives at sandbox/.local/bin/wtx).
+	# Resolving via the script's real path means a stowed wtx symlink always
+	# reads its own checkout's template. WTX_POLICY overrides (worktrees
+	# testing an unmerged template).
+	if [[ -n "${WTX_POLICY:-}" ]]; then
+		printf '%s\n' "$WTX_POLICY"
+		return
+	fi
+	local self
+	self="$(readlink -f "${BASH_SOURCE[0]}")"
+	printf '%s/policy.yaml\n' "$(dirname "$(dirname "$(dirname "$self")")")"
+}
+
+render_policy() {
+	# Render the policy template for this worktree. Marker style (@NAME@)
+	# keeps every legal mount/policy path substitutable with sed; the path
+	# charset is enforced by json_escape_check.
+	local template rendered
+	template="$(policy_template_path)"
+	[[ -f "$template" ]] || die "policy template not found: $template (WTX_POLICY overrides)"
+	json_escape_check "$WT_ROOT" "$GITDIR" "$HERDR_SOCK" "$IMAGE_USER_HOME"
+	rendered="$(sed \
+		-e "s|@IMAGE_USER_HOME@|$IMAGE_USER_HOME|g" \
+		-e "s|@WT_ROOT@|$WT_ROOT|g" \
+		-e "s|@GITDIR@|$GITDIR|g" \
+		-e "s|@HERDR_SOCK@|$HERDR_SOCK|g" \
+		"$template")"
+	# Markers also appear in template COMMENTS as documentation; only a
+	# marker outside comments means the substitution missed a value line.
+	local stripped
+	stripped="$(grep -v '^[[:space:]]*#' <<<"$rendered")"
+	if grep -q '@[A-Z_]*@' <<<"$stripped"; then
+		die "unsubstituted marker left in rendered policy — template/marker mismatch"
+	fi
+	printf '%s\n' "$rendered"
+}
+
+agent_env_args() {
+	# The env every in-sandbox agent session gets — shared by `enter` and
+	# `audit` so the audit scans exactly the env agents run with (a raw
+	# exec would skip the injection and hollow out the proof). Prints
+	# NUL-delimited exec arguments (env VALUES may contain anything;
+	# line-splitting would corrupt the array); callers read it with
+	# `mapfile -d '' -t`.
+	printf -- '--env\0HOME=%s\0' "$IMAGE_USER_HOME"
+	printf -- '--env\0TERM=%s\0' "${TERM:-xterm-256color}"
+	printf -- '--env\0HERDR_SOCKET_PATH=%s\0' "$HERDR_SOCK_IN"
+	if [[ "${WTX_NO_INFERENCE:-}" != "1" ]]; then
+		# Gateway-routed inference: the proxy strips the placeholder and
+		# injects the real provider key host-side — real keys never enter
+		# agent env. Opt out with WTX_NO_INFERENCE=1 (or use the per-sandbox
+		# key fallback via WTX_PASS_ENV; residual risk — sandbox/README.md).
+		printf -- '--env\0ANTHROPIC_BASE_URL=%s\0' "https://inference.local"
+		printf -- '--env\0ANTHROPIC_API_KEY=%s\0' "$INFERENCE_PLACEHOLDER"
+	fi
+	if [[ -n "${WTX_PASS_ENV:-}" ]]; then
+		local env_name
+		IFS=',' read -r -a pass_env <<<"${WTX_PASS_ENV}"
+		for env_name in "${pass_env[@]}"; do
+			[[ -n "$env_name" ]] || continue
+			if [[ -n "${!env_name:-}" ]]; then
+				printf -- '--env\0%s=%s\0' "$env_name" "${!env_name}"
+			else
+				info "warning: WTX_PASS_ENV asks for $env_name but it is not set host-side — skipping"
+			fi
+		done
+	fi
+}
+
+policy_fresh_check() {
+	# Nudge when a running sandbox predates the #76 egress policy: its
+	# create-time policy carries no network_policies and hardening cannot
+	# be added to a live sandbox (locked at create).
+	local pol_json
+	if pol_json="$(openshell policy get "$1" -o json 2>/dev/null)"; then
+		if ! grep -q '"network_policies"' <<<"$pol_json"; then
+			info "note: sandbox '$1' predates the egress allowlist — 'wtx down' && 'wtx up' to harden it"
+		fi
+	fi
 }
 
 label_of() {
@@ -331,6 +420,7 @@ cmd_up() {
 	tag="$(image_tag_for_head)"
 	use_recorded_name || resolve_name_collision
 	if sandbox_exists "$SBX_NAME"; then
+		policy_fresh_check "$SBX_NAME"
 		if drift_check "$tag"; then
 			info "sandbox '$SBX_NAME' already up (image sandbox:$tag)"
 		fi
@@ -341,11 +431,18 @@ cmd_up() {
 	if [[ ! -e "$HERDR_SOCK" ]]; then
 		info "warning: herdr socket not found at $HERDR_SOCK (mounting it anyway)"
 	fi
+	local rendered
+	rendered="$(render_policy)"
 	local policy create_out rc
 	policy="$(mktemp "${TMPDIR:-/tmp}/wtx-policy.XXXXXX")"
 	create_out="$(mktemp "${TMPDIR:-/tmp}/wtx-create.XXXXXX")"
-	write_policy "$policy"
-	json_escape_check "$WT_ROOT" "$GITDIR" "$HERDR_SOCK"
+	printf '%s\n' "$rendered" >"$policy"
+	# Paths were charset-checked inside render_policy before substitution.
+	local -a cpu_args=() memory_args=()
+	# ${VAR-def}: only UNSET falls back to the default; an explicit empty
+	# value genuinely disables the cap (documented).
+	[[ -n "${WTX_CPU-$DEFAULT_CPU}" ]] && cpu_args=(--cpu "${WTX_CPU-$DEFAULT_CPU}")
+	[[ -n "${WTX_MEMORY-$DEFAULT_MEMORY}" ]] && memory_args=(--memory "${WTX_MEMORY-$DEFAULT_MEMORY}")
 	set +e
 	openshell sandbox create \
 		--name "$SBX_NAME" \
@@ -354,6 +451,8 @@ cmd_up() {
 		--label "wtx.repo=$REPO_NAME" \
 		--label "wtx.branch=$WT_SLUG" \
 		--label "wtx.image=$tag" \
+		"${cpu_args[@]}" \
+		"${memory_args[@]}" \
 		--driver-config-json "$(mounts_json)" \
 		--policy "$policy" \
 		--detach --keep -- sleep infinity >"$create_out" 2>&1
@@ -384,13 +483,9 @@ cmd_enter() {
 		die "worktree not visible in sandbox — bind mounts not deployed (see sandbox/README.md) or sandbox stopped ('openshell sandbox start $SBX_NAME')"
 	fi
 	ensure_postgres || info "warning: postgres not up — run 'wtx up' and re-enter"
-	local -a env_args=(
-		--env "HOME=${IMAGE_USER_HOME}"
-		--env "PS1=wtx❯ "
-		--env "TERM=${TERM:-xterm-256color}"
-		--env "HERDR_SOCKET_PATH=${HERDR_SOCK}"
-		--env "DATABASE_URL=${DATABASE_URL}"
-	)
+	local -a env_args
+	mapfile -d '' -t env_args < <(agent_env_args)
+	env_args+=(--env "PS1=wtx❯ " --env "DATABASE_URL=${DATABASE_URL}")
 	if [[ "${HERDR_ENV:-}" == "1" ]]; then
 		env_args+=(--env "HERDR_ENV=1")
 	fi
@@ -425,6 +520,34 @@ cmd_check() {
 	ensure_postgres || die "postgres not available in sandbox '$SBX_NAME' — tests may need it; check 'wtx status'"
 	info "running 'mise run check' inside sandbox:$SBX_NAME (DATABASE_URL=${DATABASE_URL})"
 	sbx_exec --workdir "$WT_ROOT" -- bash --norc -c 'mise run check'
+}
+
+cmd_audit() {
+	# Run the in-sandbox credential audit with the agent env (agent_env_args,
+	# shared with `enter`) — the audit must scan exactly what pi runs with.
+	# Prefers the image-baked binary; the worktree fallback is REFUSED by
+	# default because it is agent-writable (a tampered audit could
+	# self-certify) — WTX_AUDIT_TRUST_WORKTREE=1 forces it. WTX_PASS_ENV
+	# names are allowlisted so the documented per-sandbox key fallback
+	# doesn't fail the audit while its residual risk is reported.
+	resolve_context || die "not inside a linked wt worktree"
+	use_recorded_name || true
+	sandbox_exists "$SBX_NAME" || die "no sandbox for this worktree — run 'wtx up' first"
+	local remote
+	if openshell sandbox exec -n "$SBX_NAME" -- test -x /usr/local/bin/credential-audit 2>/dev/null; then
+		remote="/usr/local/bin/credential-audit"
+	elif [[ -f "$WT_ROOT/sandbox/credential-audit.sh" ]]; then
+		[[ "${WTX_AUDIT_TRUST_WORKTREE:-}" == "1" ]] ||
+			die "image lacks credential-audit — refusing the agent-writable worktree copy (WTX_AUDIT_TRUST_WORKTREE=1 forces; or rebuild: sandbox/build.sh)"
+		remote="$WT_ROOT/sandbox/credential-audit.sh"
+	else
+		die "credential-audit not found in sandbox or worktree — rebuild the image (sandbox/build.sh)"
+	fi
+	local -a env_args audit_args
+	mapfile -d '' -t env_args < <(agent_env_args)
+	audit_args=("$remote" --host-home "$HOME" --worktree "$WT_ROOT" --socket "$HERDR_SOCK_IN" --placeholder "$INFERENCE_PLACEHOLDER")
+	[[ -n "${WTX_PASS_ENV:-}" ]] && audit_args+=(--allow "$WTX_PASS_ENV")
+	exec openshell sandbox exec -n "$SBX_NAME" "${env_args[@]}" -- "${audit_args[@]}"
 }
 
 cmd_down() {
@@ -530,11 +653,18 @@ commands:
   down     delete this worktree's sandbox (idempotent; PGDATA in .data/ stays
            until the worktree is removed)
   status   report sandbox/image/postgres state for this worktree
+  audit    run the credential audit inside the sandbox (issue #76)
   doctor   reap sandboxes whose worktree is gone; clear stale .sandbox-info
 
 env:
   WTX_IMAGE            image tag override (default: sandbox:<sha>, ancestor walk)
   WTX_WORKTREES_ROOT   worktrees root for doctor (default ~/.local/share/worktrees)
+  WTX_POLICY           policy template override (default: sandbox/policy.yaml
+                       in this script's checkout)
+  WTX_CPU / WTX_MEMORY resource caps (default: 4 / 8Gi; empty = no cap)
+  WTX_NO_INFERENCE     1 = skip gateway-routed inference env in enter
+  WTX_PASS_ENV         comma-separated env vars passed into enter (credential
+                       fallback; keys land in agent env — residual risk)
 EOF
 }
 
@@ -563,6 +693,10 @@ main() {
 	status)
 		shift
 		cmd_status "$@"
+		;;
+	audit)
+		shift
+		cmd_audit "$@"
 		;;
 	doctor)
 		shift

@@ -39,6 +39,10 @@ check "node" node --version
 check "python" python --version
 check "shellcheck (mise)" mise exec -- shellcheck --version
 
+# Credential audit binary (issue #76) — presence only; the checks need a
+# real sandbox (Landlock, mounts) and would false-FAIL at build time.
+check "credential-audit" credential-audit --version
+
 # Pi extension unit tests (integration tests excluded, same as CI).
 echo "== pi extensions (bun test) =="
 cd "${HOME:?}/dotfiles/pi/.pi/agent/extensions" || fail "extensions dir missing"

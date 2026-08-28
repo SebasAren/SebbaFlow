@@ -1,0 +1,114 @@
+# OpenShell sandbox policy template — rendered per-worktree by `wtx up`
+# (issue #76) and passed to `openshell sandbox create --policy` AT CREATE.
+# Landlock is locked at creation (`policy set` does not re-apply it on a
+# live sandbox — #74), so the policy belongs here, not in runtime updates.
+#
+# Substitution markers (@NAME@) are filled by wtx from the worktree context:
+#   @IMAGE_USER_HOME@  container-local image home (pi sessions, agent state)
+#   @WT_ROOT@          this worktree (RW by design — agents work here)
+#   @GITDIR@           main repo's .git gitdir (linked worktrees need it)
+# The herdr socket needs no marker: it mounts at the fixed /tmp/herdr path.
+# Paths never contain quote/backslash/pipe/ampersand — wtx refuses them.
+#
+# Egress model: default-deny. Every outbound connection except
+# `inference.local` (hardcoded-exempt in the proxy, gateway-routed) must
+# match one endpoint below AND the calling binary must match the entry's
+# `binaries` list; anything else is 403'd by the network proxy. Endpoints
+# are deliberately L4 (no `protocol:`): host:port is the security boundary,
+# and skipping TLS termination avoids the proxy's MITM/webpki failure modes
+# (upstream #813). Entries carry globs, not exact Cellar paths, so tool
+# upgrades don't orphan the allowlist.
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /app
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+    - "@IMAGE_USER_HOME@"
+    - "@WT_ROOT@"
+    - "@GITDIR@"
+# The herdr socket needs NO explicit entry: it mounts at /tmp/herdr/herdr.sock
+# (wtx) and /tmp is whitelisted wholesale. NOTE: even so, v0.0.115 cannot
+# grant a Landlock rule on a SOCKET file (open → ENXIO → skipped best-effort),
+# so in-sandbox connects to the mounted socket are denied (EACCES) — tracked
+# in sandbox/README.md as a known upstream limitation.
+landlock:
+  compatibility: best_effort
+
+network_policies:
+  # Model provider fallback (z.ai). Primary path is gateway-routed
+  # inference (inference.local — exempt from this policy, real keys never
+  # enter the sandbox); this entry only serves the documented per-sandbox
+  # --env-key fallback for OpenAI-protocol clients (residual risk, README).
+  model-provider:
+    # Binary allowlist shared by every egress entry below (YAML anchor):
+    # matched against /proc/<pid>/exe and ancestors, glob via glob.match
+    # with "/" delimiters. Everything else — including downloaded/fetched
+    # payloads — is denied egress even to allowlisted hosts. In-sandbox
+    # binaries are agent-controlled, so this list is defense-in-depth
+    # (confused-deputy), not a containment boundary; the endpoint lists
+    # below are the boundary.
+    binaries: &shared-binaries
+      - path: /home/linuxbrew/.linuxbrew/** # Homebrew CLIs (curl, gh, git, …)
+      - path: /home/linuxbrew/.local/bin/** # stowed repo scripts
+      - path: /home/linuxbrew/.local/share/mise/installs/** # mise runtimes (node, bun, python, uv, pi, …)
+      - path: /usr/bin/**
+      - path: /bin/**
+      - path: /usr/local/bin/**
+    # NOTE: deliberately NOT /opt/openshell/bin/** — binary rules also match
+    # process ANCESTORS, and every exec's chain contains the supervisor
+    # binary; allowlisting it would grant egress to anything exec'd (proven
+    # live: a copied curl in /tmp got through via that ancestor match).
+    endpoints:
+      - host: api.z.ai
+        port: 443
+
+  # Package registries needed at RUNTIME (agents bump pins → mise/bun/pip
+  # fetch). The image bakes current pins (#73); these only serve updates.
+  package-registries:
+    binaries: *shared-binaries
+    endpoints:
+      - host: registry.npmjs.org
+        port: 443
+      - host: pypi.org
+        port: 443
+      - host: files.pythonhosted.org
+        port: 443
+      - host: nodejs.org
+        port: 443
+      - host: python.org
+        port: 443
+
+  # GitHub: release tarballs + API resolution for `mise install` after pin
+  # bumps, and git fetch over HTTPS. Merge/push stays host-side by policy —
+  # git-upload-pack POSTs over this entry are technically possible; git
+  # identity is not provisioned in-sandbox (no credentials → no push).
+  github:
+    binaries: *shared-binaries
+    endpoints:
+      - host: github.com
+        port: 443
+      - host: api.github.com
+        port: 443
+      - host: objects.githubusercontent.com
+        port: 443
+      - host: codeload.github.com
+        port: 443
+
+# Deliberately NOT allowlisted (widen on concrete failure only):
+#   - ghcr.io / formulae.brew.sh — runtime `brew install` (image owns the
+#     toolchain; host-side pulls are unaffected)
+#   - port 80 (cleartext) anywhere
+#   - apt/ESM hosts — /usr is Landlock-RO and the sandbox has no root
+#   - everything else: deny-by-default
+# Likely first widening: raw.githubusercontent.com (mise plugin backends;
+# a missing entry here shows up as a flaky `mise install`, not a clear 403).

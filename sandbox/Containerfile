@@ -85,6 +85,12 @@ RUN curl -fsSL https://mise.run | MISE_VERSION=v2026.8.14 sh \
 # Bake extension dependencies so the image works offline.
 RUN cd dotfiles/pi/.pi/agent/extensions && bun install --frozen-lockfile
 
+# Credential audit (issue #76): baked so every sandbox has it on PATH
+# regardless of which repo the worktree holds. Source of truth is the repo
+# file; `wtx audit` prefers this copy. Keeping the COPY late means audit
+# tweaks don't invalidate the toolchain layers above.
+COPY --chown=root:root sandbox/credential-audit.sh /usr/local/bin/credential-audit
+
 # Smoke test — fails the build if the toolchain is broken (see smoke-test.sh).
 RUN bash dotfiles/sandbox/smoke-test.sh
 

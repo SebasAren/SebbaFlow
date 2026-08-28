@@ -15,4 +15,6 @@
 --ignore=^build\.sh$
 --ignore=^smoke-test\.sh$
 --ignore=^mise\.global\.toml$
+--ignore=^policy\.yaml$
+--ignore=^credential-audit\.sh$
 --ignore=dataview-queries.md
