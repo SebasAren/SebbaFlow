@@ -14,6 +14,7 @@ pitchfork list                          # all daemons, status, health
 pitchfork logs <daemon> --raw -n 50     # latest output
 pitchfork logs --raw -n 30              # all logs at once
 pitchfork logs <daemon> --raw --since 5min  # recent only (avoid stale logs)
+pitchfork logs <daemon> --raw --grep FAIL   # jump straight to failure lines
 pitchfork start --all                   # start all
 pitchfork restart <daemon>              # restart stale daemon
 pitchfork stop --all                    # stop all
