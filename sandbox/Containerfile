@@ -18,12 +18,15 @@ ENV HOMEBREW_NO_AUTO_UPDATE=1 \
 # the same way). git and the C toolchain are already in the base image.
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ripgrep iproute2 \
+ && apt-get install -y --no-install-recommends ripgrep iproute2 libxml2 \
  && rm -rf /var/lib/apt/lists/*
 # iproute2 (the `ip` helper) is required to run this image under OpenShell:
 # the sandbox runtime builds a network namespace and probes the well-known
 # `ip` paths; without it every create dies in provisioning with
 # "trusted ip helper not found" (found by the wtx spike, issue #74).
+# libxml2 is a runtime dependency of the postgres binaries that the
+# postgres-binary mise plugin ships (per-sandbox services, issue #75); the
+# theseus-rs builds link it dynamically and the base image does not carry it.
 
 USER linuxbrew
 WORKDIR /home/linuxbrew
@@ -66,10 +69,17 @@ RUN cd dotfiles \
 # builder IP exhausts the unauthenticated GitHub API budget (rate limit);
 # artifacts still come from the pinned repos over HTTPS, and the host
 # verifies the same pins on every install.
+#
+# `mise install` runs from the repo dir on purpose: project configs are
+# discovered from CWD, so running it from $HOME would bake ONLY the global
+# pins and silently skip every repo mise.toml tool (python, node, shellcheck,
+# …). Found live in #75: `wtx check` then failed offline trying to install
+# them at run time. The smoke test guards this with node/python checks.
 ENV PATH="/home/linuxbrew/.local/share/mise/shims:/home/linuxbrew/.local/bin:${PATH}"
 RUN curl -fsSL https://mise.run | MISE_VERSION=v2026.8.14 sh \
  && mise trust /home/linuxbrew/dotfiles/mise.toml \
  && mise trust /home/linuxbrew/.config/mise/config.toml \
+ && cd /home/linuxbrew/dotfiles \
  && MISE_GITHUB_ATTESTATIONS=false mise install
 
 # Bake extension dependencies so the image works offline.

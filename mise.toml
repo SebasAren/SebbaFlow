@@ -1,20 +1,24 @@
 [tools]
+# Exact pins, not "latest": the sandbox image must resolve the same versions
+# offline (there is no network at `wtx check` time — the egress proxy 403s
+# non-inference hosts), and repo-pinned versions keep host and image in lockstep
+# (issue #75). Bump these deliberately; `mise ls` shows what the host resolved.
 # Python tooling
 python = "3.14.7"
-"aqua:astral-sh/ruff" = "latest"
+"aqua:astral-sh/ruff" = "0.16.4"
 
 # Lua tooling (interpreter + luacheck via Homebrew — bottled, no compiler needed)
-"aqua:JohnnyMorganz/StyLua" = "latest"
-lua-language-server = "latest"
+"aqua:JohnnyMorganz/StyLua" = "2.5.2"
+lua-language-server = "3.19.1"
 
 # Shell linting
-"aqua:koalaman/shellcheck" = "latest"
-"aqua:mvdan/sh" = "latest"
+"aqua:koalaman/shellcheck" = "0.11.0"
+"aqua:mvdan/sh" = "3.13.1"
 
 # TOML formatting
-taplo = "latest"
+taplo = "0.10.0"
 
 # TypeScript/Node (for tsc, bun, prettier)
-bun = "latest"
-node = "latest"
-prettier = "latest"
+bun = "1.4.0"
+node = "26.7.0"
+prettier = "3.9.6"

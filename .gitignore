@@ -23,9 +23,19 @@ pi/.pi/agent/sessions/
 pi/.local/bin/.test-plans/
 # wtx per-worktree sandbox record (issue #74)
 .sandbox-info
+# Claude local settings: the host ignores these via its global git excludes
+# (~/.config/git/ignore), but the sandbox image has no global excludes — the
+# repo must ignore them itself or in-image checks see a different file set
+# than the host (found via wtx check, issue #75)
+**/.claude/settings.local.json
 pi/.pi/agent/settings.json
 pi/.pi/agent/auth.json
 pi/.pi/agent/trust.json
+
+# Per-worktree sandbox service state (issue #75): PGDATA for the in-sandbox
+# postgres. Lives only inside a worktree, never copied between worktrees
+# (excluded via [step.copy-ignored] in .config/wt.toml), dies with it.
+.data/
 
 # Tmux runtime artifacts
 tmux-client-*.log

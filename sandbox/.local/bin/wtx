@@ -8,11 +8,19 @@
 # `wtx enter` (full lifecycle: sandbox/README.md).
 #
 # Usage:
-#   wtx up       ensure this worktree's sandbox exists (idempotent)
+#   wtx up       ensure this worktree's sandbox exists + postgres runs (idempotent)
 #   wtx enter    run an interactive shell inside the sandbox (prompt: wtx❯)
+#   wtx check    run `mise run check` inside the sandbox image (pre-merge gate)
 #   wtx down     delete this worktree's sandbox (idempotent)
-#   wtx status   report sandbox/image state for this worktree
+#   wtx status   report sandbox/image/postgres state for this worktree
 #   wtx doctor   reap sandboxes whose worktree is gone; clear stale info files
+#
+# Per-sandbox services (issue #75): `up` and `enter` also start postgres
+# inside the sandbox (uniform localhost:5432 — each sandbox has its own
+# network namespace, so concurrent worktrees never collide). PGDATA lives
+# under <worktree>/.data/pg: it survives sandbox restarts and dies with the
+# worktree. The postmaster is daemonized via pg_ctl, so it outlives the exec
+# session that started it. `check` gates merges on in-image verification.
 #
 # Environment:
 #   WTX_IMAGE            image tag override (default: sandbox:<HEAD-sha>,
@@ -25,7 +33,19 @@ set -euo pipefail
 
 IMAGE_REPO="localhost/sandbox"
 IMAGE_USER_HOME="/home/linuxbrew"
+PG_PORT=5432
+# Uniform floor for anything running inside a sandbox: the same string in
+# every worktree, no per-worktree ports. `postgres` role + db exist on every
+# fresh initdb; projects override DATABASE_URL via their own mise.toml [env].
+DATABASE_URL="postgresql://postgres@localhost:${PG_PORT}/postgres"
+PGDATA_REL=".data/pg"
 HERDR_SOCK="${HERDR_SOCKET_PATH:-$HOME/.config/herdr/herdr.sock}"
+# Policy grants target the socket's PARENT directory, never the socket file
+# itself: a file as a read_write leaf kills sandbox provisioning (the runtime
+# runs create_dir_all on every read_write path — a socket file there aborts
+# the sandbox with "File exists (os error 17)", found live in #75). The dir
+# rule covers the socket and survives herdr recreating it.
+HERDR_SOCK_DIR="$(dirname "$HERDR_SOCK")"
 WORKTREES_ROOT="${WTX_WORKTREES_ROOT:-$HOME/.local/share/worktrees}"
 INFO_FILE=".sandbox-info"
 
@@ -146,10 +166,16 @@ json_escape_check() {
 mounts_json() {
 	# Same-path bind mounts: identical absolute path on host and in the
 	# sandbox, so --workdir and HERDR_SOCKET_PATH need no translation.
+	# selinux_label=shared (podman `z`): Bluefin runs SELinux enforcing and
+	# these host paths carry no container label — without the relabel every
+	# in-sandbox write into them dies with EACCES (verified live, #75).
+	# `shared`, not `private`: the gitdir and herdr socket are mounted by
+	# every worktree sandbox, and a private relabel would strip the previous
+	# sandbox's access on each relabel.
 	printf '{"podman":{"mounts":['
-	printf '{"type":"bind","source":"%s","target":"%s","read_only":false}' "$WT_ROOT" "$WT_ROOT"
-	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false}' "$GITDIR" "$GITDIR"
-	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false}' "$HERDR_SOCK" "$HERDR_SOCK"
+	printf '{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$WT_ROOT" "$WT_ROOT"
+	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$GITDIR" "$GITDIR"
+	printf ',{"type":"bind","source":"%s","target":"%s","read_only":false,"selinux_label":"shared"}' "$HERDR_SOCK" "$HERDR_SOCK"
 	printf ']}}'
 }
 
@@ -176,7 +202,7 @@ filesystem_policy:
     - ${IMAGE_USER_HOME}
     - ${WT_ROOT}
     - ${GITDIR}
-    - ${HERDR_SOCK}
+    - ${HERDR_SOCK_DIR}
 landlock:
   compatibility: best_effort
 EOF
@@ -184,6 +210,67 @@ EOF
 
 label_of() {
 	sandbox_get "$1" | grep -o "\"$2\": \"[^\"]*\"" | head -1 | cut -d'"' -f4
+}
+
+sbx_exec() {
+	# Exec inside this worktree's sandbox with the env the toolchain needs:
+	# HOME must point at the image home (the runtime injects HOME=/sandbox,
+	# which breaks mise's global-config lookup and thus every shim), and
+	# DATABASE_URL is the uniform in-sandbox service floor.
+	openshell sandbox exec -n "$SBX_NAME" \
+		--env "HOME=${IMAGE_USER_HOME}" \
+		--env "DATABASE_URL=${DATABASE_URL}" \
+		"$@"
+}
+
+ensure_postgres() {
+	# Start (or reuse) postgres inside the sandbox, PGDATA under the worktree
+	# so data survives sandbox restarts and dies with the worktree. The
+	# postmaster is daemonized by pg_ctl (new session), so it survives this
+	# exec session closing — that is what makes `wtx up` a valid lifecycle
+	# owner (decided over a pitchfork-in-sandbox: no extra supervisor daemon,
+	# config file, or per-sandbox state home for a service that just runs).
+	[[ -n "$SBX_NAME" ]] || return 1
+	local script
+	script=$(
+		cat <<'SCRIPT'
+set -euo pipefail
+pgdata="$WTX_PGDATA"
+logdir="$(dirname "$pgdata")"
+mkdir -p "$logdir"
+if [ ! -s "$pgdata/PG_VERSION" ]; then
+	echo "wtx: initializing PGDATA at $pgdata (postgres 15, trust auth on localhost)"
+	initdb -D "$pgdata" -U postgres -E utf8 --no-instructions >/dev/null
+fi
+# Already accepting connections (running, or mid-crash-recovery from a hard
+# sandbox kill)? pg_isready: 0 = accepting, 1 = starting up (rejecting),
+# 2 = nothing listening. Only wait in the recovering case.
+up=0
+for _ in {1..20}; do
+	rc=0
+	pg_isready -U postgres -h localhost -p "$WTX_PG_PORT" -t 1 >/dev/null 2>&1 || rc=$?
+	if [ "$rc" -eq 0 ]; then up=1; break; fi
+	if [ "$rc" -eq 2 ]; then break; fi
+	sleep 0.5
+done
+if [ "$up" -eq 0 ]; then
+	if ! pg_ctl -D "$pgdata" -l "$logdir/postgres.log" -w start; then
+		if pg_ctl status -D "$pgdata" >/dev/null 2>&1; then
+			echo "wtx: pg_ctl start failed but a server appears to be running" >&2
+			exit 1
+		fi
+		rm -f "$pgdata/postmaster.pid" # stale after a hard sandbox kill
+		pg_ctl -D "$pgdata" -l "$logdir/postgres.log" -w start
+	fi
+fi
+pg_isready -U postgres -h localhost -p "$WTX_PG_PORT" -t 5 >/dev/null
+echo "wtx: postgres ready — $WTX_PG_URL (PGDATA $pgdata)"
+SCRIPT
+	)
+	sbx_exec --env "WTX_PGDATA=${WT_ROOT}/${PGDATA_REL}" \
+		--env "WTX_PG_URL=${DATABASE_URL}" \
+		--env "WTX_PG_PORT=${PG_PORT}" \
+		-- bash --norc -c "$script"
 }
 
 label_image() {
@@ -247,6 +334,7 @@ cmd_up() {
 		if drift_check "$tag"; then
 			info "sandbox '$SBX_NAME' already up (image sandbox:$tag)"
 		fi
+		ensure_postgres || info "warning: postgres not up — 'wtx status' / rerun 'wtx up'"
 		return 0
 	fi
 	need podman
@@ -275,6 +363,7 @@ cmd_up() {
 		rm -f "$policy" "$create_out"
 		write_info_file "$tag"
 		info "sandbox '$SBX_NAME' up (image sandbox:$tag) — enter with: wtx enter"
+		ensure_postgres || info "warning: postgres not up — 'wtx status' / rerun 'wtx up'"
 		return 0
 	fi
 	if grep -q "enable_bind_mounts" "$create_out"; then
@@ -294,11 +383,13 @@ cmd_enter() {
 	if ! openshell sandbox exec -n "$SBX_NAME" -- test -d "$WT_ROOT" 2>/dev/null; then
 		die "worktree not visible in sandbox — bind mounts not deployed (see sandbox/README.md) or sandbox stopped ('openshell sandbox start $SBX_NAME')"
 	fi
+	ensure_postgres || info "warning: postgres not up — run 'wtx up' and re-enter"
 	local -a env_args=(
 		--env "HOME=${IMAGE_USER_HOME}"
 		--env "PS1=wtx❯ "
 		--env "TERM=${TERM:-xterm-256color}"
 		--env "HERDR_SOCKET_PATH=${HERDR_SOCK}"
+		--env "DATABASE_URL=${DATABASE_URL}"
 	)
 	if [[ "${HERDR_ENV:-}" == "1" ]]; then
 		env_args+=(--env "HERDR_ENV=1")
@@ -313,6 +404,27 @@ cmd_enter() {
 	# profile files, and PATH (mise shims) comes from the runtime env.
 	exec openshell sandbox exec --tty -n "$SBX_NAME" --workdir "$WT_ROOT" \
 		"${env_args[@]}" -- bash --norc -i
+}
+
+cmd_check() {
+	# Full verification INSIDE the same image the work ran in (issue #75):
+	# the host toolchain is not trusted for merge gating. Services stay up —
+	# teardown belongs to `wtx down`, which the wt pre-merge hook runs after
+	# this. The exec's exit code is `wtx check`'s exit code (set -e), which
+	# is what wt's hook gates the merge on.
+	resolve_context || die "not inside a linked wt worktree"
+	local tag
+	tag="$(image_tag_for_head)"
+	cmd_up
+	# The gate must not run in a drifted image: the worktree is bind-mounted,
+	# so a stale sandbox would check current code with old baked tools and
+	# fail offline in ways that never mention the drift.
+	if ! drift_check "$tag"; then
+		die "sandbox '$SBX_NAME' runs a different image — 'wtx down && wtx up' to switch, then re-check"
+	fi
+	ensure_postgres || die "postgres not available in sandbox '$SBX_NAME' — tests may need it; check 'wtx status'"
+	info "running 'mise run check' inside sandbox:$SBX_NAME (DATABASE_URL=${DATABASE_URL})"
+	sbx_exec --workdir "$WT_ROOT" -- bash --norc -c 'mise run check'
 }
 
 cmd_down() {
@@ -344,6 +456,11 @@ cmd_status() {
 	if sandbox_exists "$SBX_NAME"; then
 		openshell sandbox get "$SBX_NAME"
 		drift_check "$tag" || true
+		local pg="down (run 'wtx up')"
+		if sbx_exec -- bash --norc -c "pg_isready -q -U postgres -h localhost -p ${PG_PORT}" >/dev/null 2>&1; then
+			pg="ready on localhost:${PG_PORT} (PGDATA ${PGDATA_REL}, DATABASE_URL=${DATABASE_URL})"
+		fi
+		echo "postgres:   $pg"
 	elif [[ -f "$WT_ROOT/$INFO_FILE" ]]; then
 		info "sandbox '$SBX_NAME' not found — stale $INFO_FILE ('wtx down' clears it, 'wtx up' recreates)"
 	else
@@ -407,10 +524,12 @@ usage() {
 usage: wtx <command>
 
 commands:
-  up       ensure this worktree's sandbox exists (idempotent)
+  up       ensure this worktree's sandbox exists + postgres runs (idempotent)
   enter    run an interactive shell inside the sandbox (prompt: wtx❯)
-  down     delete this worktree's sandbox (idempotent)
-  status   report sandbox/image state for this worktree
+  check    run `mise run check` inside the sandbox image (pre-merge gate)
+  down     delete this worktree's sandbox (idempotent; PGDATA in .data/ stays
+           until the worktree is removed)
+  status   report sandbox/image/postgres state for this worktree
   doctor   reap sandboxes whose worktree is gone; clear stale .sandbox-info
 
 env:
@@ -432,6 +551,10 @@ main() {
 	enter)
 		shift
 		cmd_enter "$@"
+		;;
+	check)
+		shift
+		cmd_check "$@"
 		;;
 	down)
 		shift

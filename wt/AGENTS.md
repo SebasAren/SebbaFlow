@@ -35,15 +35,15 @@ Worktrees live under `~/.local/share/worktrees/<repo>/<branch>`, not inside the 
 
 Project hook config: `.config/wt.toml` in the repo root. All hook commands must be **pre-approved once** (`wt config approvals add --yes`, interactive) before they run non-interactively — approvals are stored in the global runtime `~/.config/worktrunk/approvals.toml`.
 
-| Lifecycle   | Command                                         |
-| ----------- | ----------------------------------------------- |
-| pre-start   | `mise trust`, `mise run setup`                  |
-| post-start  | `wt step copy-ignored`, `wtx up \|\| true`      |
-| post-switch | tmux rename-window (inline, no-op outside tmux) |
-| pre-commit  | `mise run pre-commit`                           |
-| pre-merge   | `mise run check`, `wtx down \|\| true`          |
+| Lifecycle   | Command                                              |
+| ----------- | ---------------------------------------------------- |
+| pre-start   | `mise trust`, `mise run setup`                       |
+| post-start  | `wt step copy-ignored`, `wtx up \|\| true`           |
+| post-switch | tmux rename-window (inline, no-op outside tmux)      |
+| pre-commit  | `mise run pre-commit`                                |
+| pre-merge   | `sandbox/.local/bin/wtx check`, `wtx down \|\| true` |
 
-`wtx` (sandbox lifecycle, issue #74) hooks are best-effort (`\|\| true`) — a sandbox failure must never block switching or merging. Both exact hook strings need pre-approval like every hook command. Lifecycle docs: `sandbox/README.md`.
+`wtx` (sandbox lifecycle, issue #74) hooks are best-effort (`\|\| true`) — a sandbox failure must never block switching or merging. The pre-merge check is the exception: it is the merge gate itself (in-image `mise run check`, issue #75) and must fail the merge when the sandbox cannot be reached. It invokes `sandbox/.local/bin/wtx` by repo-relative path (wt runs pre-merge hooks with cwd = worktree root), so the gate works from any checkout without a host-side wtx deploy. All exact hook strings need pre-approval before they run non-interactively: run `wt config approvals add --yes` (takes no positional argument — approve interactively, or `--all`); approvals live in the global runtime `~/.config/worktrunk/approvals.toml`. Lifecycle + service docs: `sandbox/README.md`.
 
 ## Postmortem: one-time `core.bare` corruption (mechanism removed upstream)
 

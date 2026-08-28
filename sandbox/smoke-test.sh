@@ -16,6 +16,12 @@ check() {
 	"$@" || fail "${name} failed"
 }
 
+# Anchor to the repo root regardless of caller cwd: at build time the RUN
+# layer starts in the image HOME, and repo mise.toml tools (node, python,
+# the aqua shellcheck) only resolve from a directory under the project config.
+# Repo tools must resolve here — wtx check runs offline and cannot install them.
+cd "$(dirname "$(readlink -f "$0")")/.."
+
 # Toolchain CLIs — mise shims first on PATH, then Homebrew.
 check "pi" pi --version
 check "mise" mise --version
@@ -25,6 +31,13 @@ check "shellcheck" shellcheck --version
 check "stylua" stylua --version
 check "ruff" ruff --version
 check "shfmt" shfmt --version
+check "psql" psql --version # postgres for per-sandbox services (issue #75)
+# Repo mise.toml tools (issue #75): these must be BAKED, not resolved at run
+# time — `wtx check` runs offline and cannot install or resolve versions.
+# They only exist when `mise install` ran from the repo dir (see Containerfile).
+check "node" node --version
+check "python" python --version
+check "shellcheck (mise)" mise exec -- shellcheck --version
 
 # Pi extension unit tests (integration tests excluded, same as CI).
 echo "== pi extensions (bun test) =="

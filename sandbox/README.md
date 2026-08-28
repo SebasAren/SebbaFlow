@@ -21,7 +21,7 @@ openshell/            # stowed: gateway systemd unit + gateway.toml (incl. drive
 
 The `openshell/` package (one level up) is stowed with `stow openshell` (unit + config land in `~/.config/systemd/user/` and `~/.config/openshell/` as symlinks). `stow sandbox` links only `.local/bin/wtx` — the `.stowrc` ignores the package's non-stowable files.
 
-Landed: `wtx` CLI (#74). Future: per-sandbox services (#75), `policy.toml` (#76).
+Landed: `wtx` CLI (#74), per-sandbox services + in-image pre-merge verification (#75). Future: policy allowlisting (#76).
 
 ## Toolchain image (issue #73)
 
@@ -43,15 +43,17 @@ The build context is a `git archive` tar — tracked files only. Everything sens
 
 ### Deliberate deviations from the host setup
 
-| Deviation                                                               | Why                                                                                                                                                                                       |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mise` stow package skipped; `sandbox/mise.global.toml` COPY'd instead  | The image must own its global pins (never read the host's), and stowing the package would collide with the COPY'd file at `~/.config/mise/config.toml`.                                   |
-| Flatpak entries stripped from the Brewfile                              | No flatpak daemon in a container.                                                                                                                                                         |
-| `ripgrep` installed via apt, not added to the Brewfile                  | Shell-out dependency of the extension tests (CI installs it the same way); the Brewfile stays the host's source of truth.                                                                 |
-| Explicit stow package list instead of `stow */`                         | `docs/`, `tests/`, `sandbox/`, `usage-dashboard/` are non-stow directories; the repo `.stowrc` is retargeted to the image `$HOME` (it hardcodes the host path).                           |
-| Base pinned to `ghcr.io/homebrew/brew:6.0.20`                           | Official Homebrew-on-Linux image (Ubuntu 24.04, glibc 2.39) — brew preinstalled, formula set frozen with the base. Bump the tag (manually or via renovate) to refresh.                    |
-| mise installer pinned (`MISE_VERSION=v2026.8.14`)                       | One less floating input — two builds of the same SHA diverge only when a pinned input bumps. Current stable — pinned-github resolution skips the releases API.                            |
-| GitHub attestation re-verification skipped at build-time `mise install` | The shared builder IP exhausts the unauthenticated GitHub API budget. Artifacts still come from pinned repos over HTTPS; the host re-verifies the same pins. CI-with-token can re-enable. |
+| Deviation                                                               | Why                                                                                                                                                                                          |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mise` stow package skipped; `sandbox/mise.global.toml` COPY'd instead  | The image must own its global pins (never read the host's), and stowing the package would collide with the COPY'd file at `~/.config/mise/config.toml`.                                      |
+| Flatpak entries stripped from the Brewfile                              | No flatpak daemon in a container.                                                                                                                                                            |
+| `ripgrep` installed via apt, not added to the Brewfile                  | Shell-out dependency of the extension tests (CI installs it the same way); the Brewfile stays the host's source of truth.                                                                    |
+| `libxml2` installed via apt                                             | Runtime dependency of the postgres binaries the postgres-binary plugin ships (#75); the theseus-rs builds link it dynamically, the host just happens to have it.                             |
+| `postgres-binary` mise plugin declared in `sandbox/mise.global.toml`    | Per-sandbox postgres (#75), pin matched to root-mono's db daemon (15.4.3). The plugin is not built into mise nor in its registry — declared at a pinned ref so `mise install` bootstraps it. |
+| Explicit stow package list instead of `stow */`                         | `docs/`, `tests/`, `sandbox/`, `usage-dashboard/` are non-stow directories; the repo `.stowrc` is retargeted to the image `$HOME` (it hardcodes the host path).                              |
+| Base pinned to `ghcr.io/homebrew/brew:6.0.20`                           | Official Homebrew-on-Linux image (Ubuntu 24.04, glibc 2.39) — brew preinstalled, formula set frozen with the base. Bump the tag (manually or via renovate) to refresh.                       |
+| mise installer pinned (`MISE_VERSION=v2026.8.14`)                       | One less floating input — two builds of the same SHA diverge only when a pinned input bumps. Current stable — pinned-github resolution skips the releases API.                               |
+| GitHub attestation re-verification skipped at build-time `mise install` | The shared builder IP exhausts the unauthenticated GitHub API budget. Artifacts still come from pinned repos over HTTPS; the host re-verifies the same pins. CI-with-token can re-enable.    |
 
 ### Drift warning: `mise.global.toml`
 
@@ -65,23 +67,44 @@ The build context is a `git archive` tar — tracked files only. Everything sens
 podman run --rm sandbox:<sha> bash /home/linuxbrew/dotfiles/sandbox/smoke-test.sh
 ```
 
-It verifies `pi`, `mise`, `luacheck`, `selene`, `shellcheck`, `stylua`, `ruff`, `shfmt` all report versions, then runs the pi extension unit tests (`bun test`, integration tests excluded — same as CI).
+It verifies `pi`, `mise`, `luacheck`, `selene`, `shellcheck`, `stylua`, `ruff`, `shfmt`, `psql`, `node`, `python` all report versions (the last three guard the repo mise.toml tools — they only exist when `mise install` ran from the repo dir), then runs the pi extension unit tests (`bun test`, integration tests excluded — same as CI).
 
-Latest verified build: all version checks pass, extension suite **529 tests / 41 files, 0 failures**; `pi` resolves via the mise shim, `luacheck`/`selene` via Homebrew, `rg` via apt. Secrets-absence checked: no `auth.json`/`settings.json`/`sessions/` in the image, no key-shaped strings in the stowed trees.
+Latest verified build: all version checks pass, extension suite **529 tests / 41 files, 0 failures**; `pi` resolves via the mise shim, `luacheck`/`selene` via Homebrew, `rg`/`libxml2` via apt, `psql` via the postgres-binary plugin, `node`/`python` via the repo mise.toml pins. Secrets-absence checked: no `auth.json`/`settings.json`/`sessions/` in the image, no key-shaped strings in the stowed trees.
 
 ### Rebuild trigger
 
-Manual (`sandbox/build.sh`) for now. **Rebuild after landing Containerfile changes** — the wtx spike (#74) added `iproute2` (the OpenShell sandbox runtime probes the `ip` helper and refuses to provision without it). Upgrade path: a CI job on merge to main that builds and pushes `sandbox:<sha>` to a registry, so worktrees can pin by digest instead of a host-local tag.
+Manual (`sandbox/build.sh`) for now. **Rebuild after landing Containerfile / `sandbox/mise.global.toml` / `mise.toml` changes** — worktrees resolve their image by HEAD sha (falling back to the nearest tagged ancestor), and an untagged HEAD fails `wtx up`/`wtx check` loudly. Upgrade path: a CI job on merge to main that builds and pushes `sandbox:<sha>` to a registry, so worktrees can pin by digest instead of a host-local tag.
 
-## wtx — per-worktree sandboxes (issue #74)
+## Per-sandbox services (issue #75)
+
+Every worktree sandbox runs its own postgres, reachable at **`localhost:5432` from inside the sandbox only**. Each sandbox has its own network namespace, so concurrent worktrees all get "the regular port" — there is no port allocation logic anywhere, and `DATABASE_URL=postgresql://postgres@localhost:5432/postgres` is the identical string in every sandbox (`wtx enter` and `wtx check` export it; projects override it via their own `mise.toml [env]`, the built-in `postgres` role/db are just the working floor).
+
+- **Binary source**: mise `postgres-binary:postgres` = 15.4.3 in `sandbox/mise.global.toml` — same backend and pin as root-mono's db daemon. The backend is a mise _plugin_ (not built in, not in the registry), declared at a pinned ref under `[plugins]`; it downloads precompiled binaries (~70 MB) that need `libxml2` (added to the image's apt line). Shims: `initdb`, `postgres`, `pg_ctl`, `pg_isready`, `psql`, `createuser`, …
+- **PGDATA**: `<worktree>/.data/pg` (gitignored). Data survives sandbox restarts and image swaps and dies with worktree removal. Logs: `.data/postgres.log`. Init is `initdb -U postgres -E utf8` (trust auth on localhost — dev floor, never exposed beyond the netns). **Bumping the postgres major** (e.g. 15 → 16) makes `pg_ctl start` refuse the old on-disk format — migrate the cluster or wipe `<worktree>/.data/pg`; `wtx up` re-initializes an empty dir (the real reason then lives in `.data/postgres.log`).
+- **Lifecycle owner**: `wtx up` (post-start hook) — after create it execs a bootstrap that starts postgres via `pg_ctl -w start`. The postmaster is daemonized in its own session, so it **survives the exec closing** (verified live); OpenShell supervises the sandbox itself, not the service. Idempotent: `pg_isready` short-circuits, crash recovery is handled by the normal startup path (stale `postmaster.pid` from a hard kill is retried once).
+- **Teardown**: `wtx down` (pre-merge hook, after checks). Deleting the sandbox kills the postmaster; PGDATA persists until the worktree is removed. Services stay alive during `pre-merge` checks by hook order.
+- **copy-ignored**: `.data/` is excluded from `wt step copy-ignored` via `[step.copy-ignored] exclude` in `.config/wt.toml` — a fresh worktree starts with an empty database, never a copy of another worktree's data.
+
+**Rejected lifecycle owners** (decided empirically, kept for the record): pitchfork inside the sandbox (own `XDG_STATE_HOME`) works but adds a supervisor daemon + generated config for a service that just runs; `openshell service expose` is HTTP-only and exposes _outward_ — structurally wrong for sandbox-local TCP. Day-two services (redis, minio) use the same owner mechanism: a `wtx up`-exec'd bootstrap in the image, PGDATA-style state under `.data/`, an idempotent `ensure_*` in `wtx`, and — for anything needing a pinned version — a mise pin in `sandbox/mise.global.toml` rather than a nested container.
+
+# In-image pre-merge verification (issue #75)
+
+`wt merge` no longer trusts the host toolchain. The `[[pre-merge]] check` hook is **`sandbox/.local/bin/wtx check`** (repo-relative — wt runs pre-merge hooks with cwd = worktree root, so the gate works from any checkout, no host-side wtx deploy required): it ensures the sandbox and its postgres, then runs `mise run check` **inside the sandbox image** against the worktree (bind-mounted at the same path). Exit code propagates to wt. Host-side `mise run check` is meaningless for gating — the image owns the toolchain.
+
+- **Offline by design**: the sandbox egress proxy 403s everything except the inference surface, so the check cannot install or version-resolve tools at run time. This is why `mise.toml` carries **exact pins** (no `latest`) and why the image bakes every repo tool: `mise install` in the Containerfile runs **from the repo dir** (project configs are CWD-discovered — from `$HOME` it silently bakes only the global pins, which bit us live).
+- **Trust**: repo `mise.toml` is plain pins → mise "safe config" → no trust prompt in-image.
+- The check reads the same git-ignored file set as the host: repo `.gitignore` carries `**/.claude/settings.local.json` explicitly because the image has no global git excludes.
+
+# wtx — per-worktree sandboxes (issue #74)
 
 `sandbox/.local/bin/wtx` gives every wt worktree its own OpenShell sandbox from the `sandbox:<sha>` image, so agent execution (pi, builds) runs isolated from the host while herdr panes, wt hooks and git stay host-side.
 
 ```bash
-wtx up       # ensure the sandbox exists (idempotent; wt post-start hook)
-wtx enter    # interactive shell inside the sandbox (prompt: wtx❯)
+wtx up       # ensure the sandbox exists + postgres runs (idempotent; wt post-start hook)
+wtx enter    # interactive shell inside the sandbox (prompt: wtx❯; exports DATABASE_URL)
+wtx check    # `mise run check` inside the image (pre-merge gate, issue #75)
 wtx down     # delete the sandbox (idempotent; wt pre-merge hook, after check)
-wtx status   # recorded image vs live sandbox, drift + stale-info report
+wtx status   # recorded image vs live sandbox, drift + postgres state
 wtx doctor   # reap managed sandboxes whose worktree no longer records them
 ```
 
@@ -99,10 +122,10 @@ wtx doctor   # reap managed sandboxes whose worktree no longer records them
 **Human wt flow:**
 
 ```bash
-wt switch --create feat-x    # worktree + hooks; post-start runs `wtx up`
-wtx enter                    # shell inside the sandbox (prompt: wtx❯)
+wt switch --create feat-x    # worktree + hooks; post-start runs `wtx up` (sandbox + postgres)
+wtx enter                    # shell inside the sandbox (prompt: wtx❯, DATABASE_URL exported)
 # ... work, commit inside the sandbox (git works: gitdir is mounted) ...
-wtx down                     # or just `wt merge` — pre-merge tears it down after `mise run check`
+wt merge                     # pre-merge: `wtx check` (in-image verification) → `wtx down`
 ```
 
 **Supervisor / herdr delegation** (canonical recipe):
@@ -129,24 +152,27 @@ herdr agent wait "$PANE" --until idle --timeout 60000
 herdr agent prompt "$PANE" "You are a worker in a wt worktree. …task…" --wait --timeout 600000
 herdr agent read "$PANE" --source recent --lines 100
 
-# 4. Merge from anywhere; pre-merge runs check then `wtx down`
+# 4. Merge from anywhere; pre-merge runs `wtx check` (in-image) then `wtx down`
 wt -C "$WT_PATH" merge
 herdr workspace close "$WS"
 ```
 
-**Recovery paths:** a pane whose sandbox was restarted shows the host `❯` again — re-run `pane run "$PANE" "wtx enter"`. A red-merge worktree (failed `mise run check`) keeps its sandbox by design (teardown runs after the check); `wtx up` recreates a deleted one. `wtx doctor` reaps anything whose worktree is gone.
+**Recovery paths:** a pane whose sandbox was restarted shows the host `❯` again — re-run `pane run "$PANE" "wtx enter"`. A red-merge worktree (failed `wtx check`) keeps its sandbox by design (teardown runs after the check); `wtx up` recreates a deleted one (PGDATA in `.data/` survives). `wtx doctor` reaps anything whose worktree is gone.
 
-**Prereqs (once):** see [Deploy checklist](#deploy-checklist) — gateway driver block + restart, image with `iproute2`, and `wt config approvals add --yes` for the exact hook strings `wtx up || true` and `wtx down || true`.
+**Prereqs (once):** see [Deploy checklist](#deploy-checklist) — gateway driver block + restart, image with `iproute2` + `libxml2` + postgres, and pre-approval for the exact hook strings `wtx up || true`, `sandbox/.local/bin/wtx check`, and `wtx down || true`.
 
 ### Deploy checklist
 
 ```bash
-sandbox/build.sh                                # 1. rebuild image (needs iproute2 since #74)
+sandbox/build.sh                                # 1. rebuild image (iproute2 + libxml2 + postgres since #75)
 stow openshell && stow sandbox                  # 2. driver block + wtx onto ~/.local/bin
 systemctl --user restart openshell-gateway      # 3. apply enable_bind_mounts + keep-id
-wt config approvals add --yes                   # 4. approve `wtx up || true`, `wtx down || true`
-wtx up && wtx status                            # 5. verify in a worktree; check mounts:
-openshell sandbox get <name> -o json | python3 -m json.tool   # labels + policy visible
+wt config approvals add --yes                   # 4. approve the hook strings, incl. the in-image merge gate
+                                                #    `sandbox/.local/bin/wtx check` (+ existing
+                                                #    `wtx up || true` / `wtx down || true`); the command
+                                                #    takes no positional argument — approve interactively
+wtx up && wtx status                            # 5. verify: sandbox Ready + postgres ready; then:
+wt merge                                        # 6. pre-merge now gates on in-image verification
 ```
 
 Until step 3 is done, `wtx up` fails fast with the bind-mounts hint (validated live — the error surfaces the exact `[openshell.drivers.podman]` fix); hooks swallow the failure by design.
@@ -167,6 +193,21 @@ Until step 3 is done, `wtx up` fails fast with the bind-mounts hint (validated l
 | `pi --approve` through the relay behaves identically (no trust dialog; TUI ready)                                                                            | Trust flow confirmed; pi ships unauthenticated (credentials = #5)           |
 
 Related: `pi/.pi/agent/extensions/herdr-agent-state.ts` reports state via `HERDR_SOCKET_PATH` + `HERDR_PANE_ID` — both propagated by `wtx enter`, pointing at the same-path mounted socket.
+
+### Live findings (per-sandbox services + in-image check, #75)
+
+All verified against the live gateway on Bluefin (SELinux enforcing, rootless podman):
+
+| Finding                                                                                                                                                                                                           | Consequence                                                                                                                               |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Bind mounts + custom policy: the runtime's `prepare_filesystem` runs `create_dir_all` on every `read_write` policy path — a **file** there (the herdr socket) kills provisioning with `File exists (os error 17)` | Policy grants target the socket's **parent directory**, never the socket file; `wtx down/up` after any policy change                      |
+| SELinux enforcing: host paths carry no container label, so every in-sandbox write into the worktree died with `EACCES`                                                                                            | Bind mounts pass `selinux_label: "shared"` (podman `z`) — `shared`, not `private`, because the gitdir/socket are mounted by every sandbox |
+| The runtime injects an egress proxy (`10.200.0.1:3128`) that 403s everything but the inference surface                                                                                                            | The check flow is offline by design: exact pins everywhere, all tools baked (see above); #76 owns the allowlist                           |
+| The image never baked the repo `mise.toml` tools (#73–#74 latent): `mise install` ran from `$HOME`, and project configs are CWD-discovered                                                                        | Containerfile runs `mise install` from the repo dir; smoke test guards `node`/`python`/`shellcheck`                                       |
+| The postgres-binary backend is a mise _plugin_ — not built in, not in the registry                                                                                                                                | Declared under `[plugins]` at a pinned ref in `sandbox/mise.global.toml`; needs `libxml2` via apt                                         |
+| The image has no global git excludes (`~/.config/git/ignore`)                                                                                                                                                     | `.gitignore` must carry machine-local patterns itself (e.g. `**/.claude/settings.local.json`) or in-image checks see a different file set |
+| `wtx doctor` reaps any managed sandbox without a live info-file claim — concurrent agents on one gateway can reap each other's sandboxes mid-flight                                                               | Doctor needs mutual exclusion or a per-worktree liveness check (input to #76)                                                             |
+| PGDATA under the worktree survives sandbox delete + image swap: `wtx down && wtx up` restarts postgres on the recovered data dir                                                                                  | Keep PGDATA in the worktree; never inside the container filesystem                                                                        |
 
 ## Install (reproducible)
 

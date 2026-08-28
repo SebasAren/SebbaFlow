@@ -26,10 +26,22 @@ pitchfork = "2.23.0"
 tree-sitter = "0.26.13"
 uv = "latest"
 prettier = "latest"
+# Postgres for per-sandbox services (issue #75) — same backend and pin as
+# root-mono's db daemon, so in-sandbox services match the primary consumer.
+# Precompiled binaries (~70 MB) via the mise installs dir; shims: initdb,
+# postgres, pg_ctl, pg_isready, psql, createdb, ...
+"postgres-binary:postgres" = "15.4.3"
 "aqua:JohnnyMorganz/StyLua" = "latest"
 "aqua:astral-sh/ruff" = "latest"
 taplo = "latest"
 "aqua:mvdan/sh" = "latest"
+
+# The postgres-binary backend is a mise PLUGIN — not a built-in backend and
+# not in mise's registry (the host has it from a manual `mise plugins
+# install`). Declared at a pinned ref so the image build stays reproducible;
+# `mise install` bootstraps [plugins] entries that a [tools] entry references.
+[plugins]
+postgres-binary = "https://github.com/kyleking/mise-postgres-binary#6c16c40b6571e5fb161c35f72e5903b1d9063a99"
 
 # OpenShell (issue #72 spike) — two binaries, one repo; aliases give each its own
 # install dir (matching alone would collide on the same path).

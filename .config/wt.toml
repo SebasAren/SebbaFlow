@@ -13,14 +13,30 @@ copy = "wt step copy-ignored"
 [[post-start]]
 sandbox = "wtx up || true"
 
+[step.copy-ignored]
+# Per-worktree sandbox service state (issue #75): PGDATA for the in-sandbox
+# postgres. A fresh worktree starts with an empty database — never a copy of
+# another worktree's data. (.data/ is gitignored; this filters copy-ignored,
+# which by default copies every ignored file.)
+exclude = [".data/"]
+
 [post-switch]
 tmux = "[ -n \"$TMUX\" ] && tmux rename-window {{ branch | sanitize }}"
 
 [pre-commit]
 pre-commit = "mise run pre-commit"
 
+# In-image verification (issue #75): ensures the sandbox and its postgres,
+# then runs `mise run check` inside the sandbox image — the host toolchain is
+# no longer trusted for merge gating. Services stay alive during checks;
+# teardown runs only after this step passes. Invoked by REPO-RELATIVE path on
+# purpose: wt runs pre-merge hooks with cwd = worktree root, so the gate works
+# from any checkout — no host-side wtx deploy (stow) required. Keep strict:
+# no `|| true`, no host fallback. (The `wtx up/down` hook strings stay bare —
+# they are #74's approved best-effort strings; changing them costs a new
+# approval and buys nothing: teardown failure converges via `wtx doctor`.)
 [[pre-merge]]
-check = "mise run check"
+check = "sandbox/.local/bin/wtx check"
 
 # Teardown after verification (issue #74): a red check aborts the merge
 # before this runs, so failing worktrees keep their sandbox alive for
