@@ -17,7 +17,7 @@ Orchestrate up to 3 parallel pi workers, each in its own wt worktree adopted as 
 | Workers **never merge** — supervisor owns all merges, one at a time                    | Concurrent merges race on CAS ref-moves + serial keeps each verification attributable |
 | **Never trust worker self-report** — only `wt merge`'s `pre-merge` verification counts | Structural gate, not agent honesty                                                    |
 | **Never force a merge past a red gate**                                                | A red gate is a failed attempt, not an obstacle                                       |
-| **2 red verifications → park**; **1 bounce** of a blocked question → surface to human  | Token ceiling                                                                         |
+| **2 red verifications → park**; **1 bounce** of a question callback → surface to human | Token ceiling                                                                         |
 | Auto-land green merges — human reviews the final result                                | Per agreement: verification is the gate                                               |
 
 ## Worker prompt
@@ -26,6 +26,7 @@ The constitution lives in the `/skill:worker` skill — never paste rules inline
 
 ```
 You are a worker in a wt worktree. Load the /skill:worker skill and follow it.
+Your delegator is <sup-name>; your slug is <slug>.
 Never run: <repo-specific live-state commands — e.g. dotfiles: stow>.
 ```
 
@@ -47,6 +48,9 @@ herdr integration status         # pi hook current (outdated = misreported agent
 ### 1. Spawn a worker per runnable task
 
 ```bash
+SPANE=$(herdr pane current | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
+herdr agent rename "$SPANE" "sup-$SLUG"   # your callback address — run-level, any unique name; taken → suffix
+
 JSON=$(wt switch --create "$SLUG" --no-cd --format json | tail -1)   # JSON is the LAST stdout line
 WT_PATH=$(echo "$JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["path"])')
 RES=$(herdr worktree open --path "$WT_PATH" --no-focus)
@@ -55,16 +59,28 @@ PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["re
 
 herdr pane wait-output "$PANE" --match "❯" --source recent-unwrapped --timeout 60000  # shell ready (shell-init race)
 herdr agent start "issue-$SLUG" --kind pi --pane "$PANE" -- --approve --model zai/glm-5.3-flash   # builder model pinned in-repo; name gets a lowercase prefix (slugs are digit-leading) and must fit 32 chars — see herdr gotchas
-herdr agent prompt "$PANE" "<preamble + task text>" --wait --timeout 600000
+herdr agent prompt "$PANE" "<preamble + task text>"    # no --wait — fire-and-forget; the worker's 'started' callback confirms delivery
 ```
 
-Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktree; first prompt may fail `agent_prompt_stalled` (cold start) → retry once; default wait states — don't add `--until idle`; `wt` hooks run synchronously (`mise run setup` can take minutes).
+Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktree; `agent_blocked` on task submission → trust dialog despite `--approve` — `agent read`, resolve, resubmit; `wt` hooks run synchronously (`mise run setup` can take minutes).
 
-### 2. Monitor — keep min(3, runnable queue) busy
+### 2. Sleep — wake on callbacks
 
-- `herdr agent list` to poll; spawn the next runnable task as soon as a worker finishes.
-- **Blocked** = the worker is asking a question: `agent read`, answer via `agent prompt --wait`. Bounce once; second block → surface to human.
-- Worker finished → its task enters the **merge queue**; note the findings field of its report for step 5.
+After spawning (and after every wake cycle below), print one status line and **end your turn** — worker callbacks arrive as user input and start your next turn:
+
+```
+Sleeping until callbacks from: issue-36, issue-41 · merge queue: empty
+```
+
+On wake, **drain every queued callback**, then act:
+
+- `started` — delivery confirmed. A spawned worker that stays silent has a lost task (cold start, trust dialog): check `herdr agent list`, re-prompt or park.
+- `question` — answer via `herdr agent prompt "$PANE" "<answer>"` (no `--wait`; the worker's next callback reports the outcome). Second `question` on the same blocker → surface to human.
+- `done` — the task enters the **merge queue**; note the findings field of its report for step 5.
+
+Then merge (step 3), spawn the next runnable task — keep `min(3, runnable)` busy, respecting `depends:` — print the status line, sleep again. On any wake (including a human nudge) you may reconcile ground truth with `herdr agent list`.
+
+**The watchdog is the human**: a worker that dies silently never calls back. The status line names who you're waiting on; if the herdr sidebar shows a worker dead or unknown, prompt the supervisor — it reconciles on wake.
 
 ### 3. Merge — serially, one at a time
 
@@ -102,6 +118,7 @@ Process learnings about supervisor/herdr/wt itself (spawn races, hook timing) go
 ## Failure modes
 
 - **Parked task** — worktree + branch preserved; scrollback via `herdr agent read`; resumable by prompting the worker again.
+- **Silent worker death** — no callback ever arrives; the human notices via the status line + sidebar and nudges the supervisor, which reconciles with `herdr agent list` on wake.
 - **herdr/wt step fails hard** — do not debug the tooling mid-run; park the task, surface the error, continue other workers.
 
 ## Usage

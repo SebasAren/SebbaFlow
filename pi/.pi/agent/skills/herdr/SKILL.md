@@ -175,6 +175,37 @@ Gotchas:
 - Switch hooks run synchronously (`mise run setup` can take minutes on a fresh worktree).
 - Linked worktrees share the main repo's `.git/config` — delegate through the `/skill:worker` skill (its rulebook: `git config` ban, no merge/rebase, review gate, findings-in-report). For isolated experiments, prefer plain clones under /tmp.
 
+### Delegate via callbacks (push, sleep until helpers report)
+
+For supervising helpers without blocking on any of them: name yourself, fire tasks without `--wait`, end your turn. Helpers wake you with callbacks — no polling, no timeout races, no serialized attention.
+
+1. **Name yourself** — the callback address helpers will use (agent names survive pane moves; unique among live agents, cleared on exit):
+
+```bash
+PANE=$(herdr pane current | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
+herdr agent rename "$PANE" "sup-mytask"    # [a-z][a-z0-9_-]{0,31}; taken → pick a variant
+```
+
+2. **Submit tasks fire-and-forget** — no `--wait`. Tell each helper your name, its slug, and the callback rule:
+
+```bash
+herdr agent prompt "$HELPER_PANE" "<task text>. Your delegator is sup-mytask, your slug is issue-36. First action: herdr agent prompt sup-mytask 'CALLBACK issue-36 started: on it'. Last action of every turn: exactly one callback — herdr agent prompt sup-mytask 'CALLBACK issue-36 <question|done>: <one line>'. Never use --wait on callbacks."
+```
+
+3. **Sleep** — print who you're waiting on, then end your turn:
+
+```
+Sleeping until callbacks from: issue-36, issue-41
+```
+
+4. **Wake on callback** — callbacks arrive as user input. Drain all queued ones, handle each (`started` → note it; `question` → answer via `agent prompt`, no `--wait`; `done` → process the report), do your work, sleep again. On any wake — including a human nudge — reconcile ground truth with `herdr agent list`.
+
+Semantics that make this safe:
+
+- `agent prompt` without `--wait` submits immediately and **can target a working agent** — the message queues as its next input. `agent_prompt_stalled` is a `--wait`-only check, so simultaneous callbacks can't collide.
+- A callback aimed at a **blocked** delegator returns `agent_blocked` and is dropped (the delegator sat at its own approval dialog). Helper: retry once after ~30 s, then end the turn and give up.
+- **A helper that dies silently never calls back** — a sleeping delegator notices nothing. The step-3 status line is the human watchdog: glance at the sidebar; a dead-looking helper → prompt the delegator, it reconciles via `agent list`.
+
 ## Notes
 
 - JSON output: `workspace *`, `tab *`, `pane list|get|current|split|layout|process-info|neighbor|edges|wait-output`, `agent list|get|wait|prompt`

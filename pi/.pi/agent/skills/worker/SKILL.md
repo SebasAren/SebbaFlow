@@ -17,13 +17,33 @@ You are a worker in a wt worktree, spawned by a supervisor or a delegating sessi
 - Commit atomically with conventional commits. Do NOT merge or rebase onto main — the supervisor merges after verifying.
 - Do NOT invoke `/skill:commit` or `/skill:persist-knowledge` — you never persist rules. Rule-worthy findings go in your final report; the supervisor gates persistence.
 
+## Callback protocol
+
+Your task prompt names your delegator (a live agent name) and your slug. Callbacks are fire-and-forget — never `--wait`:
+
+```bash
+herdr agent prompt <delegator> "CALLBACK <slug> <state>: <one line>"
+```
+
+- **First action after the initial task prompt**: send `CALLBACK <slug> started: on it` — confirms the task landed in a cold-started pi.
+- **Last action of every turn**: send exactly one terminal callback:
+
+| State      | When                            | Carries                                |
+| ---------- | ------------------------------- | -------------------------------------- |
+| `question` | Blocked on the delegator's call | Everything needed to answer, in one go |
+| `done`     | Finished or definitively stuck  | The final report (below)               |
+
+- Every callback self-identifies: slug first, always.
+- After your `question` is answered, continue working; that turn then ends with its own callback.
+- `agent_blocked` on send → the delegator sits at its own approval dialog: wait ~30 s, retry once, then end your turn anyway (the human watchdog covers it).
+
 ## Review gate
 
 Before reporting done: if non-trivial (≥5 files or ≥50 lines), run `/skill:review` — fix every 🔴 must-fix finding; decline 🟡 suggestions with a one-line reason (🟢 nits optional). Trivial changes: fix obvious issues yourself, no review needed. If the helper spawn fails, self-review inline and disclose it in your report. Review is advisory polish — it does not replace the verification gate.
 
 ## Final report
 
-When finished, report:
+When finished, send your `done` callback carrying the final report:
 
 - **Branch name** and **commits**
 - **Files touched**

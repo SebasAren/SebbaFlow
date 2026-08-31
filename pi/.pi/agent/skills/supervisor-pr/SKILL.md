@@ -7,7 +7,7 @@ description: Supervisor variant that lands worker output via forge PRs/MRs (gh/g
 
 Same discipline as supervisor, but workers' work lands on the forge via PR/MR instead of local `wt merge`. Use when you want a forge-native audit trail, or the repo requires review — branch protection is respected via auto-merge.
 
-**Read the _supervisor_ skill first** (your skills index lists its path). Its hard limits, worker rules, Phase 0–2 (prereqs, spawn, monitor), and gotchas apply unchanged. This file defines only the deltas. **Do NOT activate** outside herdr (`HERDR_ENV=1`), for single tasks, or when local landing is wanted (plain supervisor).
+**Read the _supervisor_ skill first** (your skills index lists its path). Its hard limits, worker rules, Phase 0–2 (prereqs, spawn, sleep/wake), and gotchas apply unchanged. This file defines only the deltas. **Do NOT activate** outside herdr (`HERDR_ENV=1`), for single tasks, or when local landing is wanted (plain supervisor).
 
 ## Deltas from supervisor
 

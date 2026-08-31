@@ -18,9 +18,13 @@ Analyze git changes and produce categorized findings. No tree manipulation, no s
 
 ## Delegation (herdr)
 
-1. Spawn a reviewer in a split pane (same cwd → same git state and repo trust; no worktree needed):
+1. Resolve your callback address (delegated workers already have one — `issue-36`; a plain session may need to name itself), then spawn a reviewer in a split pane (same cwd → same git state and repo trust; no worktree needed):
 
 ```bash
+PANE=$(herdr pane current | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
+SELF=$(herdr agent get "$PANE" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["agent"]["name"] or "")')
+[ -n "$SELF" ] || { SELF="rev-$RANDOM"; herdr agent rename "$PANE" "$SELF"; }   # names: [a-z][a-z0-9_-]{0,31}
+
 OUT=$(mktemp --suffix=.md)
 NEW=$(herdr pane split --current --direction right --no-focus --env PI_REVIEW_HELPER=1 | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
 herdr pane wait-output "$NEW" --match "❯" --source recent-unwrapped --timeout 30000  # shell ready
@@ -28,18 +32,17 @@ NAME="reviewer-$(basename "$(git rev-parse --show-toplevel)" | cut -c1-23)"  # a
 herdr agent start "$NAME" --kind pi --pane "$NEW" -- --model zai/glm-5.3   # reviewer model pinned in-repo
 ```
 
-2. Submit the review task and wait:
+2. Submit the review task fire-and-forget — no `--wait` — then **end your turn**; the reviewer's callback wakes you:
 
 ```bash
-herdr agent prompt "$NEW" "Delegated read-only review. Run /skill:review <target> — review inline (PI_REVIEW_HELPER=1 marks you as the helper), do not delegate. Write the full review to $OUT." --wait --timeout 600000
+herdr agent prompt "$NEW" "Delegated read-only review. Run /skill:review <target> — review inline (PI_REVIEW_HELPER=1 marks you as the helper), do not delegate. Write the full review to $OUT. Your delegator is $SELF, your slug is $NAME. First action: herdr agent prompt $SELF 'CALLBACK $NAME started: on it'. Last action of the turn: herdr agent prompt $SELF 'CALLBACK $NAME done: review written to $OUT'. Never use --wait on callbacks."
 ```
 
 - `<target>` = the user's arg (empty for working-tree changes), resolved by the helper in the shared cwd.
-- Default wait states (`idle|done|blocked`) return promptly — don't add `--until idle` (fast-turn stall).
-- `agent_prompt_stalled` on the first prompt → retry once (pi cold start).
-- Returned `blocked` → the helper is asking a question: `herdr agent read "$NEW"`, answer via another `agent prompt --wait`, then wait again.
+- `agent_blocked` on submission → the reviewer sat at a dialog: `agent read "$NEW"`, resolve, resubmit.
+- A `question` callback → answer via `herdr agent prompt "$NEW" "<answer>"` (no `--wait`); the reviewer's next callback reports the outcome.
 
-3. Collect and present: `read "$OUT"` and present the review as your answer. If the file is missing, fall back to `herdr agent read "$NEW" --source recent --lines 300`.
+3. On the `done` callback: `read "$OUT"` and present the review as your answer. If the file is missing, fall back to `herdr agent read "$NEW" --source recent --lines 300`.
 
 4. Clean up: `herdr pane close "$NEW"`.
 
