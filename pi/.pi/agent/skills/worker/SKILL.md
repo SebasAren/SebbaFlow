@@ -35,7 +35,7 @@ herdr agent prompt <delegator> "CALLBACK <slug> <state>: <one line>"
 
 - Every callback self-identifies: slug first, always.
 - After your `question` is answered, continue working; that turn then ends with its own callback.
-- `agent_blocked` on send → the delegator sits at its own approval dialog: wait ~30 s, retry once, then end your turn anyway (the human watchdog covers it).
+- `agent_blocked` on send → the delegator sits at its own approval dialog: retry once after finishing your remaining work (never `sleep` in bash to pass time), then end your turn anyway and note the undelivered callback in your report (the human watchdog covers it).
 
 ## Review gate
 

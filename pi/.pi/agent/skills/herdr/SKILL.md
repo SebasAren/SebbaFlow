@@ -175,7 +175,7 @@ Gotchas:
 - Switch hooks run synchronously (`mise run setup` can take minutes on a fresh worktree).
 - Linked worktrees share the main repo's `.git/config` — delegate through the `/skill:worker` skill (its rulebook: `git config` ban, no merge/rebase, review gate, findings-in-report). For isolated experiments, prefer plain clones under /tmp.
 
-### Delegate via callbacks (push, sleep until helpers report)
+### Delegate via callbacks (push, end turn until helpers report)
 
 For supervising helpers without blocking on any of them: name yourself, fire tasks without `--wait`, end your turn. Helpers wake you with callbacks — no polling, no timeout races, no serialized attention.
 
@@ -192,19 +192,19 @@ herdr agent rename "$PANE" "sup-mytask"    # [a-z][a-z0-9_-]{0,31}; taken → pi
 herdr agent prompt "$HELPER_PANE" "<task text>. Your delegator is sup-mytask, your slug is issue-36. First action: herdr agent prompt sup-mytask 'CALLBACK issue-36 started: on it'. Last action of every turn: exactly one callback — herdr agent prompt sup-mytask 'CALLBACK issue-36 <question|done>: <one line>'. Never use --wait on callbacks."
 ```
 
-3. **Sleep** — print who you're waiting on, then end your turn:
+3. **End your turn** — print who you're waiting on, then stop and return the prompt to the user. **Never wait in bash** — `sleep N` is the anti-pattern: it occupies your turn while the queued callbacks can't reach you; ending the turn **is** the wait (the next message starts your next turn):
 
 ```
-Sleeping until callbacks from: issue-36, issue-41
+Waiting for callbacks from: issue-36, issue-41
 ```
 
-4. **Wake on callback** — callbacks arrive as user input. Drain all queued ones, handle each (`started` → note it; `question` → answer via `agent prompt`, no `--wait`; `done` → process the report), do your work, sleep again. On any wake — including a human nudge — reconcile ground truth with `herdr agent list`.
+4. **Wake on callback** — callbacks arrive as user input. Drain all queued ones, handle each (`started` → note it; `question` → answer via `agent prompt`, no `--wait`; `done` → process the report), do your work, then end your turn again. On any wake — including a human nudge — reconcile ground truth with `herdr agent list`.
 
 Semantics that make this safe:
 
 - `agent prompt` without `--wait` submits immediately and **can target a working agent** — the message queues as its next input. `agent_prompt_stalled` is a `--wait`-only check, so simultaneous callbacks can't collide.
-- A callback aimed at a **blocked** delegator returns `agent_blocked` and is dropped (the delegator sat at its own approval dialog). Helper: retry once after ~30 s, then end the turn and give up.
-- **A helper that dies silently never calls back** — a sleeping delegator notices nothing. The step-3 status line is the human watchdog: glance at the sidebar; a dead-looking helper → prompt the delegator, it reconciles via `agent list`.
+- A callback aimed at a **blocked** delegator returns `agent_blocked` and is dropped (the delegator sat at its own approval dialog). Helper: retry once later in your turn (no bash `sleep` to pass time), then end the turn and give up.
+- **A helper that dies silently never calls back** — an idle delegator notices nothing. The step-3 status line is the human watchdog: glance at the sidebar; a dead-looking helper → prompt the delegator, it reconciles via `agent list`.
 
 ## Notes
 

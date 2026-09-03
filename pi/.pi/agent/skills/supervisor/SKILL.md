@@ -64,12 +64,12 @@ herdr agent prompt "$PANE" "<preamble + task text>"    # no --wait — fire-and-
 
 Gotchas (details in the herdr skill): `-- --approve` pre-trusts the fresh worktree; `agent_blocked` on task submission → trust dialog despite `--approve` — `agent read`, resolve, resubmit; `wt` hooks run synchronously (`mise run setup` can take minutes).
 
-### 2. Sleep — wake on callbacks
+### 2. End turn — wake on callbacks
 
-After spawning (and after every wake cycle below), print one status line and **end your turn** — worker callbacks arrive as user input and start your next turn:
+After spawning (and after every wake cycle below), print one status line and **end your turn — return the prompt to the user**. Worker callbacks arrive as user input and start your next turn. **Never wait via `sleep N` in bash**: it just occupies your turn while the queued callbacks sit undelivered — ending the turn is the wait:
 
 ```
-Sleeping until callbacks from: issue-36, issue-41 · merge queue: empty
+Waiting for callbacks from: issue-36, issue-41 · merge queue: empty
 ```
 
 On wake, **drain every queued callback**, then act:
@@ -78,7 +78,7 @@ On wake, **drain every queued callback**, then act:
 - `question` — answer via `herdr agent prompt "$PANE" "<answer>"` (no `--wait`; the worker's next callback reports the outcome). Second `question` on the same blocker → surface to human.
 - `done` — the task enters the **merge queue**; note the findings field of its report for step 5.
 
-Then merge (step 3), spawn the next runnable task — keep `min(3, runnable)` busy, respecting `depends:` — print the status line, sleep again. On any wake (including a human nudge) you may reconcile ground truth with `herdr agent list`.
+Then merge (step 3), spawn the next runnable task — keep `min(3, runnable)` busy, respecting `depends:` — print the status line, end your turn again. On any wake (including a human nudge) you may reconcile ground truth with `herdr agent list`.
 
 **The watchdog is the human**: a worker that dies silently never calls back. The status line names who you're waiting on; if the herdr sidebar shows a worker dead or unknown, prompt the supervisor — it reconciles on wake.
 
