@@ -82,6 +82,9 @@ Secrets (API keys) are resolved lazily via [Proton Pass CLI](https://proton.me/p
 curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
 ```
 
+> pass-cli is **self-managed** in `~/.local/bin` (not Homebrew). Keep it current with its
+> built-in updater — `mise run update-pass-cli` — or manually: `pass-cli update -y`.
+
 Then create `~/.secrets.tpl` from the template:
 
 ```bash

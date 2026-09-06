@@ -76,15 +76,16 @@ Tool directories may have an `AGENTS.md` (path-scoped agent instructions) or a `
 
 ## Tasks (`mise run`)
 
-| Task                    | What                                                       | When                   |
-| ----------------------- | ---------------------------------------------------------- | ---------------------- |
-| `mise run setup`        | Bootstrap all dependencies                                 | First run, after clone |
-| `mise run pre-commit`   | Format + lint + typecheck + test                           | Before committing      |
-| `mise run format`       | Auto-format all code                                       | Standalone formatting  |
-| `mise run format-check` | Verify formatting (no changes)                             | CI / pre-merge         |
-| `mise run lint`         | Lint all code (no changes)                                 | Standalone linting     |
-| `mise run typecheck`    | TypeScript type check                                      | Standalone check       |
-| `mise run test`         | Run all tests                                              | Standalone test        |
-| `mise run check`        | Full verification (format-check + lint + typecheck + test) | Pre-merge gate         |
+| Task                       | What                                                       | When                   |
+| -------------------------- | ---------------------------------------------------------- | ---------------------- |
+| `mise run setup`           | Bootstrap all dependencies                                 | First run, after clone |
+| `mise run update-pass-cli` | Update pass-cli via its built-in updater                   | Upstream releases      |
+| `mise run pre-commit`      | Format + lint + typecheck + test                           | Before committing      |
+| `mise run format`          | Auto-format all code                                       | Standalone formatting  |
+| `mise run format-check`    | Verify formatting (no changes)                             | CI / pre-merge         |
+| `mise run lint`            | Lint all code (no changes)                                 | Standalone linting     |
+| `mise run typecheck`       | TypeScript type check                                      | Standalone check       |
+| `mise run test`            | Run all tests                                              | Standalone test        |
+| `mise run check`           | Full verification (format-check + lint + typecheck + test) | Pre-merge gate         |
 
 Fine-grained tasks are also available: `format-lua`, `format-python`, `format-ts`, `format-check-lua`, `format-check-python`, `format-check-ts`, `lint-lua`, `lint-shell`, `lint-python`, `lint-ts`.
