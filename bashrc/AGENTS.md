@@ -21,6 +21,7 @@ Lazy resolution via Proton Pass CLI. API keys are **not** loaded on shell startu
 
 - `pass-cli` is wrapped: only `login`/`logout` subcommands allowed directly
 - `_ensure_secrets` resolves `~/.secrets.tpl` via `pass-cli inject` on first call
+- Failed resolution is **not** cached: inject errors surface on stderr and the next wrapped-tool call retries (e.g. after `pass-cli login`)
 - `nvim` and `pi` are wrapped to call `_ensure_secrets` before launching
 
 Template format (`~/.secrets.tpl`):
