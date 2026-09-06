@@ -27,6 +27,7 @@ globs:
 - **`renderResult` callback `details`**: The `details` parameter is typed as `unknown`. Cast with `as any` in the callback when accessing extension-specific fields.
 - **`renderResult` callback `result` cast**: The `result` parameter is typed as `AgentToolResult<unknown>` because the SDK's `registerTool` generic parameter `TDetails` defaults to `unknown`. When passing to a typed render function, use `result as unknown as Parameters<typeof renderFn>[0]` (e.g. `renderSearchResult(result as unknown as Parameters<typeof renderSearchResult>[0], state, theme)`). This avoids `any`-typed casts and prevents `@typescript-eslint/no-unsafe-*` lint violations.
 - **`@types/bun` required for `tsc`**: Add `"types": ["node", "bun"]` to tsconfig.
+- **pi-coding-agent ships undeclared deps**: 0.85.0's `dist/experimental/server.js` imports `@earendil-works/pi-server` without declaring it (monorepo-split packaging bug). After pi monorepo upgrades, `Cannot find module '@earendil-works/…'` in tests → declare the missing package in `extensions/package.json` (don't wait for upstream).
 - **Exclude test files from tsconfig `include`**: Tests that mock modules can conflict with real types. Bun's test runner doesn't typecheck.
 - **Bun parser: trailing commas after class expressions in objects**: `class {}` as an object property value must have a trailing comma. Missing comma reports the error on the _next_ property line, not where the comma is missing, making it hard to spot.
 
@@ -66,6 +67,7 @@ globs:
 - **Shared test utilities**: Import from `@pi-ext/shared/test-mocks`.
 - **Auto-discovery runner removed**: No longer using `__tests__/all-extensions.test.ts` — it spawned subprocesses with no timeout and caused cross-workspace resolution issues. Run `bun test --parallel` from `pi/.pi/agent/extensions/` instead.
 - **Mock pattern**: `mock.module()` from `bun:test` before importing the module under test.
+- **Serial `bun test` fails, `--parallel` passes**: Singleton-polluting tests (~40) only fail in serial mode (shared module state across files). The gate/CI run `--parallel` — serial-only failures are not gate-blocking; don't "fix" them.
 
 ## Pi Skill Design
 
