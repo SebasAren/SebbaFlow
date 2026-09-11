@@ -86,6 +86,17 @@ describe("shouldUseFallback", () => {
     expect(shouldUseFallback("The server had an error while processing your request.")).toBe(true);
   });
 
+  it("matches dropped-stream errors from openai-completions providers", () => {
+    expect(shouldUseFallback("Stream ended without finish_reason")).toBe(true);
+    expect(shouldUseFallback("Provider finish_reason: network_error")).toBe(true);
+  });
+
+  it("matches opaque gateway 4xx errors with no body", () => {
+    expect(shouldUseFallback("400 status code (no body)")).toBe(true);
+    expect(shouldUseFallback("413 status code (no body)")).toBe(true);
+    expect(shouldUseFallback("OpenAI API error: 400 status code (no body)")).toBe(true);
+  });
+
   it("does not match non-transient errors", () => {
     expect(shouldUseFallback("Invalid API key")).toBe(false);
     expect(shouldUseFallback("Permission denied")).toBe(false);

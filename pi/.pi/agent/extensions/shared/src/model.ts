@@ -42,6 +42,9 @@ const FALLBACK_ERROR_PATTERNS = [
   /ETIMEDOUT/i,
   /upstream[\s_]+(?:\w+[\s_]+)?error/i,
   /server had an error/i,
+  /stream ended without finish_reason/i,
+  /provider finish_reason: network_error/i,
+  /4(?:00|13)\s*(?:status code)?\s*\(no body\)/i,
 ];
 
 /**
