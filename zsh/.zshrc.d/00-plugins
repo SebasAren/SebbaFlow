@@ -1,0 +1,37 @@
+#!/bin/zsh
+# Modern oh-my-zsh alternative: zinit (lazy-loading plugin manager) + a small,
+# fast plugin set, instead of an eagerly-loaded framework.
+#
+# Numbered `00-` so it sources first: it runs `compinit`, which defines
+# `compdef`. Later files (mise, fnox, pitchfork completions) call `compdef`
+# and fail with "command not found" if compinit has not run yet.
+
+ZINIT_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git"
+if [ ! -d "$ZINIT_HOME/.git" ] && command -v git >/dev/null 2>&1; then
+  mkdir -p "$(dirname "$ZINIT_HOME")"
+  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+fi
+
+if [ -f "$ZINIT_HOME/zinit.zsh" ]; then
+  source "$ZINIT_HOME/zinit.zsh"
+
+  zinit light zsh-users/zsh-completions
+  zinit light zsh-users/zsh-autosuggestions
+  # syntax-highlighting must load last — it wraps zle widgets other plugins define
+  zinit light zsh-users/zsh-syntax-highlighting
+
+  autoload -Uz compinit && compinit
+fi
+
+# Prompt, navigation, and env-loading tools (no-ops if not installed)
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
+
+# fzf key bindings + completion (Ctrl+R history, Ctrl+T files, Alt+C cd)
+if command -v fzf >/dev/null 2>&1 && command -v brew >/dev/null 2>&1; then
+  fzf_share="$(brew --prefix fzf)/shell"
+  [ -f "$fzf_share/key-bindings.zsh" ] && source "$fzf_share/key-bindings.zsh"
+  [ -f "$fzf_share/completion.zsh" ] && source "$fzf_share/completion.zsh"
+  unset fzf_share
+fi

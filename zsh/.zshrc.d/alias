@@ -1,0 +1,9 @@
+#!/bin/zsh
+alias vi=nvim
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+
+# Homebrew package tracking (brew-sync is stowed to ~/.local/bin/)
+alias brewfile="nvim ~/dotfiles/homebrew/Brewfile"

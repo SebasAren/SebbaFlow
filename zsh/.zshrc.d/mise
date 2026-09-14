@@ -1,0 +1,18 @@
+#!/bin/zsh
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+  source <(mise completion zsh)
+fi
+
+if command -v fnox >/dev/null 2>&1; then
+  eval "$(fnox activate zsh)"
+fi
+
+if command -v pitchfork >/dev/null 2>&1; then
+  eval "$(pitchfork activate zsh)"
+fi
+
+if [ -f ~/.config/fnox/age.txt ]; then
+  FNOX_AGE_KEY=$(grep "AGE-SECRET-KEY" ~/.config/fnox/age.txt)
+  export FNOX_AGE_KEY
+fi
