@@ -25,6 +25,7 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 | `obsidian/`        | Obsidian      | Wiki search, issue tracker, and wiki maintenance tools                                                                                |
 | `bluefin-bashrc/`  | Bash          | Bluefin base `.bashrc` with inlined bling                                                                                             |
 | `macos-bashrc/`    | Bash          | Minimal base `.bashrc` for macOS + `macos-defaults` system bootstrap → [details](macos-bashrc/AGENTS.md)                              |
+| `karabiner/`       | Karabiner     | macOS key remapping — caps_lock → ctrl/esc, `Ctrl+Alt+T` opens kitty → [details](karabiner/README.md)                                 |
 | `usage-dashboard/` | Dashboard     | Pi token-usage stats (`pitchfork start usage-dash` → localhost:4813)                                                                  |
 | `docs/`            | Astro         | CV site rendering this repo's knowledge files (GitHub Pages)                                                                          |
 | `mise/`            | mise          | Global mise config (herdr, pi, pitchfork pins); repo runtimes pinned in `mise.toml`                                                   |

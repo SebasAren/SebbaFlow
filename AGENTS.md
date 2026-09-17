@@ -21,6 +21,7 @@ bashrc/                    # Bash config        → bashrc/AGENTS.md
 tmux/.config/tmux/         # Tmux (deprecated, kept for fallback)
 ghostty/.config/ghostty/   # Ghostty (deprecated, kept for fallback)
 kitty/.config/kitty/       # Kitty             → kitty/README.md
+karabiner/                 # Karabiner (macOS keys) → karabiner/README.md
 herdr/.config/herdr/       # Herdr (config only) → herdr/AGENTS.md
 wt/                        # Worktrunk (wt) → wt/AGENTS.md
 pi/.pi/                    # Pi agent           → pi/.pi/README.md
