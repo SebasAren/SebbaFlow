@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Open kitty: add an OS window to the running instance, or cold-start it.
+#
+# Bound to Ctrl+Alt+T by the Karabiner rule in
+# ../../.config/karabiner/assets/complex_modifications/kitty-hotkey.json.
+# Karabiner runs shell_command from karabiner_console_user_server with a
+# minimal environment, so binaries are called by absolute path and nothing
+# is assumed about PATH, USER or HOME.
+set -euo pipefail
+
+user=$(/usr/bin/id -un)
+home=${HOME:-/Users/$user}
+
+kitty_bin=${KITTY_BIN:-/opt/homebrew/bin/kitty}
+[[ -x $kitty_bin ]] || kitty_bin=/Applications/kitty.app/Contents/MacOS/kitty
+
+# kitty appends "-<pid>" to the `listen_on` socket path set in kitty.conf.
+# A glob, not `find /tmp` -- /tmp is a symlink to /private/tmp and find(1)
+# does not follow symlink arguments by default, so it would match nothing.
+shopt -s nullglob
+sockets=(/tmp/kitty-"$user"-*)
+socket=${sockets[0]:-}
+
+if [[ -n $socket ]] &&
+  "$kitty_bin" @ --to "unix:$socket" launch --type=os-window --cwd="$home" >/dev/null 2>&1; then
+  /usr/bin/open -a kitty # focus the instance that just gained a window
+else
+  /usr/bin/open -na kitty # nothing listening — cold start
+fi

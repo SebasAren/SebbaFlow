@@ -1,0 +1,24 @@
+{
+  "title": "Kitty terminal hotkey",
+  "rules": [
+    {
+      "description": "Ctrl+Alt+T opens kitty (GNOME-style terminal hotkey)",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "t",
+            "modifiers": {
+              "mandatory": ["control", "option"]
+            }
+          },
+          "to": [
+            {
+              "shell_command": "/Users/sebas/.local/bin/kitty-open"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
