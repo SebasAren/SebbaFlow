@@ -1,8 +1,18 @@
 #!/bin/bash
-eval "$(mise activate bash)"
-eval "$(fnox activate bash)"
-eval "$(pitchfork activate bash)"
-source <(mise completion bash)
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate bash)"
+  source <(mise completion bash)
+fi
 
-FNOX_AGE_KEY=$(cat ~/.config/fnox/age.txt | grep "AGE-SECRET-KEY")
-export FNOX_AGE_KEY
+if command -v fnox >/dev/null 2>&1; then
+  eval "$(fnox activate bash)"
+fi
+
+if command -v pitchfork >/dev/null 2>&1; then
+  eval "$(pitchfork activate bash)"
+fi
+
+if [ -f ~/.config/fnox/age.txt ]; then
+  FNOX_AGE_KEY=$(grep "AGE-SECRET-KEY" ~/.config/fnox/age.txt)
+  export FNOX_AGE_KEY
+fi
