@@ -1,6 +1,6 @@
-# --target must be the home directory. Stow doesn't expand $HOME, so this
-# is hardcoded. Change it if you clone this repo on a different machine.
---target=/var/home/sebas
+# Target defaults to the parent of this directory, which is the home directory
+# as long as the repo is cloned to ~/dotfiles. Stow doesn't expand $HOME, so an
+# explicit --target can't be portable across machines -- rely on the default.
 --ignore=.stowrc
 --ignore=AGENTS.md
 --ignore=README.md
