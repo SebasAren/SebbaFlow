@@ -2,7 +2,7 @@
 
 Requires **Neovim 0.11+** (native `vim.lsp.config` / `vim.lsp.enable`).
 
-Lazy.nvim-based Neovim config with 15 LSP servers, AI-assisted completion, and extensive plugin suite.
+Lazy.nvim-based Neovim config with 16 LSP servers, AI-assisted completion, and extensive plugin suite.
 
 ## Setup
 
@@ -24,7 +24,7 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 
 ### LSP
 
-15 servers registered via native `vim.lsp.config` / `vim.lsp.enable` (Neovim 0.11+). Mason (`:Mason`) installs servers; `mason-lspconfig` bridges install names. Per-server configs in `lsp/*.lua`. Key servers:
+16 servers registered via native `vim.lsp.config` / `vim.lsp.enable` (Neovim 0.11+). Mason (`:Mason`) installs servers; `mason-lspconfig` bridges install names. Per-server configs in `lsp/*.lua`. Key servers:
 
 | Server       | Language                |
 | ------------ | ----------------------- |
@@ -33,12 +33,13 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 | eslint       | JavaScript / TypeScript |
 | svelte       | Svelte                  |
 | vue_ls       | Vue                     |
+| ruby_lsp     | Ruby / Rails            |
 
 TypeScript/Vue is primarily handled by [typescript-tools.nvim](https://github.com/pmizio/typescript-tools.nvim) (configured in `lua/plugins/lsp.lua`), not a standalone `lsp/*.lua` server.
 
 ### Formatting & Linting
 
-- **[conform.nvim](https://github.com/stevearc/conform.nvim)** — StyLua, prettierd, black+isort. Format on save.
+- **[conform.nvim](https://github.com/stevearc/conform.nvim)** — StyLua, prettierd, black+isort, rubocop. Format on save.
 - **[nvim-lint](https://github.com/mfussenegger/nvim-lint)** — ruff, hadolint (Lua lints via `lua_ls` LSP)
 
 ### Debugging
@@ -47,7 +48,7 @@ nvim-dap + nvim-dap-ui for JavaScript/TypeScript and Python.
 
 ### Testing
 
-neotest with `<leader>t` prefix.
+neotest with `<leader>t` prefix. Adapters: neotest-python, neotest-vitest, neotest-rspec (Ruby/RSpec).
 
 ## Customization
 

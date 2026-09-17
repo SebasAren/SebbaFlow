@@ -33,6 +33,8 @@ M.filetypes = {
   "graphql",
   "astro",
   "http",
+  "ruby",
+  "eruby",
 }
 
 M.markdown_line_threshold = 3000
@@ -40,6 +42,8 @@ M.markdown_line_threshold = 3000
 function M.setup()
   -- JSX: the javascript parser cannot parse JSX tags; use the tsx parser for .jsx files
   vim.treesitter.language.register("tsx", "javascriptreact")
+  -- ERB: Rails view templates use the "eruby" filetype but the "embedded_template" parser
+  vim.treesitter.language.register("embedded_template", "eruby")
 
   vim.api.nvim_create_augroup("TreesitterAutoAttach", { clear = true })
 

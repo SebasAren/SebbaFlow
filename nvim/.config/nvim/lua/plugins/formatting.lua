@@ -33,6 +33,7 @@ return {
       graphql = { "prettierd" },
       prisma = { "prettierd" },
       html = { "prettierd" },
+      ruby = { "rubocop" },
       ["*"] = { "trim_whitespace" },
     },
     format_on_save = function()

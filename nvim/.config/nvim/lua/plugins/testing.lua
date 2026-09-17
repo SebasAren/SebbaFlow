@@ -8,6 +8,7 @@ return {
       "nvim-treesitter/nvim-treesitter",
       "nvim-neotest/neotest-python",
       "marilari88/neotest-vitest",
+      "olimorris/neotest-rspec",
     },
     config = function()
       require("neotest").setup({
@@ -16,6 +17,7 @@ return {
             -- Optional: Add any neotest-python specific config here
           }),
           require("neotest-vitest")({}),
+          require("neotest-rspec")({}),
         },
       })
     end,

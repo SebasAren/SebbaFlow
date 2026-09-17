@@ -83,6 +83,10 @@
     "branch": "master",
     "commit": "e6df4f1892f6137f58135917db24d1655937d831"
   },
+  "neotest-rspec": {
+    "branch": "main",
+    "commit": "7629f8c2837becb72090fbafce58506bb56a00f0"
+  },
   "neotest-vitest": {
     "branch": "main",
     "commit": "f01addc6f07b79ef1be5f4297eafbee9e0959018"
