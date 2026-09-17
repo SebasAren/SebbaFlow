@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Apply macOS system defaults that stock settings get wrong for terminal work.
+#
+# Usage:
+#   macos-defaults           # Apply the settings
+#   macos-defaults show      # Print current values without changing anything
+#
+# Run once after a fresh macOS install, then log out and back in — the
+# keyboard values are read at login, so relaunching the terminal is not
+# enough. Not sourced from .bashrc on purpose: these are one-time system
+# settings, and rewriting them every shell start would clobber any manual
+# adjustment made in System Settings.
+
+set -euo pipefail
+
+# Key repeat is stored in 15ms ticks. macOS ships KeyRepeat=6 (90ms, ~11
+# chars/sec), roughly a third of the ~33/sec typical on Linux — which is why
+# held hjkl crawls. 2 and 15 are the System Settings slider minimums; 1 and 10
+# go faster but are usually too twitchy for cursor movement.
+KEY_REPEAT="${KEY_REPEAT:-2}"                  # 30ms  → ~33 chars/sec
+INITIAL_KEY_REPEAT="${INITIAL_KEY_REPEAT:-15}" # 225ms before repeat starts
+
+usage() {
+  sed -n '2,/^$/p' "$0" | sed 's/^# //' | sed 's/^#//'
+  exit 0
+}
+
+require_macos() {
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    echo "macos-defaults: not macOS (uname -s = $(uname -s)), nothing to do" >&2
+    exit 1
+  fi
+}
+
+# Read a global default, printing "unset (default N)" when absent.
+read_global() {
+  local key="$1" fallback="$2" value
+  if value=$(defaults read -g "$key" 2>/dev/null); then
+    printf '%s' "$value"
+  else
+    printf 'unset (macOS default: %s)' "$fallback"
+  fi
+}
+
+cmd_show() {
+  printf '%-26s %s\n' "KeyRepeat" "$(read_global KeyRepeat 6)"
+  printf '%-26s %s\n' "InitialKeyRepeat" "$(read_global InitialKeyRepeat 25)"
+  printf '%-26s %s\n' "ApplePressAndHoldEnabled" "$(read_global ApplePressAndHoldEnabled 1)"
+}
+
+cmd_apply() {
+  echo "Before:"
+  cmd_show
+
+  # Faster cursor movement when holding a key (vim navigation).
+  defaults write -g KeyRepeat -int "$KEY_REPEAT"
+  defaults write -g InitialKeyRepeat -int "$INITIAL_KEY_REPEAT"
+
+  # Holding a key repeats it instead of opening the accent picker. Terminals
+  # like kitty and Ghostty bypass this already; GUI editors (Neovide, VS Code)
+  # do not.
+  defaults write -g ApplePressAndHoldEnabled -bool false
+
+  echo
+  echo "After:"
+  cmd_show
+  echo
+  echo "Log out and back in for the keyboard settings to take effect."
+}
+
+main() {
+  case "${1:-apply}" in
+  show)
+    require_macos
+    cmd_show
+    ;;
+  apply)
+    require_macos
+    cmd_apply
+    ;;
+  -h | --help | help) usage ;;
+  *)
+    echo "macos-defaults: unknown command '${1}'" >&2
+    exit 1
+    ;;
+  esac
+}
+
+main "$@"
