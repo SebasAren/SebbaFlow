@@ -52,7 +52,7 @@ neotest with `<leader>t` prefix. Adapters: neotest-python, neotest-vitest, neote
 
 ### GitLab
 
-**[gitlab.nvim](https://github.com/harrisoncramer/gitlab.nvim)** — review MRs (diffs via diffview-plus, discussions, approvals) with the default `gl` keymaps (`glS` start review, `glC` create MR). Needs Go from Homebrew (`brew "go"` in the Brewfile) to build its local server, and a `GITLAB_TOKEN` env var or a `.gitlab.nvim` file (`auth_token=…`) in the project root.
+**[gitlab.nvim](https://github.com/harrisoncramer/gitlab.nvim)** — review MRs (diffs via diffview-plus, discussions, approvals) with the default `gl` keymaps (`glS` start review, `glC` create MR). Needs Go from Homebrew (`brew "go"` in the Brewfile) to build its local server, and auth from a `.gitlab.nvim` file (`auth_token=…`) in the project root, `GITLAB_TOKEN`, or — as a fallback — the token `glab auth login` stored in the keyring.
 
 ## Customization
 
