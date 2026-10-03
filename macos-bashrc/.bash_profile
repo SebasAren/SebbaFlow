@@ -1,3 +1,6 @@
+# Docker Desktop CLI
+[ -d "$HOME/.docker/bin" ] && export PATH="$PATH:$HOME/.docker/bin"
+
 # .bash_profile
 # macOS Terminal launches login shells, which read .bash_profile instead of
 # .bashrc. Source .bashrc here so interactive config (aliases, .bashrc.d/,
