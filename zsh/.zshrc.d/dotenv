@@ -1,0 +1,162 @@
+#!/bin/zsh
+# Auto-source .env files on cd (oh-my-zsh's dotenv plugin, pulled as a single
+# snippet by zinit — no oh-my-zsh framework involved).
+#
+# Because oh-my-zsh is not loaded, $ZSH and $ZSH_CACHE_DIR are unset and the
+# plugin's allow/deny lists would default to `/cache/dotenv-*.list`, which
+# `touch` cannot create — every prompt would print an error. Point them at
+# XDG state instead. These must be set *before* the snippet loads: the plugin
+# resolves them with `: ${VAR:=default}` at source time.
+ZSH_DOTENV_ALLOWED_LIST="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/dotenv-allowed.list"
+ZSH_DOTENV_DISALLOWED_LIST="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/dotenv-disallowed.list"
+export ZSH_DOTENV_ALLOWED_LIST ZSH_DOTENV_DISALLOWED_LIST
+mkdir -p "${ZSH_DOTENV_ALLOWED_LIST:h}"
+
+# Loaded after 00-plugins (alphabetical order), so zinit is already sourced.
+#
+# The plugin calls source_env once at load time, for the directory the shell
+# starts in. That call would run before the wrappers below exist — so a new
+# pane opened straight into a worktree still prompts, and loose .env syntax
+# still fails. Point ZSH_DOTENV_FILE at a path that cannot exist while loading
+# to make that call a no-op, then run it ourselves at the end of this file.
+if (( $+functions[zinit] )); then
+  _dotenv_file="${ZSH_DOTENV_FILE:-.env}"
+  ZSH_DOTENV_FILE=/dev/null/.env
+  zinit snippet OMZP::dotenv
+  ZSH_DOTENV_FILE="$_dotenv_file"
+  unset _dotenv_file
+fi
+
+# Tolerate loose .env syntax.
+#
+# The plugin runs `zsh -fn` over the whole file and bails on any error, because
+# it parses values with zsh's own tokenizer. But a .env is not a zsh script: one
+# stray quote (`FOO = '''`) leaves a string open to EOF, so the file fails with
+# `unmatched '` at its last line and *every* variable is dropped — including the
+# 40-odd well-formed ones above it.
+#
+# Fall back to a line-oriented normalizer when that happens: keep whatever
+# parses, re-quote what doesn't, and say which line was bad. Files that already
+# pass the syntax check take the original path untouched.
+
+# True when $1 has all its quotes closed. Strips balanced quoted runs and
+# escaped characters; anything left over is an unmatched quote.
+_dotenv_balanced() {
+  setopt localoptions extendedglob
+  local sq="'[^']#'" dq='"([^"\\]|\\.)#"' uq="([^\"'\\\\]|\\\\?)"
+  local safe="(${sq}|${dq}|${uq})#"
+  [[ -z "${1##${~safe}}" ]]
+}
+
+# Rewrite loose .env content as valid zsh assignments. Sets REPLY.
+_dotenv_sanitize() {
+  setopt localoptions extendedglob
+  local -a lines out
+  lines=("${(@f)1}")
+  local -i i=1 n=${#lines} start
+  local chunk key value first
+
+  while (( i <= n )); do
+    chunk="${lines[i]}"
+
+    # blanks and comments pass through untouched
+    if [[ "$chunk" == [[:space:]]#(\#*|) ]]; then
+      out+=("$chunk"); (( i++ )); continue
+    fi
+
+    # KEY=VALUE, tolerating a leading `export` and spaces around the `=`
+    if [[ ! "$chunk" =~ '^[[:space:]]*(export[[:space:]]+)?([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$' ]]; then
+      (( i++ )); continue   # not an assignment — drop it
+    fi
+    key="${match[2]}"; value="${match[3]%%[[:space:]]##}"; first="$value"; start=$i
+
+    # a value may legitimately span lines; keep pulling until the quotes close
+    while ! _dotenv_balanced "$value" && (( i < n )); do
+      (( i++ )); value+=$'\n'"${lines[i]}"
+    done
+
+    if _dotenv_balanced "$value"; then
+      out+=("$key=$value")
+    else
+      # ran to EOF still open: this line is malformed, not a multi-line value.
+      # Take its first line literally and resume after it rather than letting
+      # it swallow the rest of the file.
+      out+=("$key=${(qq)first}")
+      print -ru2 -- "dotenv: line $start: unbalanced quote in '$key', taken literally"
+      i=$start
+    fi
+    (( i++ ))
+  done
+
+  REPLY="${(F)out}"
+}
+
+if (( $+functions[_dotenv_check_syntax] && $+functions[parse_dotenv] )); then
+  functions[_dotenv_check_syntax_orig]="${functions[_dotenv_check_syntax]}"
+  functions[_parse_dotenv_orig]="${functions[parse_dotenv]}"
+
+  # Record the verdict instead of aborting — but only for real files. The pipe
+  # path in source_env parses content directly without going through
+  # parse_dotenv, so leave its hard failure alone.
+  _dotenv_check_syntax() {
+    (( $# == 1 )) || { _dotenv_check_syntax_orig "$@"; return; }
+    _dotenv_needs_sanitize=0
+    _dotenv_check_syntax_orig "$@" 2>/dev/null || _dotenv_needs_sanitize=1
+    return 0
+  }
+
+  parse_dotenv() {
+    (( _dotenv_needs_sanitize )) || { _parse_dotenv_orig "$@"; return; }
+
+    local filename="$1" mode="${2:-export}" content
+    # same DoS guard as the original
+    zmodload -F zsh/stat b:zstat
+    local -i file_size
+    if ! file_size=$(zstat +size "$filename" 2>/dev/null); then
+      print -ru2 -- "dotenv: unable to determine size of file '$filename'"
+      return 1
+    fi
+    if (( file_size > 10485760 )); then
+      print -ru2 -- "dotenv: file '$filename' is too large to parse"
+      return 1
+    fi
+
+    content="$(<"$filename")" || return 1
+    _dotenv_sanitize "$content"
+    _parse_dotenv_content "$REPLY" "$mode"
+  }
+fi
+
+# Trust whole subtrees, not just exact directories.
+#
+# The plugin matches $PWD against its allow list with `grep -Fx` — an exact,
+# literal path compare. git worktrees get a fresh directory per branch
+# (~/.herdr/worktrees/<repo>/<branch>), so answering `[a]lways` in one worktree
+# teaches it nothing about the next one and every new branch re-prompts.
+#
+# Wrap source_env so any directory under a trusted prefix skips the prompt.
+# ZSH_DOTENV_PROMPT is read at call time, so a `local` here shadows it for the
+# wrapped function. The deny list is deliberately not consulted — these are
+# subtrees you already own.
+typeset -ga ZSH_DOTENV_ALLOWED_PREFIXES=(
+  "$HOME/.herdr/worktrees"
+)
+
+if (( $+functions[source_env] )); then
+  functions[_dotenv_source_env_orig]="${functions[source_env]}"
+
+  source_env() {
+    local dirpath="${PWD:A}" prefix
+    local ZSH_DOTENV_PROMPT="$ZSH_DOTENV_PROMPT"
+    for prefix in "${ZSH_DOTENV_ALLOWED_PREFIXES[@]}"; do
+      if [[ "$dirpath" == "${prefix:A}"/* ]]; then
+        ZSH_DOTENV_PROMPT=false
+        break
+      fi
+    done
+    _dotenv_source_env_orig "$@"
+  }
+fi
+
+# The load-time call deferred above, now that every wrapper is in place.
+(( $+functions[source_env] )) && source_env
