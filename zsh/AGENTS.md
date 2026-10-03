@@ -13,7 +13,7 @@ files in `.zshrc.d/`.
   00-plugins          # zinit bootstrap + plugin set + compinit + prompt/nav tools
   alias               # Short aliases
   fnox                # fnox reencryption helper
-  mise                # Activates mise/fnox/pitchfork (guarded, zsh variant)
+  mise                # Activates mise/fnox/pitchfork (skipped inside herdr), asdf shims ahead of mise
   secrets             # Lazy Proton Pass integration (same as bashrc's)
 ```
 

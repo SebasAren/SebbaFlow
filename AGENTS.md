@@ -31,6 +31,7 @@ bluefin-bashrc/            # Bluefin base bashrc → bluefin-bashrc/AGENTS.md
 docs/                      # CV site (Astro, GitHub Pages)
 tests/                     # Local plenary Lua tests (tests/run.sh)
 mise/.config/mise/         # Global mise config (herdr, pi, pitchfork pins)
+asdf/.tool-versions        # Global asdf versions (fritsctl check needs a global nodejs)
 usage-dashboard/           # Pi usage stats dashboard (pitchfork usage-dash)
 mise.toml                  # Runtime versions
 .mise/tasks/              # Mise tasks (lint, format, check, etc.)

@@ -3,7 +3,15 @@
 # .zshenv is sourced by zsh unconditionally, before .zshrc.
 
 # XDG Base Directory
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+# Inside herdr, XDG_CONFIG_HOME stays unset so tools inside the nono sandbox
+# resolve their macOS-default config dirs (e.g. glab → Application Support),
+# matching the paths herdr-nono.zsh grants. Explicit unset because panes inherit
+# it from whatever shell launched the herdr server.
+if [[ "$HERDR_ENV" == "1" ]]; then
+  unset XDG_CONFIG_HOME
+else
+  export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+fi
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"

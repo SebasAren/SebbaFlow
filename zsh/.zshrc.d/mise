@@ -1,7 +1,33 @@
 #!/bin/zsh
-if command -v mise >/dev/null 2>&1; then
+# Inside herdr, mise stays off entirely: its per-prompt PATH rewriting fights
+# asdf's shims. Panes inherit the env of whatever shell launched the herdr
+# server, so also strip mise state that leaked in from there. The mise binary
+# itself (/opt/homebrew/bin) stays callable, so `mise run` tasks and the
+# pre-commit hook still work — they build their own env per invocation.
+if [[ "$HERDR_ENV" == "1" ]]; then
+  _mise_data="${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}"
+  path=("${(@)path:#$_mise_data/*}")
+  unset -m '__MISE_*'
+  unset MISE_SHELL _mise_data
+elif command -v mise >/dev/null 2>&1; then
   eval "$(mise activate zsh)"
   source <(mise completion zsh)
+fi
+
+# asdf (0.16+, Go rewrite) has no asdf.sh to source — it only needs its shims
+# on PATH, and they must beat mise. mise's precmd/chpwd hooks re-prepend its
+# tool paths on every prompt, so a one-off PATH export would be buried again.
+# Register our own hooks *after* mise's (hooks run in registration order) and
+# move the shims back to the front each time.
+if command -v asdf >/dev/null 2>&1; then
+  _asdf_shims_first() {
+    local shims="${ASDF_DATA_DIR:-$HOME/.asdf}/shims"
+    path=("$shims" "${(@)path:#$shims}")
+  }
+  autoload -Uz add-zsh-hook
+  add-zsh-hook precmd _asdf_shims_first
+  add-zsh-hook chpwd _asdf_shims_first
+  _asdf_shims_first
 fi
 
 if command -v fnox >/dev/null 2>&1; then
