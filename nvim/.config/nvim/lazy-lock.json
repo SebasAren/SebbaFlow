@@ -11,6 +11,10 @@
     "branch": "master",
     "commit": "016802de402556da54c36bd7359b441266b01cdd"
   },
+  "diffview-plus.nvim": {
+    "branch": "main",
+    "commit": "875d16dd8c8aa86f1a5c3b5cef49e1133980ae94"
+  },
   "document-color.nvim": {
     "branch": "main",
     "commit": "74c487f0e5accfaae033755451b9e367220693fd"
@@ -30,6 +34,10 @@
   "git-conflict.nvim": {
     "branch": "main",
     "commit": "4bbfdd92d547d2862a75b4e80afaf30e73f7bbb4"
+  },
+  "gitlab.nvim": {
+    "branch": "develop",
+    "commit": "0af8e71fd508fe755ee9a7c9dba6d709b17a8842"
   },
   "gitsigns.nvim": {
     "branch": "main",
