@@ -87,7 +87,7 @@ pi
 /login        # pick a provider (OAuth or API key)
 ```
 
-Non-provider API keys (Exa, Context7, OpenRouter, Langfuse) live in the same
+Non-provider API keys (Exa, Context7, OpenRouter) live in the same
 file as custom `api_key` entries — the extensions and tools read them from
 there automatically (env vars still win when set):
 
@@ -95,15 +95,7 @@ there automatically (env vars still win when set):
 {
   "exa": { "type": "api_key", "key": "..." },
   "context7": { "type": "api_key", "key": "..." },
-  "openrouter": { "type": "api_key", "key": "..." },
-  "langfuse": {
-    "type": "api_key",
-    "key": "pk-...",
-    "env": {
-      "LANGFUSE_SECRET_KEY": "sk-...",
-      "LANGFUSE_HOST": "https://cloud.langfuse.com"
-    }
-  }
+  "openrouter": { "type": "api_key", "key": "..." }
 }
 ```
 

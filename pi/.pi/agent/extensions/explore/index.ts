@@ -19,7 +19,7 @@ import {
 import type { CreateAgentSessionOptions } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { resolveRealCwd, runSubagent, getModel, startExploreTrace } from "@pi-ext/shared";
+import { resolveRealCwd, runSubagent, getModel } from "@pi-ext/shared";
 
 import { EXPLORE_SYSTEM_PROMPT } from "./constants";
 import { renderCall, renderResult } from "./render";
@@ -169,103 +169,66 @@ export default function (pi: ExtensionAPI) {
       const defaultTimeout = thoroughness === "thorough" ? 600_000 : 300_000;
       const timeoutMs = params.timeoutMs ?? defaultTimeout;
 
-      // Initialize tracing
-      const modelName = getModel() || "unknown";
-      const sessionId = ctx.sessionManager?.getSessionId?.();
-      const { observation, child } = startExploreTrace(params.query, cwd, modelName, sessionId);
+      // Pre-search: run intelligent pre-search before spawning the subagent
+      const preSearchResult = await preSearch(cwd, params.query);
 
-      try {
-        // Pre-search: run intelligent pre-search before spawning the subagent
-        const preSpan = child("pre-search", { input: { query: params.query } });
-        const preSearchResult = await preSearch(cwd, params.query);
-        preSpan.update({
-          output: {
-            stats: preSearchResult.stats,
-            text: preSearchResult.text,
-          },
-        });
-        preSpan.end();
+      // Build query with constraints and optional focus files
+      let query = params.query + preSearchResult.text;
+      query += `\n\n[Constraints: thoroughness=${thoroughness}, max ${maxToolCalls} tool calls]`;
+      if (params.directory) {
+        query += `\n[Scope: only look in ${params.directory}]`;
+      }
+      if (params.files && params.files.length > 0) {
+        query += `\n[Focus files: start by reading these known-relevant files, then explore outward if needed]`;
+        query += `\n${params.files.map((f) => `- ${f}`).join("\n")}`;
+      }
 
-        // Build query with constraints and optional focus files
-        let query = params.query + preSearchResult.text;
-        query += `\n\n[Constraints: thoroughness=${thoroughness}, max ${maxToolCalls} tool calls]`;
-        if (params.directory) {
-          query += `\n[Scope: only look in ${params.directory}]`;
-        }
-        if (params.files && params.files.length > 0) {
-          query += `\n[Focus files: start by reading these known-relevant files, then explore outward if needed]`;
-          query += `\n${params.files.map((f) => `- ${f}`).join("\n")}`;
-        }
+      const result = await runSubagent({
+        cwd,
+        query,
+        systemPrompt: EXPLORE_SYSTEM_PROMPT,
+        createSession: createExploreSession,
+        timeoutMs,
+        signal,
+        onUpdate: onUpdate
+          ? (update) => {
+              onUpdate({
+                content: [{ type: "text", text: update.text }],
+                details: { model: getModel(), query, recentCalls: update.recentCalls },
+              });
+            }
+          : undefined,
+        loopDetection: true,
+        maxToolCalls,
+      });
 
-        const result = await runSubagent({
-          cwd,
-          query,
-          systemPrompt: EXPLORE_SYSTEM_PROMPT,
-          createSession: createExploreSession,
-          timeoutMs,
-          signal,
-          onUpdate: onUpdate
-            ? (update) => {
-                onUpdate({
-                  content: [{ type: "text", text: update.text }],
-                  details: { model: getModel(), query, recentCalls: update.recentCalls },
-                });
-              }
-            : undefined,
-          onToolCall: (info) => {
-            const toolSpan = child(info.toolName, {
-              input: { argsSummary: info.argsSummary },
-              metadata: { success: info.success, durationMs: info.durationMs },
-            });
-            toolSpan.end();
-          },
-          loopDetection: true,
-          maxToolCalls,
-        });
+      const isError = result.exitCode !== 0 || !!result.errorMessage;
 
-        const isError = result.exitCode !== 0 || !!result.errorMessage;
-
-        observation.update({
-          output: {
-            usage: {
-              input: result.usage.input,
-              output: result.usage.output,
-              turns: result.usage.turns,
-              cost: result.usage.cost,
-              contextTokens: result.usage.contextTokens,
-            },
-            success: !isError,
-          },
-        });
-
-        if (isError) {
-          const errorMsg = result.errorMessage || result.stderr || result.output || "(no output)";
-          return {
-            content: [{ type: "text" as const, text: `Explore failed: ${errorMsg}` }],
-            details: {
-              model: getModel(),
-              query,
-              usage: result.usage,
-              success: false,
-              preSearchStats: preSearchResult.stats,
-            },
-          };
-        }
-
+      if (isError) {
+        const errorMsg = result.errorMessage || result.stderr || result.output || "(no output)";
         return {
-          content: [{ type: "text" as const, text: result.output || "(no output)" }],
+          content: [{ type: "text" as const, text: `Explore failed: ${errorMsg}` }],
           details: {
             model: getModel(),
-            usedModel: result.model,
             query,
             usage: result.usage,
-            success: true,
+            success: false,
             preSearchStats: preSearchResult.stats,
           },
         };
-      } finally {
-        observation.end();
       }
+
+      return {
+        content: [{ type: "text" as const, text: result.output || "(no output)" }],
+        details: {
+          model: getModel(),
+          usedModel: result.model,
+          query,
+          usage: result.usage,
+          success: true,
+          preSearchStats: preSearchResult.stats,
+        },
+      };
     },
 
     renderCall(args, theme, context) {

@@ -34,14 +34,6 @@ describe("index exports", () => {
   it("exports formatAsBulletList", () => {
     expect(typeof shared.formatAsBulletList).toBe("function");
   });
-
-  it("exports initTracing", () => {
-    expect(typeof shared.initTracing).toBe("function");
-  });
-
-  it("exports startExploreTrace", () => {
-    expect(typeof shared.startExploreTrace).toBe("function");
-  });
 });
 
 // Type-only exports

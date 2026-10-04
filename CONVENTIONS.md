@@ -59,7 +59,7 @@ See `.claude/rules/global.md` for stow conventions (auto-injected on every sessi
 
 - Never commit secrets or credentials to the repo
 - No shell-level injection: `pi` and its extensions read credentials from pi's built-in auth (`~/.pi/agent/auth.json`, written by `/login`)
-- Non-provider tool keys (Exa, Context7, OpenRouter, Langfuse) are custom `api_key` entries in the same file; env vars win when set
+- Non-provider tool keys (Exa, Context7, OpenRouter) are custom `api_key` entries in the same file; env vars win when set
 
 ## File Organization
 
