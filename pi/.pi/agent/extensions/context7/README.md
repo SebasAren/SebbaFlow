@@ -26,10 +26,11 @@ Fetch documentation snippets for a specific library using its Context7 library I
 ## Setup
 
 1. Get a free API key at [context7.com/dashboard](https://context7.com/dashboard)
-2. Set the environment variable:
-   ```bash
-   export CONTEXT7_API_KEY='your-key'
+2. Add it to pi's built-in auth (recommended):
+   ```json
+   { "context7": { "type": "api_key", "key": "your-key" } }
    ```
+   in `~/.pi/agent/auth.json`, or set the `CONTEXT7_API_KEY` env var.
 3. The extension will be automatically loaded by Pi.
 
 ## Usage

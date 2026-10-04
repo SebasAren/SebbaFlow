@@ -29,7 +29,7 @@
   },
   "fzf-lua": {
     "branch": "main",
-    "commit": "d5c12c6d72ed84554f0f8dacb84f20da094b6a2d"
+    "commit": "bba13a0d260ca5e049683344ba70791c9ad8ece6"
   },
   "git-conflict.nvim": {
     "branch": "main",
@@ -77,11 +77,7 @@
   },
   "mini.nvim": {
     "branch": "main",
-    "commit": "ba4362b1728c60f4002e924ebddbb25e21d1b2cf"
-  },
-  "minuet-ai.nvim": {
-    "branch": "main",
-    "commit": "3b0a4c5f97b7124d94302c608fbe01c0270d4fbe"
+    "commit": "65d615e1f78775323bfd4651f694824256e2adc1"
   },
   "neotest": {
     "branch": "master",

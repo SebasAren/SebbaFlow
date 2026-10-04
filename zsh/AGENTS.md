@@ -15,7 +15,6 @@ files in `.zshrc.d/`.
   dotenv              # Auto-source .env on cd (OMZ dotenv snippet via zinit)
   fnox                # fnox reencryption helper
   mise                # Activates mise/fnox/pitchfork (skipped inside herdr), asdf shims ahead of mise
-  secrets             # Lazy Proton Pass integration (same as bashrc's)
 ```
 
 `00-plugins` is numbered so it sources first — it runs `compinit`, which

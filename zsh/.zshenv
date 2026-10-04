@@ -39,7 +39,7 @@ elif [ -d "/usr/local/Homebrew" ]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
 
-# User binaries from stow packages (brew-sync, macos-defaults, wiki-search, …).
+# User binaries from stow packages (brew-sync, macos-defaults, issue, …).
 # After the Homebrew block so ~/.local/bin takes precedence. `typeset -U`
 # dedupes — .zshenv runs on every zsh invocation, including nested shells,
 # so without it PATH grows on each one.

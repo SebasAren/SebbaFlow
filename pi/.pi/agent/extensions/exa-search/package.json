@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@pi-ext/shared": "workspace:*",
     "exa-js": "^2.0.0"
   },
   "pi": {

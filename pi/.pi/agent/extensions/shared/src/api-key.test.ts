@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { checkApiKey, requireApiKey } from "./api-key";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { checkApiKey, requireApiKey, resolveApiKey } from "./api-key";
+
+/** Create a temp agent dir with an auth.json and point PI_CODING_AGENT_DIR at it. */
+function withAuthFile(entries: Record<string, unknown>): string {
+  const dir = mkdtempSync(join(tmpdir(), "pi-auth-"));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "auth.json"), JSON.stringify(entries));
+  process.env.PI_CODING_AGENT_DIR = dir;
+  return dir;
+}
 
 describe("checkApiKey", () => {
   const originalWarn = console.warn;
@@ -43,6 +55,108 @@ describe("checkApiKey", () => {
     expect(result).toBe("");
     expect(warnings).toHaveLength(1);
     delete process.env.TEST_API_KEY_EMPTY;
+  });
+});
+
+describe("resolveApiKey", () => {
+  const keyVars = ["TEST_RESOLVE_KEY", "TEST_RESOLVE_MISSING"];
+
+  afterEach(() => {
+    for (const v of keyVars) delete process.env[v];
+    delete process.env.PI_CODING_AGENT_DIR;
+  });
+
+  it("prefers the environment variable over the auth.json entry", () => {
+    const dir = withAuthFile({ exa: { type: "api_key", key: "auth-key" } });
+    process.env.TEST_RESOLVE_KEY = "env-key";
+    expect(resolveApiKey("TEST_RESOLVE_KEY", "exa")).toBe("env-key");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("falls back to the auth.json entry when env is unset", () => {
+    const dir = withAuthFile({ exa: { type: "api_key", key: "auth-key" } });
+    delete process.env.TEST_RESOLVE_KEY;
+    expect(resolveApiKey("TEST_RESOLVE_KEY", "exa")).toBe("auth-key");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("re-reads auth.json when the agent dir changes", () => {
+    const dirA = withAuthFile({ exa: { type: "api_key", key: "key-a" } });
+    expect(resolveApiKey("TEST_RESOLVE_MISSING", "exa")).toBe("key-a");
+    const dirB = withAuthFile({ exa: { type: "api_key", key: "key-b" } });
+    expect(resolveApiKey("TEST_RESOLVE_MISSING", "exa")).toBe("key-b");
+    rmSync(dirA, { recursive: true, force: true });
+    rmSync(dirB, { recursive: true, force: true });
+  });
+
+  it("returns undefined when neither env nor auth.json has the key", () => {
+    const dir = withAuthFile({ other: { type: "api_key", key: "x" } });
+    delete process.env.TEST_RESOLVE_MISSING;
+    expect(resolveApiKey("TEST_RESOLVE_MISSING", "exa")).toBeUndefined();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("returns undefined when auth.json is missing entirely", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pi-auth-empty-"));
+    process.env.PI_CODING_AGENT_DIR = dir;
+    delete process.env.TEST_RESOLVE_MISSING;
+    expect(resolveApiKey("TEST_RESOLVE_MISSING", "exa")).toBeUndefined();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("checkApiKey with auth.json fallback", () => {
+  afterEach(() => {
+    delete process.env.PI_CODING_AGENT_DIR;
+    delete process.env.TEST_AUTH_KEY;
+  });
+
+  it("returns the auth.json key without warning when env is unset", () => {
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+    try {
+      const dir = withAuthFile({ exa: { type: "api_key", key: "auth-key" } });
+      expect(checkApiKey("exa-search", "TEST_AUTH_KEY", "exa")).toBe("auth-key");
+      expect(warnings).toHaveLength(0);
+      rmSync(dir, { recursive: true, force: true });
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it("warns mentioning auth.json when both sources are missing", () => {
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+    try {
+      const dir = withAuthFile({});
+      expect(checkApiKey("exa-search", "TEST_AUTH_KEY", "exa")).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain("auth.json");
+      rmSync(dir, { recursive: true, force: true });
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+});
+
+describe("requireApiKey with auth.json fallback", () => {
+  afterEach(() => {
+    delete process.env.PI_CODING_AGENT_DIR;
+    delete process.env.TEST_AUTH_KEY;
+  });
+
+  it("returns the auth.json key when env is unset", () => {
+    const dir = withAuthFile({ context7: { type: "api_key", key: "auth-key" } });
+    expect(requireApiKey("context7", "TEST_AUTH_KEY", "context7")).toBe("auth-key");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("throws mentioning auth.json when both sources are missing", () => {
+    const dir = withAuthFile({});
+    expect(() => requireApiKey("context7", "TEST_AUTH_KEY", "context7")).toThrow(/auth\.json/);
+    rmSync(dir, { recursive: true, force: true });
   });
 });
 

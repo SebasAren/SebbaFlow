@@ -1,4 +1,7 @@
-import { describe, it, expect, afterEach, mock } from "bun:test";
+import { describe, it, expect, afterEach, beforeEach, mock } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Mock OpenTelemetry SDK modules to prevent real connections
 mock.module("@opentelemetry/sdk-node", () => ({
@@ -18,6 +21,12 @@ describe("initTracing", () => {
   const origPublicKey = process.env.LANGFUSE_PUBLIC_KEY;
   const origSecretKey = process.env.LANGFUSE_SECRET_KEY;
   const origHost = process.env.LANGFUSE_HOST;
+  const origAgentDir = process.env.PI_CODING_AGENT_DIR;
+
+  // Isolate from the developer's real auth.json (may contain a langfuse entry)
+  beforeEach(() => {
+    process.env.PI_CODING_AGENT_DIR = join(tmpdir(), "no-such-pi-auth-dir");
+  });
 
   afterEach(() => {
     // Restore originals
@@ -27,6 +36,8 @@ describe("initTracing", () => {
     else delete process.env.LANGFUSE_SECRET_KEY;
     if (origHost !== undefined) process.env.LANGFUSE_HOST = origHost;
     else delete process.env.LANGFUSE_HOST;
+    if (origAgentDir !== undefined) process.env.PI_CODING_AGENT_DIR = origAgentDir;
+    else delete process.env.PI_CODING_AGENT_DIR;
   });
 
   it("returns a no-op tracer when LANGFUSE env vars are not set", () => {
@@ -124,5 +135,33 @@ describe("initTracing", () => {
 
     // noop constant and real singleton must be different objects
     expect(noopInstance).not.toBe(realInstance);
+  });
+
+  it("enables real tracing from a langfuse auth.json entry when env is unset", () => {
+    delete process.env.LANGFUSE_PUBLIC_KEY;
+    delete process.env.LANGFUSE_SECRET_KEY;
+    delete process.env.LANGFUSE_HOST;
+
+    const emptyDir = mkdtempSync(join(tmpdir(), "pi-auth-empty-"));
+    process.env.PI_CODING_AGENT_DIR = emptyDir;
+    const noopInstance = initTracing();
+
+    const authDir = mkdtempSync(join(tmpdir(), "pi-auth-langfuse-"));
+    writeFileSync(
+      join(authDir, "auth.json"),
+      JSON.stringify({
+        langfuse: {
+          type: "api_key",
+          key: "pk-auth",
+          env: { LANGFUSE_SECRET_KEY: "sk-auth", LANGFUSE_HOST: "https://example.com" },
+        },
+      }),
+    );
+    process.env.PI_CODING_AGENT_DIR = authDir;
+    const realInstance = initTracing();
+
+    expect(realInstance).not.toBe(noopInstance);
+    rmSync(emptyDir, { recursive: true, force: true });
+    rmSync(authDir, { recursive: true, force: true });
   });
 });

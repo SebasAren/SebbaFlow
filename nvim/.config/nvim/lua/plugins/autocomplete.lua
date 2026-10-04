@@ -4,25 +4,6 @@ return {
     version = "1.*",
     dependencies = {
       "echasnovski/mini.nvim",
-      {
-        "milanglacier/minuet-ai.nvim",
-        config = function()
-          require("minuet").setup({
-            provider_options = {
-              codestral = {
-                model = "codestral-latest",
-                end_point = "https://codestral.mistral.ai/v1/fim/completions",
-                api_key = "CODESTRAL_API_KEY",
-                stream = true,
-                optional = {
-                  stop = nil, -- the identifier to stop the completion generation
-                  max_tokens = nil,
-                },
-              },
-            },
-          })
-        end,
-      },
     },
     ---@module 'blink.cmp'
     ---@type blink.cmp.Config
@@ -62,16 +43,8 @@ return {
       },
       snippets = { preset = "mini_snippets" },
       sources = {
-        default = { "lsp", "path", "snippets", "buffer", "minuet" },
-        providers = {
-          minuet = {
-            name = "minuet",
-            module = "minuet.blink",
-            async = true,
-            timeout_ms = 3000,
-            score_offset = 50,
-          },
-        },
+        default = { "lsp", "path", "snippets", "buffer" },
+        providers = {},
       },
     },
     opts_extend = { "sources.default" },

@@ -17,10 +17,7 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 
 ### Completion
 
-[blink.cmp](https://github.com/Saghen/blink.cmp) with AI providers:
-
-- **Codestral** (Mistral) for code completion
-- **Minuet-AI** for extended context suggestions
+[blink.cmp](https://github.com/Saghen/blink.cmp) with LSP, snippet, path, and buffer sources.
 
 ### LSP
 

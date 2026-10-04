@@ -6,6 +6,7 @@
  * is sent — avoids import-noise contamination.
  */
 
+import { resolveApiKey } from "@pi-ext/shared";
 import type { FileEntry, ScoredFile } from "./file-index";
 
 const RERANK_MODEL = "cohere/rerank-4-fast";
@@ -68,7 +69,8 @@ export async function rerankCandidates(
   candidates: ScoredFile[],
   entries: Map<string, FileEntry>,
 ): Promise<RerankedFile[]> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  // Env var first, then the "openrouter" entry in pi's auth.json
+  const apiKey = resolveApiKey("OPENROUTER_API_KEY", "openrouter");
   if (!apiKey || candidates.length < 2) {
     // Graceful fallback: copy heuristic score into relevanceScore
     return candidates.map((c) => ({

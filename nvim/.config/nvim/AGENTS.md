@@ -2,7 +2,7 @@
 
 Requires **Neovim 0.11+** (uses `vim.lsp.config` / `vim.lsp.enable` APIs).
 
-Lazy.nvim-based config with LSP servers, AI-powered completion (minuet+codestral), and modular plugin specs.
+Lazy.nvim-based config with LSP servers and modular plugin specs.
 
 ## Structure
 

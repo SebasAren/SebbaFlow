@@ -2,8 +2,9 @@
  * Tracing module — OpenTelemetry tracing via Langfuse.
  *
  * Provides a singleton `initTracing()` that lazily initializes the
- * OpenTelemetry SDK with LangfuseSpanProcessor when LANGFUSE env vars
- * are set. When env vars are missing, returns no-op stubs that safely
+ * OpenTelemetry SDK with LangfuseSpanProcessor when Langfuse credentials
+ * are available (LANGFUSE_* env vars, or a "langfuse" entry in pi's
+ * auth.json). When neither is present, returns no-op stubs that safely
  * swallow all calls (no throwing, no memory leaks).
  *
  * Usage:
@@ -21,6 +22,7 @@ import {
 } from "@langfuse/tracing";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { readAuthEntries } from "./api-key";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -64,27 +66,38 @@ let realTracing: TracingInstance | undefined;
 
 // ── Helper ─────────────────────────────────────────────────────────────────
 
-function hasEnvVars(): boolean {
-  return !!(
-    process.env.LANGFUSE_PUBLIC_KEY &&
-    process.env.LANGFUSE_SECRET_KEY &&
-    process.env.LANGFUSE_HOST
-  );
+export interface LangfuseConfig {
+  publicKey: string;
+  secretKey: string;
+  host: string;
+}
+
+/**
+ * Resolve Langfuse credentials: env vars first, then the "langfuse" entry
+ * in pi's auth.json (`key` = public key, `env` = secret + host).
+ * Returns undefined when not fully configured — tracing stays off.
+ */
+function resolveLangfuseConfig(): LangfuseConfig | undefined {
+  const entry = readAuthEntries()["langfuse"];
+  const publicKey = process.env.LANGFUSE_PUBLIC_KEY || entry?.key;
+  const secretKey = process.env.LANGFUSE_SECRET_KEY || entry?.env?.LANGFUSE_SECRET_KEY;
+  const host = process.env.LANGFUSE_HOST || entry?.env?.LANGFUSE_HOST;
+  return publicKey && secretKey && host ? { publicKey, secretKey, host } : undefined;
 }
 
 // ── Real tracer initialization ────────────────────────────────────────────
 
 let sdk: NodeSDK | undefined;
 
-function initRealTracing(): TracingInstance {
+function initRealTracing(config: LangfuseConfig): TracingInstance {
   if (realTracing) return realTracing;
 
   sdk = new NodeSDK({
     spanProcessors: [
       new LangfuseSpanProcessor({
-        publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-        secretKey: process.env.LANGFUSE_SECRET_KEY,
-        baseUrl: process.env.LANGFUSE_HOST,
+        publicKey: config.publicKey,
+        secretKey: config.secretKey,
+        baseUrl: config.host,
       }),
     ],
   });
@@ -215,8 +228,8 @@ export function startExploreTrace(
 /**
  * Initialize tracing (lazy singleton).
  *
- * Returns a no-op tracer when LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY,
- * and LANGFUSE_HOST are not all set. Otherwise initializes the OpenTelemetry
+ * Returns a no-op tracer when Langfuse credentials are not fully configured
+ * (env vars or auth.json). Otherwise initializes the OpenTelemetry
  * SDK with LangfuseSpanProcessor and returns the real Langfuse SDK binding.
  *
  * The real tracer is a singleton: the SDK is initialized only once.
@@ -225,8 +238,9 @@ export function startExploreTrace(
  * Safe to call multiple times — only initializes SDK once.
  */
 export function initTracing(): TracingInstance {
-  if (hasEnvVars()) {
-    return initRealTracing();
+  const config = resolveLangfuseConfig();
+  if (config) {
+    return initRealTracing(config);
   }
 
   return noopTracing;

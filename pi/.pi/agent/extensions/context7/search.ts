@@ -36,7 +36,7 @@ export async function executeSearch(
 ) {
   if (!apiKey) {
     throw new Error(
-      "CONTEXT7_API_KEY not set. Get your API key at context7.com/dashboard and set it via: export CONTEXT7_API_KEY='your-key'",
+      "CONTEXT7_API_KEY not set. Get your API key at context7.com/dashboard and set it via export CONTEXT7_API_KEY='your-key' or an auth.json \"context7\" entry",
     );
   }
 

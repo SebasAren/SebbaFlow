@@ -58,9 +58,8 @@ See `.claude/rules/global.md` for stow conventions (auto-injected on every sessi
 ## Secrets
 
 - Never commit secrets or credentials to the repo
-- Use `~/.secrets.tpl` with Proton Pass CLI template syntax: `{{ pass://path/to/key }}`
-- Secrets are resolved lazily on first use, not at shell startup
-- Full key list: `bashrc/.secrets.tpl` — Exa, Context7, OpenRouter, Langfuse, and more (pi extensions, wiki-search reranking, model providers)
+- No shell-level injection: `pi` and its extensions read credentials from pi's built-in auth (`~/.pi/agent/auth.json`, written by `/login`)
+- Non-provider tool keys (Exa, Context7, OpenRouter, Langfuse) are custom `api_key` entries in the same file; env vars win when set
 
 ## File Organization
 

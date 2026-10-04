@@ -1,4 +1,4 @@
 #!/bin/bash
 export FALLBACK_MODEL="opencode-go/mimo-v2.5"
-export CHEAP_MODEL="opencode-go/deepseek-v4-flash"
+export CHEAP_MODEL="deepseek/deepseek-flash"
 export SUBAGENT_MAX_RETRIES=3

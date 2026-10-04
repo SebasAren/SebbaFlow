@@ -1,4 +1,10 @@
-export { checkApiKey, requireApiKey } from "./api-key";
+export {
+  checkApiKey,
+  requireApiKey,
+  resolveApiKey,
+  readAuthEntries,
+  type AuthCredential,
+} from "./api-key";
 export { resolveRealCwd } from "./cwd";
 export { formatTokens, formatUsageLine } from "./format";
 export { argsSignature, detectLoop } from "./loop-detection";

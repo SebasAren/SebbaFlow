@@ -33,7 +33,7 @@ globs:
 
 ## Extension Catalog
 
-- **No wiki tooling in pi — deliberate**: `wiki-search`/`wiki-read`/`wiki-lint` extensions, `obsidian-wiki-*` skills, and `store-memory` were intentionally removed (bf32f31, 80ffab1); pi's agent surface has no wiki access. Do not re-add — the wiki pipeline (ingest/lint/CLI tooling) lives in the `obsidian/` stow package, invoked directly via bash, not through pi extensions/skills.
+- **No wiki tooling in pi — deliberate**: `wiki-search`/`wiki-read`/`wiki-lint` extensions, `obsidian-wiki-*` skills, and `store-memory` were intentionally removed (bf32f31, 80ffab1); pi's agent surface has no wiki access. Do not re-add — the remaining wiki pipeline (issue tracker, frontmatter I/O) lives in the `obsidian/` stow package, invoked directly via bash, not through pi extensions/skills. The standalone `wiki-search` CLI was removed entirely.
 
 ## Extension Architecture
 
@@ -72,8 +72,8 @@ globs:
 ## Pi Skill Design
 
 - **Split skills by concern** — monolithic skills waste context because the full SKILL.md loads on every invocation. Split into focused skills so each loads only what it needs.
-- **Skills vs extensions** — Skills are procedural guides (how to ingest, how to lint). For always-available operations like querying/searching, prefer a CLI tool (`~/.local/bin/wiki-search`) over a skill invocation.
-- **CLI tools in skills must be framed as bash commands** — Agents interpret bare tool names (e.g., `use wiki-search "..."`) as native tools they don't have access to and skip them. Always wrap CLI invocations in bash code blocks or explicitly say "via the `bash` tool".
+- **Skills vs extensions** — Skills are procedural guides (how to ingest, how to lint). For always-available operations like querying/searching, prefer a CLI tool (e.g. `issue`) over a skill invocation.
+- **CLI tools in skills must be framed as bash commands** — Agents interpret bare tool names (e.g., `use issue list`) as native tools they don't have access to and skip them. Always wrap CLI invocations in bash code blocks or explicitly say "via the `bash` tool".
 
 ## New Extension Checklist
 

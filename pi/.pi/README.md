@@ -8,17 +8,17 @@ Custom extensions for the [Pi](https://github.com/earendil-works/pi-mono) AI cod
 
 These spawn a separate (cheaper/faster) model to handle reconnaissance, research, or knowledge capture — keeping the parent agent focused on the actual task.
 
-| Extension     | Purpose                                                                        | Config                            |
-| ------------- | ------------------------------------------------------------------------------ | --------------------------------- |
-| **explore**   | Codebase reconnaissance with pre-search, file indexing, and semantic reranking | `CHEAP_MODEL` env var             |
-| **librarian** | Research via Exa web search + Context7 library docs + past session history     | `EXA_API_KEY`, `CONTEXT7_API_KEY` |
+| Extension     | Purpose                                                                        | Config                                                                   |
+| ------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| **explore**   | Codebase reconnaissance with pre-search, file indexing, and semantic reranking | `CHEAP_MODEL` env var                                                    |
+| **librarian** | Research via Exa web search + Context7 library docs + past session history     | auth.json `exa`/`context7` entries (or `EXA_API_KEY`/`CONTEXT7_API_KEY`) |
 
 ### Research & Documentation
 
-| Extension      | Purpose                                               | Config             |
-| -------------- | ----------------------------------------------------- | ------------------ |
-| **context7**   | Up-to-date library documentation search and retrieval | `CONTEXT7_API_KEY` |
-| **exa-search** | Web search and page content fetching via Exa API      | `EXA_API_KEY`      |
+| Extension      | Purpose                                               | Config                                             |
+| -------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| **context7**   | Up-to-date library documentation search and retrieval | auth.json `context7` entry (or `CONTEXT7_API_KEY`) |
+| **exa-search** | Web search and page content fetching via Exa API      | auth.json `exa` entry (or `EXA_API_KEY`)           |
 
 ### Knowledge Management
 

@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Update pass-cli (self-managed in ~/.local/bin, not Homebrew)"
-set -euo pipefail
-
-pass-cli update -y
-pass-cli --version

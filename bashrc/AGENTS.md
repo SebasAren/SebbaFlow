@@ -10,25 +10,13 @@ Modular shell config. Entry point: `.bashenv` (global vars), then all files in `
   config              # Sources .bashenv, fzf key bindings
   alias               # Short aliases
   mise                # Activates mise runtime manager
-  secrets             # Lazy Proton Pass integration
   fnox                # fnox reencryption helper
-.secrets.tpl          # Template for secret injection
 ```
 
-## Secrets (`secrets`)
+## Secrets
 
-Lazy resolution via Proton Pass CLI. API keys are **not** loaded on shell startup.
-
-- `_ensure_secrets` resolves `~/.secrets.tpl` via `pass-cli inject` on first call (when `pass-cli` is on PATH and the template exists)
-- Failed resolution is **not** cached: inject errors surface on stderr and the next wrapped-tool call retries (e.g. after `pass-cli login`)
-- `nvim` and `pi` are wrapped to call `_ensure_secrets` before launching
-
-Template format (`~/.secrets.tpl`):
-
-```bash
-export EXA_API_KEY='{{ pass://API/Exa/API Key }}'
-export CONTEXT7_API_KEY='{{ pass://API/Context7/API Key }}'
-```
+No shell-level secret injection. `pi` and its extensions read credentials
+from pi's built-in auth (`~/.pi/agent/auth.json`, written by `/login`).
 
 ## Conventions
 

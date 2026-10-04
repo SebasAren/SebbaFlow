@@ -15,10 +15,6 @@ echo "=== Bun Tests (tdd-plan) ==="
 bun test --parallel "$REPO_ROOT/pi/.local/bin/tdd-plan.test.ts"
 bun test --parallel "$REPO_ROOT/pi/.local/bin/lib/"
 
-echo "=== Bun Tests (wiki-search) ==="
-cd "$REPO_ROOT/obsidian/.local/lib/wiki-search"
-bun test --parallel "${COV_FLAGS[@]}"
-
 echo "=== Bun Tests (wiki-core) ==="
 bun test --parallel "$REPO_ROOT/obsidian/.local/lib/wiki-core" "${COV_FLAGS[@]}"
 

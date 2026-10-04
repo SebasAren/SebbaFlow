@@ -8,6 +8,7 @@
 
 import Exa from "exa-js";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { checkApiKey } from "@pi-ext/shared";
 
 import { WebSearchParams, executeWebSearch } from "./web-search";
 import { WebFetchParams, executeWebFetch } from "./web-fetch";
@@ -19,8 +20,8 @@ export default function (pi: ExtensionAPI) {
   // The main agent skips registration, keeping these tools out of its context.
   if (parseInt(process.env.PI_LIBRARIAN_LOAD || "0", 10) < 1) return;
 
-  // Get API key from environment
-  const apiKey = process.env.EXA_API_KEY;
+  // Resolve API key: env var first, then the "exa" entry in pi's auth.json
+  const apiKey = checkApiKey("exa-search", "EXA_API_KEY", "exa");
 
   const exa = apiKey ? new Exa(apiKey) : null;
 
@@ -37,7 +38,9 @@ export default function (pi: ExtensionAPI) {
 
     async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       if (!exa) {
-        throw new Error("EXA_API_KEY not set. Please set it via: export EXA_API_KEY='your-key'");
+        throw new Error(
+          "EXA_API_KEY not set. Set it via export EXA_API_KEY='your-key' or add an \"exa\" api_key entry to auth.json",
+        );
       }
 
       return executeWebSearch(params, exa, signal, onUpdate);
@@ -70,7 +73,9 @@ export default function (pi: ExtensionAPI) {
 
     async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       if (!exa) {
-        throw new Error("EXA_API_KEY not set. Please set it via: export EXA_API_KEY='your-key'");
+        throw new Error(
+          "EXA_API_KEY not set. Set it via export EXA_API_KEY='your-key' or add an \"exa\" api_key entry to auth.json",
+        );
       }
 
       return executeWebFetch(params, exa, signal, onUpdate);

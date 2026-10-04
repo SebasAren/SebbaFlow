@@ -16,10 +16,10 @@ Includes [Pi agent extensions](#pi-agent-extensions) that delegate codebase expl
 | `kitty/`           | **Kitty**     | GPU-accelerated terminal + native multiplexer (replaces tmux + Ghostty). Inline images in pi Just Work™ → [details](kitty/README.md)  |
 | `herdr/`           | **Herdr**     | Terminal workspace manager for AI coding agents (shell is running inside it). Config only — runtime state stays in `~/.config/herdr/` |
 | `pi/`              | **Pi Agent**  | Coding assistant with 9 custom extensions (explore subagent, librarian research subagent, and more)                                   |
-| `nvim/`            | Neovim        | Lazy.nvim, 15 LSP servers, blink.cmp AI completion (Codestral + Minuet-AI) → [details](nvim/README.md)                                |
+| `nvim/`            | Neovim        | Lazy.nvim, 15 LSP servers, blink.cmp completion → [details](nvim/README.md)                                                           |
 | `tmux/`            | Tmux          | (Legacy) Alt-based keybindings, Tokyo Night theme → [details](tmux/README.md)                                                         |
 | `ghostty/`         | Ghostty       | (Legacy) GPU-accelerated terminal. Replaced by Kitty                                                                                  |
-| `bashrc/`          | Bash          | Modular shell config: aliases, secrets, fzf, mise                                                                                     |
+| `bashrc/`          | Bash          | Modular shell config: aliases, fzf, mise                                                                                              |
 | `wt/`              | **Worktrunk** | Git worktree CLI — parallel work + agent delegation → [details](wt/AGENTS.md)                                                         |
 | `homebrew/`        | Homebrew      | `brew-sync` CLI + Brewfile for personal packages                                                                                      |
 | `obsidian/`        | Obsidian      | Wiki search, issue tracker, and wiki maintenance tools                                                                                |
@@ -76,25 +76,36 @@ nvim --headless "+Lazy! sync" +qa
 
 LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs servers on first use.
 
-### 4. Set up shell secrets
+### 4. Authenticate pi (built-in auth)
 
-Secrets (API keys) are resolved lazily via [Proton Pass CLI](https://proton.me/pass). Install it:
-
-```bash
-curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
-```
-
-> pass-cli is **self-managed** in `~/.local/bin` (not Homebrew). Keep it current with its
-> built-in updater — `mise run update-pass-cli` — or manually: `pass-cli update -y`.
-
-Then create `~/.secrets.tpl` from the template:
+pi stores all provider and tool credentials in its own credential store
+(`~/.pi/agent/auth.json`, mode 0600) — no external secret manager is involved.
 
 ```bash
-cp bashrc/.secrets.tpl ~/.secrets.tpl
-# Edit to add your API keys
+pi
+# then inside pi:
+/login        # pick a provider (OAuth or API key)
 ```
 
-Secrets are only resolved when tools like `pi` or `nvim` actually need them — not on shell startup.
+Non-provider API keys (Exa, Context7, OpenRouter, Langfuse) live in the same
+file as custom `api_key` entries — the extensions and tools read them from
+there automatically (env vars still win when set):
+
+```json
+{
+  "exa": { "type": "api_key", "key": "..." },
+  "context7": { "type": "api_key", "key": "..." },
+  "openrouter": { "type": "api_key", "key": "..." },
+  "langfuse": {
+    "type": "api_key",
+    "key": "pk-...",
+    "env": {
+      "LANGFUSE_SECRET_KEY": "sk-...",
+      "LANGFUSE_HOST": "https://cloud.langfuse.com"
+    }
+  }
+}
+```
 
 ### 5. Install (legacy) Tmux plugins
 
@@ -183,9 +194,12 @@ Stow is minimal and transparent — it just creates symlinks. No daemons, no com
 
 [mise](https://mise.jdx.dev/) is a single tool that replaces multiple version managers (nvm, pyenv, rbenv, etc.). It's fast, supports `.tool-versions` compatibility, and has built-in task running (`mise run format-lua`).
 
-### Why Proton Pass for secrets?
+### Why pi's built-in auth instead of a secret manager?
 
-Secrets should never be committed to git. Proton Pass CLI provides encrypted secret injection via templates (`~/.secrets.tpl`). The lazy resolution pattern in `.bashrc.d/secrets` means API keys are only fetched when a tool actually needs them, keeping shell startup fast.
+Secrets should never be committed to git. pi's `/login` stores OAuth tokens and
+API keys in `~/.pi/agent/auth.json` (0600), and every pi extension reads its
+credentials from the same file. One credential store, no shell-level injection,
+no dependence on Proton Pass CLI or template files.
 
 ### Why subagents for exploration and research?
 
@@ -197,7 +211,7 @@ Running the main model (e.g. Claude) to grep through files burns tokens on outpu
 
 → **[Full details in `nvim/README.md`](nvim/README.md)**
 
-Lazy.nvim with 15 LSP servers, blink.cmp completion (Codestral + Minuet-AI), conform.nvim formatting, nvim-dap debugging, and neotest testing. Requires Neovim 0.11+.
+Lazy.nvim with 15 LSP servers, blink.cmp completion, conform.nvim formatting, nvim-dap debugging, and neotest testing. Requires Neovim 0.11+.
 
 ### Tmux (Legacy)
 
@@ -215,13 +229,12 @@ GPU-accelerated terminal that replaces both Ghostty and tmux. Provides native ta
 
 Modular config in `bashrc/.bashrc.d/`. Each file handles one concern:
 
-| File      | Purpose                       |
-| --------- | ----------------------------- |
-| `config`  | Editor, fzf bindings          |
-| `alias`   | Short aliases                 |
-| `mise`    | Activate mise runtime manager |
-| `secrets` | Lazy Proton Pass integration  |
-| `fnox`    | fnox reencryption helper      |
+| File     | Purpose                       |
+| -------- | ----------------------------- |
+| `config` | Editor, fzf bindings          |
+| `alias`  | Short aliases                 |
+| `mise`   | Activate mise runtime manager |
+| `fnox`   | fnox reencryption helper      |
 
 ### Homebrew
 
@@ -257,7 +270,6 @@ The TypeScript surface (Pi agent extensions and standalone CLIs) is covered by 5
 | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `pi/.pi/agent/extensions/**/*.test.ts`                          | Unit tests co-located with source; `integration.test.ts` per extension covers load/register cycles |
 | `pi/.local/bin/tdd-plan.test.ts` + `pi/.local/bin/lib/`         | End-to-end CLI tests via `execSync` against the `tdd-plan` binary                                  |
-| `obsidian/.local/lib/wiki-search/wiki-search.test.ts`           | Unit tests with real filesystem fixtures for the `wiki-search` CLI                                 |
 | `obsidian/.local/lib/wiki-core/` + `obsidian/.local/lib/issue/` | Unit tests for wiki frontmatter I/O and issue tracker CLI                                          |
 
 `tests/` holds a local-only plenary Lua suite (run via `tests/run.sh`, requires nvim) — not part of `mise run test` or CI.
@@ -271,7 +283,6 @@ mise run test
 # Individual test groups:
 cd pi/.pi/agent/extensions && bun test --parallel
 bun test pi/.local/bin/tdd-plan.test.ts
-bun test obsidian/.local/lib/wiki-search/wiki-search.test.ts
 bun test obsidian/.local/lib/wiki-core/wiki-core.test.ts
 bun test obsidian/.local/lib/issue/cli.test.ts
 bun test obsidian/.local/lib/issue/issue.test.ts

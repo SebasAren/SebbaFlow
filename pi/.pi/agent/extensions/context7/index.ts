@@ -9,6 +9,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Context7 } from "@upstash/context7-sdk";
+import { checkApiKey } from "@pi-ext/shared";
 
 import { SearchParams, executeSearch } from "./search";
 import { DocsParams, executeDocs } from "./docs";
@@ -30,9 +31,10 @@ export default function (pi: ExtensionAPI) {
   // The main agent skips registration, keeping these tools out of its context.
   if (parseInt(process.env.PI_LIBRARIAN_LOAD || "0", 10) < 1) return;
 
-  // Get API key from environment (captured at init for warning — but guard above
-  // skips this entirely for main agent, warning only fires in subagent context)
-  const apiKey = process.env.CONTEXT7_API_KEY;
+  // Resolve API key: env var first, then the "context7" entry in pi's auth.json
+  // (captured at init for warning — but guard above skips this entirely for
+  // main agent, warning only fires in subagent context)
+  const apiKey = checkApiKey("context7", "CONTEXT7_API_KEY", "context7");
 
   // Tool 1: Search libraries
   pi.registerTool({
