@@ -6,6 +6,8 @@
 -- otherwise reuse the token glab keeps in the OS keyring. glab 1.120 has no
 -- `auth token` command and `config get token` skips the keyring, so read it
 -- from `auth status --show-token` ("Token found in ...: <token>").
+-- Only personal access tokens work: the Go server sends the token as
+-- PRIVATE-TOKEN, which GitLab rejects (401) for glab's OAuth logins.
 local function auth_provider()
   local token, url, err = require("gitlab.state").default_auth_provider()
   if err ~= nil or (token ~= nil and token ~= "") then
@@ -16,6 +18,16 @@ local function auth_provider()
   end
 
   local host = (url or "https://gitlab.com"):gsub("^%a+://", ""):gsub("/.*$", "")
+  local is_oauth = vim.system({ "glab", "config", "get", "is_oauth2", "--host", host }, { text = true }):wait(5000)
+  if vim.trim(is_oauth.stdout or "") == "true" then
+    vim.notify(
+      "gitlab.nvim: glab is logged in via OAuth, which the Go server can't use. "
+        .. "Set GITLAB_TOKEN or run `glab auth login --stdin` with a personal access token.",
+      vim.log.levels.WARN
+    )
+    return nil, url, nil
+  end
+
   local cmd = { "glab", "auth", "status", "--hostname", host, "--show-token" }
   local result = vim.system(cmd, { text = true }):wait(5000)
   local output = (result.stdout or "") .. (result.stderr or "")
