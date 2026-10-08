@@ -58,7 +58,8 @@ WS=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["resu
 PANE=$(echo "$RES" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])')
 
 herdr pane wait-output "$PANE" --match "❯" --source recent-unwrapped --timeout 60000  # shell ready (shell-init race)
-herdr agent start "issue-$SLUG" --kind pi --pane "$PANE" -- --approve --model zai/glm-5.3-flash   # builder model pinned in-repo; name gets a lowercase prefix (slugs are digit-leading) and must fit 32 chars — see herdr gotchas
+MODEL=$(task-grade "<task text>")   # Jev classifier grades the task: flash (default) or pro — fresh worker session, so no prompt cache to lose; any error falls back to flash
+herdr agent start "issue-$SLUG" --kind pi --pane "$PANE" -- --approve --model "$MODEL"   # name gets a lowercase prefix (slugs are digit-leading) and must fit 32 chars — see herdr gotchas
 herdr agent prompt "$PANE" "<preamble + task text>"    # no --wait — fire-and-forget; the worker's 'started' callback confirms delivery
 ```
 
