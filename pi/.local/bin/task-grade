@@ -1,0 +1,88 @@
+#!/usr/bin/env bun
+/**
+ * task-grade — pick a pi worker model for a task via the Jev classifier.
+ *
+ * Grades whether a coding task needs a strong model or a fast one and
+ * prints the model id. Designed for `herdr agent start --model "$(task-grade "$TASK")"`:
+ * fresh worker sessions have no prompt cache, so per-task routing is free.
+ * Never fails: any error (missing key, network, bad answer) prints the
+ * flash fallback model on stdout with the reason on stderr, exit 0.
+ *
+ * Usage:
+ *   task-grade "Fix the typo in README"
+ *   echo "$TASK_BODY" | task-grade
+ *   task-grade --json "$TASK"      # full result: grade, probability, cost, fallback flag
+ *   task-grade --flash zai/glm-5.3-flash --pro zai/glm-5.3 "$TASK"
+ */
+
+import { DEFAULT_CLASSIFIER, gradeTask } from "./lib/task-grade";
+
+interface CliOptions {
+	json: boolean;
+	flash?: string;
+	pro?: string;
+	classifier?: string;
+	taskParts: string[];
+}
+
+function printHelp(): void {
+	console.log(`task-grade — pick a pi worker model for a task via the Jev classifier
+
+Usage:
+  task-grade [flags] <task text...>    # task text as args, or piped via stdin
+  task-grade --json <task text...>     # full JSON result on stdout
+
+Flags:
+  --json              Print the full result object instead of just the model id
+  --flash <model>     Flash model id (default: zai/glm-5.3-flash)
+  --pro <model>       Pro model id (default: zai/glm-5.3)
+  --classifier <id>   Classifier model (default: ${DEFAULT_CLASSIFIER})
+  -h, --help          Show this help
+
+Key resolution: OPENROUTER_API_KEY env var, then the openrouter entry in
+pi's auth.json (~/.pi/agent/auth.json). Falls back to the flash model on
+any error — check the "fallback" field in --json output if you care.`);
+}
+
+function parseArgs(argv: string[]): CliOptions {
+	const opts: CliOptions = { json: false, taskParts: [] };
+	for (let i = 0; i < argv.length; i++) {
+		const arg = argv[i];
+		if (arg === "--json") opts.json = true;
+		else if (arg === "--flash") opts.flash = argv[++i];
+		else if (arg === "--pro") opts.pro = argv[++i];
+		else if (arg === "--classifier") opts.classifier = argv[++i];
+		else if (arg === "-h" || arg === "--help") {
+			printHelp();
+			process.exit(0);
+		} else opts.taskParts.push(arg);
+	}
+	return opts;
+}
+
+async function main(): Promise<void> {
+	const opts = parseArgs(process.argv.slice(2));
+	let task = opts.taskParts.join(" ").trim();
+	if (!task && !process.stdin.isTTY) task = (await Bun.stdin.text()).trim();
+	if (!task) {
+		console.error("task-grade: no task text given (pass it as args or pipe it via stdin)");
+		process.exit(1);
+	}
+
+	const result = await gradeTask(task, {
+		flashModel: opts.flash,
+		proModel: opts.pro,
+		classifier: opts.classifier,
+	});
+
+	if (opts.json) {
+		console.log(JSON.stringify(result, null, 2));
+		return;
+	}
+	if (result.fallback) {
+		console.error(`[task-grade] ${result.reason} — falling back to ${result.model}`);
+	}
+	console.log(result.model);
+}
+
+await main();
