@@ -18,7 +18,7 @@ Analyze git changes and produce categorized findings. No tree manipulation, no s
 
 ## Delegation (herdr)
 
-1. Resolve your callback address (delegated workers already have one — `issue-36`; a plain session may need to name itself), then spawn a reviewer in a split pane (same cwd → same git state and repo trust; no worktree needed):
+1. Resolve your callback address (delegated workers already have one — `issue-36`; a plain session may need to name itself), then spawn a reviewer in a split pane (same cwd → same git state; no worktree needed — but trust is per-directory, so a fresh worktree cwd still needs `--approve`):
 
 ```bash
 PANE=$(herdr pane current | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
@@ -29,7 +29,7 @@ OUT=$(mktemp --suffix=.md)
 NEW=$(herdr pane split --current --direction right --no-focus --env PI_REVIEW_HELPER=1 | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
 herdr pane wait-output "$NEW" --match "❯" --source recent-unwrapped --timeout 30000  # shell ready
 NAME="reviewer-$(basename "$(git rev-parse --show-toplevel)" | cut -c1-23)"  # agent names: server-global, must fit 32 chars — the prefix handles digit-leading slugs, cut handles long ones (collides only on a shared 23-char prefix)
-herdr agent start "$NAME" --kind pi --pane "$NEW" -- --model zai/glm-5.3   # reviewer model pinned in-repo
+herdr agent start "$NAME" --kind pi --pane "$NEW" -- --approve --model zai/glm-5.3   # --approve: cwd may be a fresh worktree with no saved pi trust decision (a worker running this is in one); model pinned in-repo
 ```
 
 2. Submit the review task fire-and-forget — no `--wait` — then **end your turn**; the reviewer's callback wakes you:
