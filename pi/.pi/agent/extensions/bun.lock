@@ -34,7 +34,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@pi-ext/shared": "workspace:*",
-        "@upstash/context7-sdk": "^0.5.0",
+        "@upstash/context7-sdk": "^0.6.0",
       },
     },
     "exa-search": {
@@ -347,7 +347,7 @@
 
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.59.4", "", { "dependencies": { "@typescript-eslint/types": "8.59.4", "eslint-visitor-keys": "^5.0.0" } }, "sha512-U3gxVaDVnuZKhSspW/MzMxE1kq7zOdc072FcSNoqA1I9p8HyKbBFfEHoWckBAMgNMph4MamwS5iTVzFmrnt8TQ=="],
 
-    "@upstash/context7-sdk": ["@upstash/context7-sdk@0.5.0", "", {}, "sha512-ywZO7ladg9YQOaHtXfK45Q0jUg12MpQtH+wahz1TZQZsnRUnYNrMSsl3bUhekpt7bexQfv5kafFUM6KBWMPkkQ=="],
+    "@upstash/context7-sdk": ["@upstash/context7-sdk@0.6.0", "", {}, "sha512-38CYY/rpJfkvQXHCAo0engQasosS2MJKZXJfezCLYJSoTUacGNP7iAUP9PnHtncUgsCRtW+UGhnvyPhIKBEbSQ=="],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
 
