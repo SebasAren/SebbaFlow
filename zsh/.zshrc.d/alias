@@ -7,3 +7,5 @@ alias .....="cd ../../../.."
 
 # Homebrew package tracking (brew-sync is stowed to ~/.local/bin/)
 alias brewfile="nvim ~/dotfiles/homebrew/Brewfile"
+alias superclaude="claude --dangerously-skip-permissions --agent supervisor"
+alias dangerclaude="claude --dangerously-skip-permissions"
