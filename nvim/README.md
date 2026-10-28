@@ -21,17 +21,18 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 
 ### LSP
 
-17 servers registered via native `vim.lsp.config` / `vim.lsp.enable` (Neovim 0.11+). Mason (`:Mason`) installs servers; `mason-lspconfig` bridges install names. Per-server configs in `lsp/*.lua`. Key servers:
+18 servers registered via native `vim.lsp.config` / `vim.lsp.enable` (Neovim 0.11+). Mason (`:Mason`) installs servers; `mason-lspconfig` bridges install names. Per-server configs in `lsp/*.lua`. Key servers:
 
-| Server       | Language                |
-| ------------ | ----------------------- |
-| basedpyright | Python                  |
-| lua_ls       | Lua                     |
-| eslint       | JavaScript / TypeScript |
-| svelte       | Svelte                  |
-| vue_ls       | Vue                     |
-| ruby_lsp     | Ruby / Rails            |
-| cssls        | CSS / SCSS / Less       |
+| Server        | Language                           |
+| ------------- | ---------------------------------- |
+| basedpyright  | Python                             |
+| lua_ls        | Lua                                |
+| eslint        | JavaScript / TypeScript            |
+| svelte        | Svelte                             |
+| vue_ls        | Vue                                |
+| ruby_lsp      | Ruby / Rails                       |
+| cssls         | CSS / SCSS / Less                  |
+| css_variables | CSS custom properties across files |
 
 TypeScript/Vue is primarily handled by [typescript-tools.nvim](https://github.com/pmizio/typescript-tools.nvim) (configured in `lua/plugins/lsp.lua`), not a standalone `lsp/*.lua` server.
 
