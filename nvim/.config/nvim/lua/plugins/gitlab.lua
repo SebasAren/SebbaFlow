@@ -40,6 +40,44 @@ local function auth_provider()
   return nil, url, nil
 end
 
+-- The plugin's reload_review only re-reads the MR's diff refs from GitLab; it
+-- never fetches, so a head SHA pushed since the last fetch isn't in the local
+-- repo and diffview silently keeps the old diff. Commenting also refuses while
+-- the checked-out branch is behind its upstream. So with the MR branch checked
+-- out, fast-forward it; otherwise fetch the MR ref (works for fork MRs too).
+-- Then reload and refresh the discussion tree.
+local function reload_review()
+  local state = require("gitlab.state")
+  local iid = state.INFO and state.INFO.iid
+  if not require("gitlab.reviewer").is_open or iid == nil then
+    vim.notify("gitlab.nvim: no review open", vim.log.levels.WARN)
+    return
+  end
+
+  local cmd
+  if require("gitlab.git").get_current_branch() == state.INFO.source_branch then
+    cmd = { "git", "pull", "--ff-only" }
+  else
+    local remote = state.settings.connection_settings.remote
+    cmd = { "git", "fetch", remote, string.format("refs/merge-requests/%d/head", iid) }
+  end
+  vim.system(cmd, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 then
+        local msg = string.format("gitlab.nvim: `%s` failed: %s", table.concat(cmd, " "), vim.trim(result.stderr or ""))
+        vim.notify(msg, vim.log.levels.ERROR)
+        return
+      end
+      vim.cmd.checktime() -- Reload buffers the pull changed on disk
+      local gitlab = require("gitlab")
+      gitlab.reload_review()
+      if require("gitlab.actions.discussions").split_visible then
+        gitlab.refresh_data()
+      end
+    end)
+  end)
+end
+
 return {
   {
     "harrisoncramer/gitlab.nvim",
@@ -52,9 +90,15 @@ return {
     build = function()
       require("gitlab.server").build(true)
     end,
+    keys = {
+      { "gl<C-r>", reload_review, desc = "Pull MR changes and reload GitLab review" },
+    },
     ---@type GitlabSettings
     opts = {
       auth_provider = auth_provider,
+      keymaps = {
+        global = { reload_review = false }, -- Replaced by the fetching wrapper above
+      },
     },
   },
 }
