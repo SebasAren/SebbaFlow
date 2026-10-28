@@ -15,10 +15,6 @@
     "branch": "main",
     "commit": "875d16dd8c8aa86f1a5c3b5cef49e1133980ae94"
   },
-  "document-color.nvim": {
-    "branch": "main",
-    "commit": "74c487f0e5accfaae033755451b9e367220693fd"
-  },
   "flash.nvim": {
     "branch": "main",
     "commit": "5f0f270fdc7c5b0c21d903ee85b9cb06f2ac636a"

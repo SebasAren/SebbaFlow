@@ -36,6 +36,8 @@ LSP servers are managed by Mason (`:Mason` in Neovim). The config auto-installs 
 
 Multi-brand CSS: when token files scope the same custom properties under `[data-brand="x"]` (default brand on `:root`), `css_variables` resolves one brand at a time — it follows the brand file you open, or pick one with `:CssBrand` (`lua/config/css-brand.lua`).
 
+Colour previews (`textDocument/documentColor` from cssls, css_variables, tailwindcss) use Neovim's built-in `vim.lsp.document_color`, which needs **Neovim 0.12+** — on 0.11 everything else works, just without swatches.
+
 TypeScript/Vue is primarily handled by [typescript-tools.nvim](https://github.com/pmizio/typescript-tools.nvim) (configured in `lua/plugins/lsp.lua`), not a standalone `lsp/*.lua` server.
 
 ### Formatting & Linting
