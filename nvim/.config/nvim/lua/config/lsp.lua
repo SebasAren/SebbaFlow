@@ -79,5 +79,5 @@ vim.lsp.enable(lsp_servers)
 
 require("mason-lspconfig").setup({
   automatic_enable = false,
-  ensure_installed = { "svelte", "vue_ls", "ruby_lsp" },
+  ensure_installed = { "svelte", "vue_ls", "ruby_lsp", "cssls" },
 })

@@ -4,6 +4,7 @@ M.filetypes = {
   "bash",
   "c",
   "css",
+  "scss",
   "diff",
   "html",
   "javascript",
