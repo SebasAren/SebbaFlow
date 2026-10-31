@@ -16,7 +16,7 @@ jobs:
       - name: Verify mise and npm pi versions are in sync
         run: bash .github/scripts/check-version-sync.sh
 
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install: true
 
