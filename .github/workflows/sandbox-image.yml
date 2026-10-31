@@ -20,20 +20,27 @@ permissions:
 jobs:
   build:
     name: Build toolchain image (smoke gate) + push to GHCR
-    # Inert on refs that don't carry the sandbox stack yet (e.g. main before
-    # sandbox-rollout merges): the job is skipped, not failed.
-    if: ${{ hashFiles('sandbox/Containerfile') != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build inputs
+      # Inert on refs that don't carry the sandbox stack yet (e.g. main before
+      # sandbox-rollout merges): the build steps skip, the job stays green.
+      # (hashFiles() is not available in job-level `if`, so the check runs here.)
+      - name: Gate on sandbox stack presence
+        id: gate
         run: |
           podman --version
-          git rev-parse --short HEAD
+          if [ -f sandbox/Containerfile ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No sandbox/Containerfile on this ref — skipping image build."
+          fi
 
       - name: Resolve image refs
         id: refs
+        if: steps.gate.outputs.present == 'true'
         run: |
           short_sha="$(git rev-parse --short HEAD)"
           # GHCR image names must be lowercase
@@ -42,6 +49,7 @@ jobs:
           echo "image=${image}" >> "$GITHUB_OUTPUT"
 
       - name: Build image (build.sh reuses the local recipe; smoke test is the final build layer)
+        if: steps.gate.outputs.present == 'true'
         env:
           # Authenticated GitHub API for the build's three API surfaces:
           # mise github/aqua backend version resolution and the
@@ -52,7 +60,7 @@ jobs:
         run: sandbox/build.sh
 
       - name: Push to GHCR
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.gate.outputs.present == 'true'
         env:
           IMAGE: ${{ steps.refs.outputs.image }}
           SHORT_SHA: ${{ steps.refs.outputs.short_sha }}
