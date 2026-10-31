@@ -1,0 +1,72 @@
+name: sandbox-image
+
+on:
+  push:
+    branches: [main, sandbox-rollout]
+  pull_request:
+    branches: [main, sandbox-rollout]
+    paths:
+      - .github/workflows/sandbox-image.yml
+  workflow_dispatch:
+
+concurrency:
+  group: sandbox-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build toolchain image (smoke gate) + push to GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Inert on refs that don't carry the sandbox stack yet (e.g. main before
+      # sandbox-rollout merges): the build steps skip, the job stays green.
+      # (hashFiles() is not available in job-level `if`, so the check runs here.)
+      - name: Gate on sandbox stack presence
+        id: gate
+        run: |
+          podman --version
+          if [ -f sandbox/Containerfile ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No sandbox/Containerfile on this ref — skipping image build."
+          fi
+
+      - name: Resolve image refs
+        id: refs
+        if: steps.gate.outputs.present == 'true'
+        run: |
+          short_sha="$(git rev-parse --short HEAD)"
+          # GHCR image names must be lowercase
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/sandbox"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image (build.sh reuses the local recipe; smoke test is the final build layer)
+        if: steps.gate.outputs.present == 'true'
+        env:
+          # Authenticated GitHub API for the build's three API surfaces:
+          # mise github/aqua backend version resolution and the
+          # postgres-binary plugin's release listing (Bearer auth).
+          # Keeps the shared-runner anonymous budget (60 req/h) out of the build.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_GITHUB_TOKEN: ${{ github.token }}
+        run: sandbox/build.sh
+
+      - name: Push to GHCR
+        if: github.event_name == 'push' && steps.gate.outputs.present == 'true'
+        env:
+          IMAGE: ${{ steps.refs.outputs.image }}
+          SHORT_SHA: ${{ steps.refs.outputs.short_sha }}
+        run: |
+          podman login ghcr.io -u "${{ github.actor }}" --password-stdin <<< "${{ github.token }}"
+          podman tag "sandbox:${SHORT_SHA}" "${IMAGE}:${SHORT_SHA}" "${IMAGE}:latest"
+          podman push "${IMAGE}:${SHORT_SHA}"
+          podman push "${IMAGE}:latest"
+          podman image inspect --format 'pushed {{.RepoTags}} digest {{.Digest}}' "${IMAGE}:${SHORT_SHA}"
