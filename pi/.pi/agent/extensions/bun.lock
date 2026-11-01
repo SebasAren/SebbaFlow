@@ -65,6 +65,13 @@
         "@earendil-works/pi-coding-agent": "^1.1.0",
       },
     },
+    "factory": {
+      "name": "@pi-ext/factory",
+      "version": "1.0.0",
+      "dependencies": {
+        "@pi-ext/shared": "workspace:*",
+      },
+    },
     "librarian": {
       "name": "@pi-ext/librarian",
       "version": "1.0.0",
@@ -291,6 +298,8 @@
     "@pi-ext/explore": ["@pi-ext/explore@workspace:explore"],
 
     "@pi-ext/extract-share": ["@pi-ext/extract-share@workspace:extract-share"],
+
+    "@pi-ext/factory": ["@pi-ext/factory@workspace:factory"],
 
     "@pi-ext/librarian": ["@pi-ext/librarian@workspace:librarian"],
 
