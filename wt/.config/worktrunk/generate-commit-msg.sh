@@ -2,14 +2,17 @@
 # Generate a commit message from the prompt wt sends via stdin.
 # Used by wt's squash/commit generation.
 #
-# wt sends its own built-in prompt (task, format, style, diff, context)
-# to stdin. We just need to pipe it to pi and return the output.
+# wt sends its built-in prompt to stdin: task, format, style, guidance, a
+# <commits> section with the subjects being squashed, diffstat, and diff.
+# We prepend conventional-commit instructions, pipe the prompt to pi, and
+# on failure fall back to the squashed commits' own subjects (or a
+# diff-stat line on the non-squash commit path, which has no <commits>).
 set -euo pipefail
 
 # Source pi model settings if available
 if [[ -f ~/.bashrc.d/pi_models ]]; then
-# shellcheck source=/dev/null
-  source ~/.bashrc.d/pi_models
+	# shellcheck source=/dev/null
+	source ~/.bashrc.d/pi_models
 fi
 
 # Read wt's full prompt from stdin
@@ -28,32 +31,57 @@ prompt="${conventional_prefix}${prompt}"
 # Build pi arguments
 pi_args=("-p" "--no-tools" "--no-extensions" "--no-skills" "--no-session" "--no-prompt-templates" "--thinking" "off")
 if [[ -n "${CHEAP_MODEL:-}" ]]; then
-  pi_args+=("--model" "$CHEAP_MODEL")
+	pi_args+=("--model" "$CHEAP_MODEL")
 fi
 
-# Temporary file for pi output
+# Temporary files for pi output; stderr is kept separate so it can never
+# leak into a "successful" message
 tmp_out=$(mktemp)
-trap 'rm -f "$tmp_out"' EXIT
+tmp_err=$(mktemp)
+trap 'rm -f "$tmp_out" "$tmp_err"' EXIT
 
-# Run pi with timeout, capture output
-if timeout 30 pi "${pi_args[@]}" "$prompt" > "$tmp_out" 2>&1; then
-  commit_msg=$(cat "$tmp_out")
-  # Trim leading/trailing blank lines
-  commit_msg=$(echo "$commit_msg" | sed -e '/./,$!d' -e ':a' -e '/^\n*$/{$d;N;ba}')
-  if [[ -n "$commit_msg" ]]; then
-    echo "$commit_msg"
-    exit 0
-  fi
+# Run pi: two attempts, 60s ceiling each. Empty output counts as failure.
+for _attempt in 1 2; do
+	if timeout 60 pi "${pi_args[@]}" "$prompt" >"$tmp_out" 2>"$tmp_err"; then
+		commit_msg=$(sed -e '/./,$!d' -e ':a' -e '/^\n*$/{$d;N;ba}' "$tmp_out")
+		if [[ -n "$commit_msg" ]]; then
+			echo "$commit_msg"
+			exit 0
+		fi
+	fi
+done
+
+echo "WARNING: pi failed to generate commit message; using fallback." >&2
+if [[ -s "$tmp_err" ]]; then
+	tail -n 5 "$tmp_err" >&2
 fi
 
-# Fallback: generate conventional commit message from diff stats in the prompt
-echo "WARNING: pi failed to generate commit message." >&2
-files_changed=$(echo "$prompt" | grep -c '^diff --git' || echo 0)
-if [[ $files_changed -eq 0 ]]; then
-  echo "chore: update"
-elif [[ $files_changed -eq 1 ]]; then
-  filename=$(echo "$prompt" | grep -m1 '^diff --git' | sed 's|^diff --git a/||;s| b/.*||')
-  echo "chore: update $filename"
+# Fallback 1: wt's squash prompt embeds the subjects being squashed in
+# <commits>; for a single-commit branch that subject is already the right
+# message. The section is absent on the non-squash commit path.
+subjects=$(sed -n '/^<commits/,/^<\/commits>/p' <<<"$prompt" |
+	sed -e '/^<commits/d' -e '/^<\/commits>/d' -e 's/^- //' |
+	sed -e '/./,$!d')
+if [[ -n "$subjects" ]]; then
+	first_subject=$(head -n 1 <<<"$subjects")
+	other_subjects=$(tail -n +2 <<<"$subjects" | sed -e '/./,$!d')
+	if [[ -n "$other_subjects" ]]; then
+		bulleted=${other_subjects//$'\n'/$'\n- '}
+		printf '%s\n\n- %s\n' "$first_subject" "$bulleted"
+	else
+		echo "$first_subject"
+	fi
+	exit 0
+fi
+
+# Fallback 2: describe the diff itself (non-squash commit path)
+files_changed=$(grep -c '^diff --git' <<<"$prompt" || true)
+if ((files_changed == 0)); then
+	echo "WARNING: nothing to describe - no commits and no diff; aborting." >&2
+	exit 1
+elif ((files_changed == 1)); then
+	filename=$(grep -m1 '^diff --git' <<<"$prompt" | sed 's|^diff --git a/||;s| b/.*||')
+	echo "chore: update $filename"
 else
-  echo "chore: update $files_changed files"
+	echo "chore: update $files_changed files"
 fi
