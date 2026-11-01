@@ -10,7 +10,7 @@ See [`.claude/rules/pi-extensions.md`](../../../../.claude/rules/pi-extensions.m
 pi/.pi/agent/extensions/
 ├── package.json          # Bun workspaces root + `pi.extensions` manifest (discovery allowlist)
 ├── tsconfig.base.json    # Shared tsconfig
-├── eslint.config.mjs
+├── .oxlintrc.json
 ├── shared/               # @pi-ext/shared — common utilities and test mocks
 └── <extension>/          # One directory per extension
     ├── index.ts
@@ -42,7 +42,7 @@ mise run typecheck
 bun test --parallel
 
 # Lint
-bunx eslint .
+bunx oxlint --type-aware .
 ```
 
 CI runs the same three steps on every push ([`.github/workflows/test.yml`](../../../../.github/workflows/test.yml)).

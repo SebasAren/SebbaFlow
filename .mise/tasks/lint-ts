@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-#MISE description="Lint TypeScript with ESLint"
+#MISE description="Lint TypeScript with oxlint"
 set -euo pipefail
 
-echo "=== Linting TypeScript (ESLint) ==="
+echo "=== Linting TypeScript (oxlint) ==="
 cd pi/.pi/agent/extensions
-bunx eslint .
+bunx oxlint --type-aware .

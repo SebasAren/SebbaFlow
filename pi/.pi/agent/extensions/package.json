@@ -16,7 +16,6 @@
     "session-memory"
   ],
   "devDependencies": {
-    "@eslint/js": "^10.0.0",
     "@earendil-works/pi-ai": "^1.1.0",
     "@earendil-works/pi-coding-agent": "^1.1.0",
     "@earendil-works/pi-tui": "^1.1.0",
@@ -24,9 +23,9 @@
     "@types/bun": "^1.3.11",
     "@types/node": "^26.0.0",
     "diff": "^9.0.0",
-    "eslint": "^10.0.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.0.0"
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "^1.1.0",
