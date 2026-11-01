@@ -40,11 +40,12 @@ tmp_out=$(mktemp)
 tmp_err=$(mktemp)
 trap 'rm -f "$tmp_out" "$tmp_err"' EXIT
 
-# Run pi: two attempts, 60s ceiling each. Empty output counts as failure.
+# Run pi: two attempts, 60s ceiling each. Empty or whitespace-only output
+# counts as failure so a garbage "   " message can't skip the fallback.
 for _attempt in 1 2; do
 	if timeout 60 pi "${pi_args[@]}" "$prompt" >"$tmp_out" 2>"$tmp_err"; then
 		commit_msg=$(sed -e '/./,$!d' -e ':a' -e '/^\n*$/{$d;N;ba}' "$tmp_out")
-		if [[ -n "$commit_msg" ]]; then
+		if [[ -n "${commit_msg//[[:space:]]/}" ]]; then
 			echo "$commit_msg"
 			exit 0
 		fi
@@ -69,7 +70,7 @@ if [[ -n "$subjects" ]]; then
 		bulleted=${other_subjects//$'\n'/$'\n- '}
 		printf '%s\n\n- %s\n' "$first_subject" "$bulleted"
 	else
-		echo "$first_subject"
+		printf '%s\n' "$first_subject"
 	fi
 	exit 0
 fi
