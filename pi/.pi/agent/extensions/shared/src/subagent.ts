@@ -458,7 +458,7 @@ async function runSingleAttempt(
           aborted = true;
           void session.abort();
         };
-        void signal.addEventListener("abort", abortHandler, { once: true });
+        signal.addEventListener("abort", abortHandler, { once: true });
       }
     }
 

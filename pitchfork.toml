@@ -14,7 +14,7 @@ dir = "pi/.pi/agent/extensions"
 # --- Linters (re-run on change) ---
 
 [daemons.lint-ts]
-run = "bash -c 'bunx eslint . --cache && echo ✓ lint-ts passed'"
+run = "bash -c 'bunx oxlint --type-aware . && echo ✓ lint-ts passed'"
 dir = "pi/.pi/agent/extensions"
 watch = ["**/*.ts"]
 
