@@ -28,12 +28,13 @@ These spawn a separate (cheaper/faster) model to handle reconnaissance, research
 
 ### Workflow & Session
 
-| Extension         | Purpose                                                                                                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **tdd-tree**      | TDD kickoff point labeling in the session tree for structured plan execution. **Soft-disabled** — source kept, omitted from the `pi.extensions` manifest in `extensions/package.json` |
-| **extract-share** | Extract assistant messages as PNG or markdown for sharing                                                                                                                             |
-| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                                                                                                                         |
-| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading                                                                                                     |
+| Extension         | Purpose                                                                                                                                                                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **tdd-tree**      | TDD kickoff point labeling in the session tree for structured plan execution. **Soft-disabled** — source kept, omitted from the `pi.extensions` manifest in `extensions/package.json`                                                                           |
+| **extract-share** | Extract assistant messages as PNG or markdown for sharing                                                                                                                                                                                                       |
+| **usage-tracker** | Token usage statistics (`/usage`) feeding the usage dashboard                                                                                                                                                                                                   |
+| **factory**       | Mastra Factory bridge: `factory_items`/`factory_attention`/`factory_decisions`/`factory_resolve` tools + `/factory` status widget. Config: `FACTORY_BASE_URL`/`FACTORY_TOKEN` env or auth.json `factory` entry; project via `FACTORY_PROJECT_ID` or auto-detect |
+| **claude-rules**  | `.claude/rules/` parser with picomatch glob matching and path-scoped rule loading                                                                                                                                                                               |
 
 ### Shared Library
 
