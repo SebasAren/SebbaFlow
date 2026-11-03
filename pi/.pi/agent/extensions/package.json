@@ -13,7 +13,8 @@
     "tdd-tree",
     "extract-share",
     "usage-tracker",
-    "session-memory"
+    "session-memory",
+    "observational-memory"
   ],
   "devDependencies": {
     "@earendil-works/pi-ai": "^1.1.0",
@@ -40,6 +41,7 @@
       "./extract-share/index.ts",
       "./herdr-agent-state.ts",
       "./librarian/index.ts",
+      "./observational-memory/index.ts",
       "./session-memory/index.ts",
       "./usage-tracker/index.ts"
     ]
