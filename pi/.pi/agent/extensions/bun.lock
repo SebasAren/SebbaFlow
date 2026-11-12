@@ -33,7 +33,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@pi-ext/shared": "workspace:*",
-        "@upstash/context7-sdk": "^0.6.0",
+        "@upstash/context7-sdk": "^0.7.0",
       },
     },
     "exa-search": {
@@ -384,7 +384,7 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
-    "@upstash/context7-sdk": ["@upstash/context7-sdk@0.6.0", "", {}, "sha512-38CYY/rpJfkvQXHCAo0engQasosS2MJKZXJfezCLYJSoTUacGNP7iAUP9PnHtncUgsCRtW+UGhnvyPhIKBEbSQ=="],
+    "@upstash/context7-sdk": ["@upstash/context7-sdk@0.7.0", "", {}, "sha512-Voa4wh3OudjjDl8sg258E4wkgEPdLQNfP5/BRSAtNR3zq1crd1kncwJOiT/fDNrCVZqhoiyQsSnihYpbWYFoyQ=="],
 
     "agent-base": ["agent-base@9.0.0", "", {}, "sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA=="],
 
