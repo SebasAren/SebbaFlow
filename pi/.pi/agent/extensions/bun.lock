@@ -72,6 +72,16 @@
         "@pi-ext/shared": "workspace:*",
       },
     },
+    "observational-memory": {
+      "name": "@pi-ext/observational-memory",
+      "version": "1.0.0",
+      "dependencies": {
+        "@pi-ext/shared": "workspace:*",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "^1.1.0",
+      },
+    },
     "session-memory": {
       "name": "@pi-ext/session-memory",
       "version": "1.0.0",
@@ -293,6 +303,8 @@
     "@pi-ext/extract-share": ["@pi-ext/extract-share@workspace:extract-share"],
 
     "@pi-ext/librarian": ["@pi-ext/librarian@workspace:librarian"],
+
+    "@pi-ext/observational-memory": ["@pi-ext/observational-memory@workspace:observational-memory"],
 
     "@pi-ext/session-memory": ["@pi-ext/session-memory@workspace:session-memory"],
 
