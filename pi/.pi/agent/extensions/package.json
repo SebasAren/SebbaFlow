@@ -9,6 +9,7 @@
     "exa-search",
     "explore",
     "librarian",
+    "observational-memory",
     "shared",
     "tdd-tree",
     "extract-share",
@@ -40,6 +41,7 @@
       "./extract-share/index.ts",
       "./herdr-agent-state.ts",
       "./librarian/index.ts",
+      "./observational-memory/index.ts",
       "./session-memory/index.ts",
       "./usage-tracker/index.ts"
     ]
